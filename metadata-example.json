@@ -1,0 +1,45 @@
+{
+  "name": "Test NFT Name",
+  "description": "A detailed description of your NFT",
+  "image": "ipfs://bafybeigf4pl6nsf7cpqsiejilxhdkuhyoq5chfdqbij2ayl5ehhielslxe",
+  "artist": "Name of the Artist",
+  "category": "The Category",
+  "group_id": "123",
+  "img_group_id": "456",
+  "attributes": [
+    {
+      "trait_type": "Redeemable",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Redemption Size",
+      "value": "Large"
+    },
+    {
+      "trait_type": "Year",
+      "value": "2024"
+    },
+    {
+      "trait_type": "Original Medium",
+      "value": "Digital"
+    },
+    {
+      "trait_type": "Acquisition Method",
+      "value": "Bought"
+    },
+    {
+      "trait_type": "Creator Type",
+      "value": "Individual"
+    },
+    {
+      "trait_type": "Edition Number",
+      "value": 1,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Total Supply",
+      "value": 100,
+      "display_type": "number"
+    }
+  ]
+}
