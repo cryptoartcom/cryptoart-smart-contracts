@@ -2,9 +2,10 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import MerkleTree from "merkletreejs";
-import { keccak256, bufferToHex } from "ethereumjs-util";
+import { keccak256 } from "ethereumjs-util";
 import { CryptoArtNFT } from "../typechain-types";
 import { AbiCoder } from "ethers";
+import SHA3 from "crypto-js/sha3";
 
 describe("CryptoArtNFT", function () {
 	let cryptoArtNFT: CryptoArtNFT;
@@ -29,6 +30,7 @@ describe("CryptoArtNFT", function () {
 		mintTokens = [
 			{ index: 0, account: ethers.getAddress(owner.address), amount: 1 },
 			{ index: 1, account: ethers.getAddress(addr1.address), amount: 1 },
+			{ index: 2, account: ethers.getAddress(addr2.address), amount: 1 },
 		];
 
 		bufDistributeAmount = mintTokens.map((el) =>
@@ -97,30 +99,91 @@ describe("CryptoArtNFT", function () {
 	});
 
 	describe("Minting", function () {
+		it("Should verify valid merkle proof", async function () {
+			const encodedData = coder.encode(
+				["address", "uint256"],
+				[mintTokens[1].account, mintTokens[1].index]
+			);
+
+			const leafHash = SHA3(encodedData).toString();
+			const leaf = Buffer.from(leafHash, "hex");
+			const leaves = [leaf];
+			const tree = new MerkleTree(leaves, SHA3);
+			const root = Buffer.from(tree.getRoot().toString("hex"), "hex");
+
+			const proof = tree.getProof(leaf).map((p) => p.data);
+			const isValid = tree.verify(proof, leaf, root);
+
+			expect(isValid).to.equal(true);
+		});
+
 		it("should allow whitelisted users to mint with a valid proof", async function () {
-			const leaf = keccak256(
+			// Encode and create leaf hashes
+			const leafHash1 = keccak256(
 				Buffer.from(
 					coder
 						.encode(
 							["address", "uint256"],
 							[mintTokens[1].account, mintTokens[1].index]
 						)
-						.slice(2), // Slicing to remove the `0x` prefix, as Buffer expects a clean hexadecimal string
-					"hex" // Specify base to indicate the string format to convert from
+						.slice(2),
+					"hex"
 				)
 			);
+			console.log(`Leaf created: ${leafHash1.toString("hex")}`);
 
-			const validProof = tree.getHexProof(leaf);
+			const leaf1 = leafHash1;
 
-			// First, let's whitelist addr1.
+			const leafHash2 = keccak256(
+				Buffer.from(
+					coder
+						.encode(
+							["address", "uint256"],
+							[mintTokens[2].account, mintTokens[2].index]
+						)
+						.slice(2),
+					"hex"
+				)
+			);
+			const leaf2 = leafHash2;
+
+			const leaves = [leaf1, leaf2];
+
+			// Create a new Merkle tree
+			const tree = new MerkleTree(leaves, keccak256);
+			const root = Buffer.from(tree.getRoot().toString("hex"), "hex");
+
+			// Generate the proof for leaf1
+			const proof = tree.getProof(leaf1);
+			console.log(
+				`Generated proof: ${proof.map((p) => p.data.toString("hex"))}`
+			);
+
+			// Expect the proof to be valid
+			const isValid = tree.verify(proof, leaf1, root);
+			expect(isValid).to.equal(true);
+
+			// Prepare the proof for Solidity
+			const validProofForContract = proof.map(
+				(el) => "0x" + Buffer.from(el.data).toString("hex")
+			);
+
+			// Whitelist and update merkle root
 			await cryptoArtNFT.connect(owner).addToWhitelist([addr1.address]);
-			// Update merkle root.
-			await cryptoArtNFT.connect(owner).updateMerkleRoot(tree.getHexRoot());
-			// Then, addr1 should be allowed to mint.
-			await cryptoArtNFT.connect(addr1).mint(1, "metadataURI", validProof, {
-				value: ethers.parseEther("0.0001"),
-			});
-			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			await cryptoArtNFT
+				.connect(owner)
+				.updateMerkleRoot(`0x${tree.getRoot().toString("hex")}`);
+
+			// Allow addr1 to mint
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(1, "meteor", validProofForContract, {
+					value: ethers.parseEther("0.1"),
+				});
+
+			const balance = await cryptoArtNFT.balanceOf(addr1.address);
+
+			expect(balance).to.equal(1);
 		});
 
 		it("should not allow whitelisted users to mint with an invalid proof", async function () {
