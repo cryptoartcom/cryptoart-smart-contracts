@@ -1,17 +1,18 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
-async function main() {
+async function main(): Promise<void> {
 	const CryptoArtNFT = await ethers.getContractFactory("CryptoArtNFT");
-	const nft = await CryptoArtNFT.deploy();
 
-	await nft.deployed();
+	const cryptoArtNFT = await upgrades.deployProxy(CryptoArtNFT, {
+		initializer: "initialize",
+	});
 
-	console.log("CryptoArtNFT deployed to:", nft.address);
+	console.log("CryptoArtNFT deployed to:", cryptoArtNFT.address);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-	console.error(error);
-	process.exitCode = 1;
-});
+main()
+	.then(() => process.exit(0))
+	.catch((error: Error) => {
+		console.error(error);
+		process.exit(1);
+	});
