@@ -17,6 +17,7 @@ interface IERC2981 {
 }
 
 contract CryptoArtNFT is
+    IERC4906,
     ERC721URIStorageUpgradeable,
     IERC2981,
     OwnableUpgradeable
@@ -47,6 +48,11 @@ contract CryptoArtNFT is
         royaltyPercentage = 250; // default to 2.5% royalty
     }
 
+    /// @dev See {IERC165-supportsInterface}.
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC721URIStorageUpgradeable) returns (bool) {
+        return interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
+    }
+
     function updateMerkleRoot(bytes32 _merkleRoot) public onlyOwner {
         merkleRoot = _merkleRoot;
     }
@@ -57,6 +63,7 @@ contract CryptoArtNFT is
     ) public onlyOwner {
         _setTokenURI(_tokenId, _newMetadataURI);
         emit URIUpdated(_tokenId, _newMetadataURI);
+        emit MetadataUpdate(_tokenId);
     }
 
     function updateMintPrice(uint256 newPrice) public onlyOwner {
