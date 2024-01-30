@@ -113,12 +113,12 @@ contract CryptoArtNFT is
     function mint(uint256 _tokenId, string memory metadataURI, bytes32[] memory merkleProof) public payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
-        bytes32 node = keccak256(abi.encodePacked(msg.sender, _tokenId));
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, _tokenId))));
 
         if(msg.sender != owner()){
             require(msg.value >= priceToMintNFT, "Not enough Ether to mint NFT.");
             require(whitelist[msg.sender], "Minting is not open or your address is not whitelisted");
-            require(MerkleProof.verify(merkleProof, merkleRoot, node), "Invalid proof");
+            require(MerkleProof.verify(merkleProof, merkleRoot, leaf), "Invalid proof");
         }
 
         _mint(msg.sender, _tokenId);
