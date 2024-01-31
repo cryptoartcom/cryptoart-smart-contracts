@@ -66,26 +66,6 @@ describe("CryptoArtNFT", function () {
 			await cryptoArtNFT.connect(owner).updateMerkleRoot(newMerkleRoot);
 			expect(await cryptoArtNFT.merkleRoot()).to.equal(newMerkleRoot);
 		});
-
-		it("should only allow the owner to whitelist addresses", async function () {
-			const addressesToAdd = [addr1.address, addr2.address];
-			await cryptoArtNFT.connect(owner).addToWhitelist(addressesToAdd);
-			expect(await cryptoArtNFT.whitelist(addr1.address)).to.be.true;
-			expect(await cryptoArtNFT.whitelist(addr2.address)).to.be.true;
-			await expect(cryptoArtNFT.connect(addr1).addToWhitelist(addressesToAdd))
-				.to.be.reverted;
-		});
-
-		it("should only allow the owner to remove addresses from whitelist", async function () {
-			const addressesToRemove = [addr1.address];
-			await cryptoArtNFT.connect(owner).removeFromWhitelist(addressesToRemove);
-			expect(await cryptoArtNFT.whitelist(addr1.address)).to.be.false;
-			await expect(
-				cryptoArtNFT.connect(addr1).removeFromWhitelist(addressesToRemove)
-			).to.be.reverted;
-		});
-
-		// ... more test cases for owner functions ...
 	});
 
 	describe("Non-owner Privileges", function () {
@@ -118,7 +98,7 @@ describe("CryptoArtNFT", function () {
 			expect(isValid).to.equal(true);
 		});
 
-		it("should allow whitelisted users to mint with a valid proof", async function () {
+		it("should allow users to mint with a valid proof", async function () {
 			// Encode and create leaf hashes
 			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
 			const leaf1 = leafHash1;
@@ -141,8 +121,7 @@ describe("CryptoArtNFT", function () {
 				}
 			}
 
-			// Whitelist and update merkle root
-			await cryptoArtNFT.connect(owner).addToWhitelist([addr1.address]);
+			// Update merkle root
 			await cryptoArtNFT.connect(owner).updateMerkleRoot(root);
 
 			// Allow addr1 to mint
@@ -155,12 +134,11 @@ describe("CryptoArtNFT", function () {
 			expect(balance).to.equal(1);
 		});
 
-		it("should not allow whitelisted users to mint with an invalid proof", async function () {
+		it("should not allow users to mint with an invalid proof", async function () {
 			const invalidProof = [
 				"0x0000000000000000000000000000000000000000000000000000000000000000",
 			];
-			// Even though addr2 is whitelisted, an invalid proof prevents minting.
-			await cryptoArtNFT.connect(owner).addToWhitelist([addr2.address]);
+			// An invalid proof prevents minting.
 			await expect(
 				cryptoArtNFT.connect(addr2).mint(1, "metadataURI", invalidProof, {
 					value: ethers.parseEther("0.0001"),
@@ -185,9 +163,7 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT.connect(addr2).mint(1, "metadataURI", validProof, {
 					value: ethers.parseEther("0.0001"),
 				})
-			).to.be.revertedWith(
-				"Minting is not open or your address is not whitelisted"
-			);
+			).to.be.revertedWith("Invalid proof");
 		});
 	});
 });

@@ -57,17 +57,17 @@ contract CryptoArtNFT is
         merkleRoot = _merkleRoot;
     }
 
-    function updateMetadata(
-        uint256 _tokenId,
-        string memory _newMetadataURI
-    ) public onlyOwner {
-        _setTokenURI(_tokenId, _newMetadataURI);
-        emit URIUpdated(_tokenId, _newMetadataURI);
-        emit MetadataUpdate(_tokenId);
-    }
-
     function updateMintPrice(uint256 newPrice) public onlyOwner {
         priceToMintNFT = newPrice;
+    }
+
+    // Royalties
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _salePrice
+    ) external view override returns (address receiver, uint256 royaltyAmount) {
+        royaltyAmount = (_salePrice * royaltyPercentage) / ROYALTY_BASE;
+        return (royaltyReceiver, royaltyAmount);
     }
 
     function updateRoyalties(
@@ -81,42 +81,25 @@ contract CryptoArtNFT is
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
 
-    function royaltyInfo(
-        uint256 _tokenId,
-        uint256 _salePrice
-    ) external view override returns (address receiver, uint256 royaltyAmount) {
-        royaltyAmount = (_salePrice * royaltyPercentage) / ROYALTY_BASE;
-        return (royaltyReceiver, royaltyAmount);
-    }
-
-    // Mapping to handle whitelist
-    mapping(address => bool) public whitelist;
-
-    // Function to add whitelisted addresses
-    // Function to add a set of addresses to whitelist
-    function addToWhitelist(address[] memory _addresses) public onlyOwner {
-        for (uint i = 0; i < _addresses.length; i++) {
-            whitelist[_addresses[i]] = true;
-        }
-    }
-
-    // Function to remove a set of addresses from whitelist
-    function removeFromWhitelist(address[] memory _addresses) public onlyOwner {
-        for (uint i = 0; i < _addresses.length; i++) {
-            whitelist[_addresses[i]] = false;
-        }
-    }
-
-    // metadata
+    // Metadata
     function setBaseURI(string memory newBaseURI) public onlyOwner {
         baseURI = newBaseURI;
+    }
+
+    function updateMetadata(
+        uint256 _tokenId,
+        string memory _newMetadataURI
+    ) public onlyOwner {
+        _setTokenURI(_tokenId, _newMetadataURI);
+        emit URIUpdated(_tokenId, _newMetadataURI);
+        emit MetadataUpdate(_tokenId);
     }
 
     function _baseURI() override internal view virtual returns (string memory) {
         return baseURI;
     }
 
-    // mint
+    // Mint
     function mint(uint256 _tokenId, string memory metadataURI, bytes32[] memory merkleProof) public payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
@@ -124,7 +107,6 @@ contract CryptoArtNFT is
 
         if(msg.sender != owner()){
             require(msg.value >= priceToMintNFT, "Not enough Ether to mint NFT.");
-            require(whitelist[msg.sender], "Minting is not open or your address is not whitelisted");
             require(MerkleProof.verify(merkleProof, merkleRoot, leaf), "Invalid proof");
         }
 
