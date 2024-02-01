@@ -20,7 +20,7 @@ async function main(): Promise<void> {
 
 	try {
 		await contract
-			.connect(accountToMint)
+			.connect(ownerAccount)
 			.updateMetadata(
 				0,
 				"bafkreibelgtnszgsraph3pgrdad2pmk6pi2wa3phu6zh3y3zkbzdme7ejq"
