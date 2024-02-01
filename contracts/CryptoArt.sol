@@ -33,9 +33,7 @@ contract CryptoArtNFT is
 
     // Merkle tree related
     bytes32 public merkleRoot;
-    mapping(uint256 => bool) public claimed;
 
-    event URIUpdated(uint256 indexed tokenId, string newURI);
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
 
     function initialize() public initializer {
@@ -91,7 +89,10 @@ contract CryptoArtNFT is
         string memory _newMetadataURI
     ) public onlyOwner {
         _setTokenURI(_tokenId, _newMetadataURI);
-        emit URIUpdated(_tokenId, _newMetadataURI);
+        triggerMetadataUpdate(_tokenId);
+    }
+
+    function triggerMetadataUpdate(uint256 _tokenId) public onlyOwner {
         emit MetadataUpdate(_tokenId);
     }
 
@@ -111,10 +112,7 @@ contract CryptoArtNFT is
         }
 
         _mint(msg.sender, _tokenId);
-        // _setTokenURI(_tokenId, tokenURI(_tokenId));
-        _setTokenURI(_tokenId, string(abi.encodePacked(baseURI, metadataURI)));
-        claimed[_tokenId] = true;
-        // tokenCounter++;
+        _setTokenURI(_tokenId, metadataURI);
     }
 
     function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {

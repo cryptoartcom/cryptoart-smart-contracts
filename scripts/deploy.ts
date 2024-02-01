@@ -7,7 +7,7 @@ async function main(): Promise<void> {
 		initializer: "initialize",
 	});
 
-	console.log("CryptoArtNFT deployed to:", cryptoArtNFT.address);
+	console.log("CryptoArtNFT deployed to:", cryptoArtNFT.target);
 }
 
 main()

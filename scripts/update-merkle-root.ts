@@ -7,8 +7,8 @@ async function main(): Promise<void> {
 		"sepolia",
 		process.env.INFURA_API_KEY as string
 	);
-	const accountToMint = new ethers.Wallet(
-		process.env.MINT_ACCOUNT_KEY as string,
+	const ownerAccount = new ethers.Wallet(
+		process.env.SEPOLIA_ACCOUNT_KEY as string,
 		provider
 	);
 
@@ -20,15 +20,9 @@ async function main(): Promise<void> {
 
 	try {
 		await contract
-			.connect(accountToMint)
-			.mint(
-				3,
-				"bafkreibelgtnszgsraph3pgrdad2pmk6pi2wa3phu6zh3y3zkbzdme7ejq",
-				[
-					"0x4ac8c14c9c0dcc3180014ef1288354dd7c2cd1d2d3328f82172fd3c6ca838ef2",
-					"0x7fe839be75ab7740b847667ea5a5ee002ea9f00dce4a4a7798bd93ae01ee1638",
-				],
-				{ value: ethers.parseUnits("0.0001", 18) }
+			.connect(ownerAccount)
+			.updateMerkleRoot(
+				"0xac1966dc28e3f7816e147d03b5d40a62212bd55c18ea6ce5e46903cefdb8595b"
 			);
 	} catch (error) {
 		console.log("Failed!!!", error);

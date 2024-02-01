@@ -7,13 +7,13 @@ async function main(): Promise<void> {
 		"sepolia",
 		process.env.INFURA_API_KEY as string
 	);
-	const accountToMint = new ethers.Wallet(
-		process.env.MINT_ACCOUNT_KEY as string,
+	const ownerAccount = new ethers.Wallet(
+		process.env.SEPOLIA_ACCOUNT_KEY as string,
 		provider
 	);
 
 	// Connect to the deployed contract
-	const contractAddress = "0x658B81d9deC39B0CffCC4d987c26159C75cEC5c5"; // Replace with your deployed contract address
+	const contractAddress = "0x8247045ca0E584487AF0FC0EbAfF42c95299529D"; // Replace with your deployed contract address
 	const contract = (await CryptoArtNFTFactory.attach(
 		contractAddress
 	)) as CryptoArtNFT;
@@ -21,14 +21,9 @@ async function main(): Promise<void> {
 	try {
 		await contract
 			.connect(accountToMint)
-			.mint(
-				3,
-				"bafkreibelgtnszgsraph3pgrdad2pmk6pi2wa3phu6zh3y3zkbzdme7ejq",
-				[
-					"0x4ac8c14c9c0dcc3180014ef1288354dd7c2cd1d2d3328f82172fd3c6ca838ef2",
-					"0x7fe839be75ab7740b847667ea5a5ee002ea9f00dce4a4a7798bd93ae01ee1638",
-				],
-				{ value: ethers.parseUnits("0.0001", 18) }
+			.updateMetadata(
+				0,
+				"bafkreibelgtnszgsraph3pgrdad2pmk6pi2wa3phu6zh3y3zkbzdme7ejq"
 			);
 	} catch (error) {
 		console.log("Failed!!!", error);
