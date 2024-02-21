@@ -166,4 +166,37 @@ describe("CryptoArtNFT", function () {
 			).to.be.revertedWith("Invalid proof");
 		});
 	});
+
+	describe("Burning", function () {
+		it("Should allow the token owner to burn a token", async function () {
+			// Mint a new token
+			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
+			const leaf1 = leafHash1;
+			const leaves = [leaf1];
+			const tree = StandardMerkleTree.of(leaves, ["address", "uint256"]);
+			const root = tree.root;
+			let proof: string[] = [];
+			for (const [i, v] of tree.entries()) {
+				if (v[0] === leafHash1[0]) {
+					proof = tree.getProof(i);
+				}
+			}
+			await cryptoArtNFT.connect(owner).updateMerkleRoot(root);
+			await cryptoArtNFT.connect(addr1).mint(1, "meteor", proof, {
+				value: ethers.parseEther("0.1"),
+			});
+
+			// Burn the token
+			await cryptoArtNFT.connect(addr1).burn(1);
+
+			// verify it has been burned by querying balance
+			const balanceAfterBurn = await cryptoArtNFT.balanceOf(addr1.address);
+			expect(balanceAfterBurn).to.equal(0);
+		});
+
+		it("Should not allow non-token owner to burn a token", async function () {
+			// Try to burn token 1 (which doesn't exist for addr2)
+			await expect(cryptoArtNFT.connect(addr2).burn(1)).to.be.reverted; // Expected a revert
+		});
+	});
 });

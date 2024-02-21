@@ -5,6 +5,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URISto
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 using Strings for uint256;
 
@@ -121,5 +123,18 @@ contract CryptoArtNFT is
         } catch {
             return true;
         }
+    }
+
+    // Burn
+    function burn(uint256 tokenId) public virtual {
+      // Only allow the owner to burn their token
+      require(ownerOf(tokenId) == msg.sender || isApprovedForAll(ownerOf(tokenId), msg.sender), "Caller is not owner nor approved");
+      _burn(tokenId);
+    }
+
+    function batchBurn(uint256[] memory tokenIds) public virtual {
+      for (uint i = 0; i < tokenIds.length; i++) {
+          burn(tokenIds[i]);
+      }
     }
 }
