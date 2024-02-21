@@ -36,6 +36,9 @@ contract CryptoArtNFT is
     // Merkle tree related
     bytes32 public merkleRoot;
 
+    // Burn
+    mapping (address => uint256) public burnCount;
+
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
 
     function initialize() public initializer {
@@ -116,6 +119,13 @@ contract CryptoArtNFT is
         _mint(msg.sender, _tokenId);
         _setTokenURI(_tokenId, metadataURI);
     }
+   
+    function mintWithBurns(uint256 _tokenId, string memory metadataURI, bytes32[] memory merkleProof, uint256 burnsToUse) public payable {
+        require(burnCount[msg.sender] >= burnsToUse, "Not enough burns available.");
+
+        mint(_tokenId, metadataURI, merkleProof);
+        burnCount[msg.sender] -= burnsToUse;
+    }
 
     function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
         try this.ownerOf(_tokenId) returns (address _owner) {
@@ -130,6 +140,7 @@ contract CryptoArtNFT is
       // Only allow the owner to burn their token
       require(ownerOf(tokenId) == msg.sender || isApprovedForAll(ownerOf(tokenId), msg.sender), "Caller is not owner nor approved");
       _burn(tokenId);
+      burnCount[_msgSender()] += 1;
     }
 
     function batchBurn(uint256[] memory tokenIds) public virtual {

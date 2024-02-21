@@ -32,6 +32,7 @@ describe("CryptoArtNFT", function () {
 			{ index: 0, account: ethers.getAddress(owner.address), amount: 1 },
 			{ index: 1, account: ethers.getAddress(addr1.address), amount: 1 },
 			{ index: 2, account: ethers.getAddress(addr2.address), amount: 1 },
+			{ index: 3, account: ethers.getAddress(addr1.address), amount: 1 },
 		];
 
 		bufDistributeAmount = mintTokens.map((el) =>
@@ -197,6 +198,133 @@ describe("CryptoArtNFT", function () {
 		it("Should not allow non-token owner to burn a token", async function () {
 			// Try to burn token 1 (which doesn't exist for addr2)
 			await expect(cryptoArtNFT.connect(addr2).burn(1)).to.be.reverted; // Expected a revert
+		});
+
+		it("Should update burnCount after burning a token", async function () {
+			// Mint a new token
+			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
+			const leaf1 = leafHash1;
+			const leaves = [leaf1];
+			const tree = StandardMerkleTree.of(leaves, ["address", "uint256"]);
+			const root = tree.root;
+			let proof: string[] = [];
+			for (const [i, v] of tree.entries()) {
+				if (v[0] === leafHash1[0]) {
+					proof = tree.getProof(i);
+				}
+			}
+
+			await cryptoArtNFT.connect(owner).updateMerkleRoot(root);
+			await cryptoArtNFT.connect(addr1).mint(1, "meteor", proof, {
+				value: ethers.parseEther("0.1"),
+			});
+
+			await cryptoArtNFT.connect(addr1).burn(1);
+
+			// Confirm burn count increased
+			const burnCount = await cryptoArtNFT.burnCount(addr1.address);
+			expect(burnCount).to.equal(1);
+		});
+
+		it("Should update burnCount after batch burning tokens", async function () {
+			// Mint a new token
+			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
+			const leaf1 = leafHash1;
+			const leafHash2 = [mintTokens[2].account, mintTokens[2].index];
+			const leaf2 = leafHash2;
+			const leaves = [leaf1, leaf2];
+			const tree = StandardMerkleTree.of(leaves, ["address", "uint256"]);
+			const root = tree.root;
+			let proof1: string[] = [];
+			let proof2: string[] = [];
+			for (const [i, v] of tree.entries()) {
+				if (v[0] === leafHash1[0]) {
+					proof1 = tree.getProof(i);
+				}
+
+				if (v[0] === leafHash2[0]) {
+					proof2 = tree.getProof(i);
+				}
+			}
+
+			await cryptoArtNFT.connect(owner).updateMerkleRoot(root);
+			await cryptoArtNFT.connect(addr1).mint(1, "meteor", proof1, {
+				value: ethers.parseEther("0.1"),
+			});
+			await cryptoArtNFT.connect(addr1).mint(2, "meteor", proof2, {
+				value: ethers.parseEther("0.1"),
+			});
+
+			await cryptoArtNFT.connect(addr1).batchBurn([1, 2]);
+
+			// Confirm burn count increased by the number of tokens burned
+			const burnCount = await cryptoArtNFT.burnCount(addr1.address);
+			expect(burnCount).to.equal(2);
+		});
+
+		it("Should allow minting with burns and decrease burnCount", async function () {
+			// Mint a new token
+			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
+			const leaf1 = leafHash1;
+			const leafHash3 = [mintTokens[3].account, mintTokens[3].index];
+			const leaf3 = leafHash3;
+			const leaves = [leaf1, leaf3];
+			const tree = StandardMerkleTree.of(leaves, ["address", "uint256"]);
+			const root = tree.root;
+			let proof: string[] = [];
+			for (const [i, v] of tree.entries()) {
+				if (v[0] === leafHash1[0]) {
+					proof = tree.getProof(i);
+				}
+			}
+			await cryptoArtNFT.connect(owner).updateMerkleRoot(root);
+			await cryptoArtNFT.connect(addr1).mint(1, "meteor", proof, {
+				value: ethers.parseEther("0.1"),
+			});
+
+			// Burn the token
+			await cryptoArtNFT.connect(addr1).burn(1);
+			// Confirm burn count decreased
+			const burnCount = await cryptoArtNFT.burnCount(addr1.address);
+			expect(burnCount).to.equal(1);
+
+			for (const [i, v] of tree.entries()) {
+				if (v[0] === leafHash3[0]) {
+					proof = tree.getProof(i);
+				}
+			}
+
+			// Mint with burn used
+			await cryptoArtNFT.connect(addr1).mintWithBurns(3, "meteor2", proof, 1, {
+				value: ethers.parseEther("0.1"),
+			});
+			// Verify new token is minted
+			const newOwner = await cryptoArtNFT.ownerOf(3);
+			expect(newOwner).to.equal(addr1.address);
+		});
+
+		it("Should revert minting with burns when burnCount is less than burns used", async function () {
+			// Mint a new token
+			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
+			const leaf1 = leafHash1;
+			const leaves = [leaf1];
+			const tree = StandardMerkleTree.of(leaves, ["address", "uint256"]);
+			const root = tree.root;
+			let proof: string[] = [];
+			for (const [i, v] of tree.entries()) {
+				if (v[0] === leafHash1[0]) {
+					proof = tree.getProof(i);
+				}
+			}
+
+			await cryptoArtNFT.connect(owner).updateMerkleRoot(root);
+			await cryptoArtNFT.connect(addr1).mint(1, "meteor", proof, {
+				value: ethers.parseEther("0.1"),
+			});
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mintWithBurns(1, "uniqueURI", proof, 1)
+			).to.be.revertedWith("Not enough burns available.");
 		});
 	});
 });
