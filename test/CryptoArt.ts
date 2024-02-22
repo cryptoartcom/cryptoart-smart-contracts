@@ -230,20 +230,20 @@ describe("CryptoArtNFT", function () {
 			// Mint a new token
 			const leafHash1 = [mintTokens[1].account, mintTokens[1].index];
 			const leaf1 = leafHash1;
-			const leafHash2 = [mintTokens[2].account, mintTokens[2].index];
-			const leaf2 = leafHash2;
-			const leaves = [leaf1, leaf2];
+			const leafHash3 = [mintTokens[3].account, mintTokens[3].index];
+			const leaf3 = leafHash3;
+			const leaves = [leaf1, leaf3];
 			const tree = StandardMerkleTree.of(leaves, ["address", "uint256"]);
 			const root = tree.root;
 			let proof1: string[] = [];
-			let proof2: string[] = [];
+			let proof3: string[] = [];
 			for (const [i, v] of tree.entries()) {
-				if (v[0] === leafHash1[0]) {
+				if (v[0] === leafHash1[0] && v[1] === leafHash1[1]) {
 					proof1 = tree.getProof(i);
 				}
 
-				if (v[0] === leafHash2[0]) {
-					proof2 = tree.getProof(i);
+				if (v[0] === leafHash3[0] && v[1] === leafHash3[1]) {
+					proof3 = tree.getProof(i);
 				}
 			}
 
@@ -251,11 +251,11 @@ describe("CryptoArtNFT", function () {
 			await cryptoArtNFT.connect(addr1).mint(1, "meteor", proof1, {
 				value: ethers.parseEther("0.1"),
 			});
-			await cryptoArtNFT.connect(addr1).mint(2, "meteor", proof2, {
+			await cryptoArtNFT.connect(addr1).mint(3, "meteor", proof3, {
 				value: ethers.parseEther("0.1"),
 			});
 
-			await cryptoArtNFT.connect(addr1).batchBurn([1, 2]);
+			await cryptoArtNFT.connect(addr1).batchBurn([1, 3]);
 
 			// Confirm burn count increased by the number of tokens burned
 			const burnCount = await cryptoArtNFT.burnCount(addr1.address);
@@ -273,7 +273,7 @@ describe("CryptoArtNFT", function () {
 			const root = tree.root;
 			let proof: string[] = [];
 			for (const [i, v] of tree.entries()) {
-				if (v[0] === leafHash1[0]) {
+				if (v[0] === leafHash1[0] && v[1] === leafHash1[1]) {
 					proof = tree.getProof(i);
 				}
 			}
@@ -289,7 +289,7 @@ describe("CryptoArtNFT", function () {
 			expect(burnCount).to.equal(1);
 
 			for (const [i, v] of tree.entries()) {
-				if (v[0] === leafHash3[0]) {
+				if (v[0] === leafHash3[0] && v[1] === leafHash3[1]) {
 					proof = tree.getProof(i);
 				}
 			}
