@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 
 using Strings for uint256;
 
@@ -24,7 +25,8 @@ contract CryptoArtNFT is
     IERC4906,
     ERC721URIStorageUpgradeable,
     IERC2981,
-    OwnableUpgradeable
+    OwnableUpgradeable,
+    NoncesUpgradeable
 {
     using ECDSA for bytes32;
 
@@ -165,14 +167,14 @@ contract CryptoArtNFT is
       }
     }
 
-    function _validateAuthorizedMint(address minter, uint256 tokenId, bool isClaimable, bytes memory signature) internal view {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, block.chainid, isClaimable, address(this)));
+    function _validateAuthorizedMint(address minter, uint256 tokenId, bool isClaimable, bytes memory signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, isClaimable, address(this)));
         address signer = _signatureWallet(contentHash, signature);
         require(signer == currentAuthoritySigner(), "Not authorized to mint");
     }
 
-    function _validateAuthorizedBurnableMint(address minter, uint256 tokenId, uint256 burnsToUse, bytes memory signature) internal view {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, block.chainid, burnsToUse, address(this)));
+    function _validateAuthorizedBurnableMint(address minter, uint256 tokenId, uint256 burnsToUse, bytes memory signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter),block.chainid, burnsToUse, address(this)));
         address signer = _signatureWallet(contentHash, signature);
         require(signer == currentAuthoritySigner(), "Not authorized to mint");
     }

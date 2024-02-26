@@ -20,19 +20,20 @@ const _signerAuthorityWallet = new ethers.Wallet(
 );
 
 const getSignatureForMint = async (
-	contractAddress: { target: any },
+	contractAddress: CryptoArtNFT,
 	minter: any,
 	id: any,
 	isClaimable: boolean = false,
 	signer: HardhatEthersSigner | null = null
 ) => {
 	const signerAuthority = signer ?? _signerAuthorityWallet;
+	const nonce = await contractAddress.nonces(minter);
 	const chainId = network.config.chainId;
 	const verifyingContract = contractAddress.target;
 
 	const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-		["address", "uint256", "uint256", "bool", "address"],
-		[minter, id, chainId, isClaimable, verifyingContract]
+		["address", "uint256", "uint256", "uint256", "bool", "address"],
+		[minter, id, nonce, chainId, isClaimable, verifyingContract]
 	);
 
 	const digest = ethers.getBytes(ethers.keccak256(encodedData));
@@ -47,19 +48,20 @@ const getSignatureForMint = async (
 };
 
 const getSignatureForBurnableMint = async (
-	contractAddress: { target: any },
+	contractAddress: CryptoArtNFT,
 	minter: any,
 	id: any,
 	burnsToUse: number,
 	signer: HardhatEthersSigner | null = null
 ) => {
 	const signerAuthority = signer ?? _signerAuthorityWallet;
+	const nonce = await contractAddress.nonces(minter);
 	const chainId = network.config.chainId;
 	const verifyingContract = contractAddress.target;
 
 	const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-		["address", "uint256", "uint256", "uint256", "address"],
-		[minter, id, chainId, burnsToUse, verifyingContract]
+		["address", "uint256", "uint256", "uint256", "uint256", "address"],
+		[minter, id, nonce, chainId, burnsToUse, verifyingContract]
 	);
 
 	const digest = ethers.getBytes(ethers.keccak256(encodedData));
@@ -241,6 +243,29 @@ describe("CryptoArtNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Mint only if token was not burnt", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(id, signature, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.not.be.reverted;
+			await expect(cryptoArtNFT.connect(addr1).burn(id));
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(id, signature, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.be.reverted;
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
+		});
+
 		it("Mint only if enough ETH: valid", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
@@ -273,6 +298,66 @@ describe("CryptoArtNFT", function () {
 			).to.not.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
+		it("Mint after burning using a new signature voucher", async function () {
+			const { signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(_tokenId1, signature, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.not.be.reverted;
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+
+			await cryptoArtNFT.connect(addr1).burn(_tokenId1);
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
+
+			const { signature: newSignaturePostBurn } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(_tokenId1, newSignaturePostBurn, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.not.be.reverted;
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+	});
+
+	describe("Nonce", function () {
+		it("Nonce increment after successful tx", async function () {
+			const nonceBeforeSuccessfullyMint = await cryptoArtNFT.nonces(
+				addr1.address
+			);
+
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(id, signature, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+
+			const nonceAfterSuccessfullyMint = await cryptoArtNFT.nonces(
+				addr1.address
+			);
+			expect(nonceBeforeSuccessfullyMint + 1n).equal(
+				nonceAfterSuccessfullyMint
+			);
 		});
 	});
 
