@@ -219,6 +219,28 @@ describe("CryptoArtNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Mint only if signature was not already used by other token Id", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(id, signature, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.not.be.reverted;
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(_tokenId2, signature, {
+					value: ethers.parseEther("0.1"),
+				})
+			).to.be.revertedWith("Not authorized to mint");
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
 		it("Mint only if enough ETH: valid", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
