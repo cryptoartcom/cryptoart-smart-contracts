@@ -3,7 +3,6 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -54,7 +53,8 @@ contract CryptoArtNFT is
     }
 
     function initialize() public initializer {
-        __ERC721_init("CryptoArtNFT", "CART");
+        __ERC721_init("CryptoArtNFT", "CANFT");
+        __ERC721URIStorage_init();
         __Ownable_init(msg.sender);
 
         priceToMintNFT = 0.0001 ether;
