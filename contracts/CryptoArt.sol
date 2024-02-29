@@ -38,21 +38,12 @@ contract CryptoArtNFT is
     // Burn
     mapping (address => uint256) public burnCount;
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address private immutable _defaultOwner_1;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address private immutable _defaultAuthoritySigner_1;
+    address private _defaultOwner;
+    address private _defaultAuthoritySigner;
 
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address contractOwner_1,
-    address contractAuthoritySigner_1) {
-              _defaultOwner_1 = contractOwner_1;
-        _defaultAuthoritySigner_1 = contractAuthoritySigner_1;
-    }
-
-    function initialize() public initializer {
+    function initialize(address contractOwner, address contractAuthoritySigner) public initializer {
         __ERC721_init("CryptoArtNFT", "CANFT");
         __ERC721URIStorage_init();
         __Ownable_init(msg.sender);
@@ -61,6 +52,9 @@ contract CryptoArtNFT is
         royaltyReceiver = payable(msg.sender); // default to the contract creator
         baseURI = "ipfs://";
         royaltyPercentage = 250; // default to 2.5% royalty
+
+        _defaultOwner = contractOwner;
+        _defaultAuthoritySigner = contractAuthoritySigner;
     }
 
     /// @dev See {IERC165-supportsInterface}.
@@ -183,11 +177,24 @@ contract CryptoArtNFT is
       return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
     }
 
+    // ownership
     function currentAuthoritySigner() public view returns (address){
-        return _defaultAuthoritySigner_1;
+        return _defaultAuthoritySigner;
     }
 
     function owner() public view virtual override returns (address) {
-        return _defaultOwner_1;
+        return _defaultOwner;
+    }
+
+    function updateAuthoritySigner(
+        address newAuthoritySigner
+    ) public onlyOwner {
+        _defaultAuthoritySigner = newAuthoritySigner;
+    }
+
+    function updateOwner(
+        address newOwner
+    ) public onlyOwner {
+        _defaultOwner = newOwner;
     }
 }

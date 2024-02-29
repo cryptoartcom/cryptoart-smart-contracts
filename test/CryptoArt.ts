@@ -8,8 +8,6 @@ import { keccak256 } from "ethereumjs-util";
 
 const _tokenId1 = 1;
 const _tokenId2 = 2;
-const _tokenId3 = 3;
-const _nullAddress = "0x0000000000000000000000000000000000000000";
 const _owner = new ethers.Wallet(
 	process.env.MINT_ACCOUNT_KEY!,
 	ethers.provider
@@ -84,10 +82,13 @@ describe("CryptoArtNFT", function () {
 	beforeEach(async function () {
 		[addr1, addr2, fakeSigner] = await ethers.getSigners();
 		const CryptoArtNFTFactory = await ethers.getContractFactory("CryptoArtNFT");
-		const proxyContract = await upgrades.deployProxy(CryptoArtNFTFactory, {
-			initializer: "initialize",
-			constructorArgs: [_owner.address, _signerAuthorityWallet.address],
-		});
+		const proxyContract = await upgrades.deployProxy(
+			CryptoArtNFTFactory,
+			[_owner.address, _signerAuthorityWallet.address],
+			{
+				initializer: "initialize",
+			}
+		);
 		cryptoArtNFT = proxyContract as unknown as CryptoArtNFT;
 	});
 
