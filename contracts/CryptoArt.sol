@@ -38,8 +38,8 @@ contract CryptoArtNFT is
     // Burn
     mapping (address => uint256) public burnCount;
 
-    address private _defaultOwner;
-    address private _defaultAuthoritySigner;
+    address private _owner;
+    address private _authoritySigner;
 
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
 
@@ -53,8 +53,8 @@ contract CryptoArtNFT is
         baseURI = "ipfs://";
         royaltyPercentage = 250; // default to 2.5% royalty
 
-        _defaultOwner = contractOwner;
-        _defaultAuthoritySigner = contractAuthoritySigner;
+        _owner = contractOwner;
+        _authoritySigner = contractAuthoritySigner;
     }
 
     /// @dev See {IERC165-supportsInterface}.
@@ -179,22 +179,22 @@ contract CryptoArtNFT is
 
     // ownership
     function currentAuthoritySigner() public view returns (address){
-        return _defaultAuthoritySigner;
+        return _authoritySigner;
     }
 
     function owner() public view virtual override returns (address) {
-        return _defaultOwner;
+        return _owner;
     }
 
     function updateAuthoritySigner(
         address newAuthoritySigner
     ) public onlyOwner {
-        _defaultAuthoritySigner = newAuthoritySigner;
+        _authoritySigner = newAuthoritySigner;
     }
 
     function updateOwner(
         address newOwner
     ) public onlyOwner {
-        _defaultOwner = newOwner;
+        _owner = newOwner;
     }
 }
