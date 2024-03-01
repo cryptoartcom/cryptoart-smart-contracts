@@ -46,11 +46,11 @@ contract CryptoArtNFT is
     function initialize(address contractOwner, address contractAuthoritySigner) public initializer {
         __ERC721_init("CryptoArtNFT", "CANFT");
         __ERC721URIStorage_init();
-        __Ownable_init(msg.sender);
+        __Ownable_init(contractOwner);
 
         priceToMintNFT = 0.0001 ether;
-        royaltyReceiver = payable(msg.sender); // default to the contract creator
-        baseURI = "ipfs://";
+        royaltyReceiver = payable(contractOwner); // default to the contract creator
+        baseURI = "https://staging.api.cryptoart.com/metadata/";
         royaltyPercentage = 250; // default to 2.5% royalty
 
         _owner = contractOwner;

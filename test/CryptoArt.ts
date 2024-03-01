@@ -21,7 +21,8 @@ const getSignatureForMint = async (
 	contractAddress: CryptoArtNFT,
 	minter: any,
 	id: any,
-	isClaimable: boolean = false,
+	mintType: "openMint" | "whitelist" | "claimable",
+	priceInWei: bigint,
 	signer: HardhatEthersSigner | null = null
 ) => {
 	const signerAuthority = signer ?? _signerAuthorityWallet;
@@ -30,36 +31,16 @@ const getSignatureForMint = async (
 	const verifyingContract = contractAddress.target;
 
 	const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-		["address", "uint256", "uint256", "uint256", "bool", "address"],
-		[minter, id, nonce, chainId, isClaimable, verifyingContract]
-	);
-
-	const digest = ethers.getBytes(ethers.keccak256(encodedData));
-
-	const signature = await signerAuthority.signMessage(digest);
-
-	return {
-		minter,
-		id,
-		signature,
-	};
-};
-
-const getSignatureForBurnableMint = async (
-	contractAddress: CryptoArtNFT,
-	minter: any,
-	id: any,
-	burnsToUse: number,
-	signer: HardhatEthersSigner | null = null
-) => {
-	const signerAuthority = signer ?? _signerAuthorityWallet;
-	const nonce = await contractAddress.nonces(minter);
-	const chainId = network.config.chainId;
-	const verifyingContract = contractAddress.target;
-
-	const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-		["address", "uint256", "uint256", "uint256", "uint256", "address"],
-		[minter, id, nonce, chainId, burnsToUse, verifyingContract]
+		[
+			"address",
+			"uint256",
+			"string",
+			"uint256",
+			"uint256",
+			"uint256",
+			"address",
+		],
+		[minter, id, mintType, priceInWei, nonce, chainId, verifyingContract]
 	);
 
 	const digest = ethers.getBytes(ethers.keccak256(encodedData));

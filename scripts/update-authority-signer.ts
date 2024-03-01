@@ -13,7 +13,7 @@ async function main(): Promise<void> {
 	);
 
 	// Connect to the deployed contract
-	const contractAddress = "0x11a3b61047A6F82735F6253907414de8ddbf5568"; // Replace with your deployed contract address
+	const contractAddress = "0xa9d573506bE0e7e5712C158fAC1C63A11a225235"; // Replace with your deployed contract address
 	const contract = (await CryptoArtNFTFactory.attach(
 		contractAddress
 	)) as CryptoArtNFT;
@@ -21,11 +21,7 @@ async function main(): Promise<void> {
 	try {
 		await contract
 			.connect(accountToMint)
-			.mint(
-				123,
-				"0x4a1d3c5d543764c6a0d83d8656d2653108dc772b19da9f68528f9813c2e3e4c51d0eab82525ee4cc1ceb597eb134e9d2655a583f51c2632eec6336e00a859e061b",
-				{ value: ethers.parseUnits("0.0001", 18) }
-			);
+			.updateAuthoritySigner("0x1102Fe8E99b366Ef19fa9F49Ef1002B077D2Ff1F");
 	} catch (error) {
 		console.log("Failed!!!", error);
 	}
