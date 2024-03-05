@@ -155,6 +155,13 @@ contract CryptoArtNFT is
       }
     }
 
+    function burnAndMint(uint256[] memory tokenIds, uint256 _tokenId, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) public payable {
+        require(_tokenNotExists(_tokenId), "Token already minted.");
+
+        batchBurn(tokenIds);
+        mintWithBurns(_tokenId, mintType, tokenPrice, burnsToUse, signature);
+    }
+
     function _validateAuthorizedMint(address minter, uint256 tokenId,string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) internal {
         bytes32 contentHash = keccak256(abi.encode(minter, tokenId, mintType, tokenPrice, burnsToUse, _useNonce(minter), block.chainid, address(this)));
         address signer = _signatureWallet(contentHash, signature);
