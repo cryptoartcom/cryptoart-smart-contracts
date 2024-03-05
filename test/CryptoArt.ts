@@ -6,6 +6,14 @@ import { CryptoArtNFT } from "../typechain-types";
 import { AbiCoder } from "ethers";
 import { keccak256 } from "ethereumjs-util";
 
+type mintTypes = "openMint" | "whitelist" | "claimable" | "burn";
+enum MintTypesEnum {
+	OpenMint = "openMint",
+	Whitelist = "whitelist",
+	Claimable = "claimable",
+	Burn = "burn",
+}
+
 const _tokenId1 = 1;
 const _tokenId2 = 2;
 const _owner = new ethers.Wallet(
@@ -16,12 +24,15 @@ const _signerAuthorityWallet = new ethers.Wallet(
 	process.env.MINT_ACCOUNT_KEY!,
 	ethers.provider
 );
+const _priceInWei = ethers.parseEther("0.0001");
 
 const getSignatureForMint = async (
 	contractAddress: CryptoArtNFT,
 	minter: any,
 	id: any,
-	isClaimable: boolean = false,
+	mintType: mintTypes = "openMint",
+	priceInWei: bigint = _priceInWei,
+	burnsToUse: number = 0,
 	signer: HardhatEthersSigner | null = null
 ) => {
 	const signerAuthority = signer ?? _signerAuthorityWallet;
@@ -30,36 +41,26 @@ const getSignatureForMint = async (
 	const verifyingContract = contractAddress.target;
 
 	const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-		["address", "uint256", "uint256", "uint256", "bool", "address"],
-		[minter, id, nonce, chainId, isClaimable, verifyingContract]
-	);
-
-	const digest = ethers.getBytes(ethers.keccak256(encodedData));
-
-	const signature = await signerAuthority.signMessage(digest);
-
-	return {
-		minter,
-		id,
-		signature,
-	};
-};
-
-const getSignatureForBurnableMint = async (
-	contractAddress: CryptoArtNFT,
-	minter: any,
-	id: any,
-	burnsToUse: number,
-	signer: HardhatEthersSigner | null = null
-) => {
-	const signerAuthority = signer ?? _signerAuthorityWallet;
-	const nonce = await contractAddress.nonces(minter);
-	const chainId = network.config.chainId;
-	const verifyingContract = contractAddress.target;
-
-	const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-		["address", "uint256", "uint256", "uint256", "uint256", "address"],
-		[minter, id, nonce, chainId, burnsToUse, verifyingContract]
+		[
+			"address",
+			"uint256",
+			"string",
+			"uint256",
+			"uint256",
+			"uint256",
+			"uint256",
+			"address",
+		],
+		[
+			minter,
+			id,
+			mintType,
+			priceInWei,
+			burnsToUse,
+			nonce,
+			chainId,
+			verifyingContract,
+		]
 	);
 
 	const digest = ethers.getBytes(ethers.keccak256(encodedData));
@@ -126,14 +127,19 @@ describe("CryptoArtNFT", function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
-				_tokenId1
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
 			);
 
 			// Allow addr1 to mint
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -144,43 +150,54 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				false,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0,
 				fakeSigner
 			);
 
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Not authorized to mint");
 		});
 
 		it("Mint only if valid signature: invalid parameters mismatch", async function () {
-			const { id, signature } = await getSignatureForMint(
+			const { signature } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
-				_tokenId1
+				_tokenId1,
+				MintTypesEnum.Claimable
 			);
 
 			// mismatch token
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(_tokenId2, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(_tokenId2, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Not authorized to mint");
 
 			// mismatch wallet
 			await expect(
-				cryptoArtNFT.connect(addr2).mint(_tokenId1, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr2)
+					.mint(_tokenId1, MintTypesEnum.Whitelist, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Not authorized to mint");
 
 			// mismatch token and wallet
 			await expect(
-				cryptoArtNFT.connect(addr2).mint(_tokenId2, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr2)
+					.mint(_tokenId2, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Not authorized to mint");
 		});
 
@@ -189,14 +206,18 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				false,
+				"openMint",
+				_priceInWei,
+				0,
 				fakeSigner
 			);
 
 			await expect(
-				cryptoArtNFT.connect(addr2).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr2)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Not authorized to mint");
 		});
 
@@ -209,14 +230,18 @@ describe("CryptoArtNFT", function () {
 
 			// Allow addr1 to mint
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Token already minted.");
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -231,14 +256,18 @@ describe("CryptoArtNFT", function () {
 
 			// Allow addr1 to mint
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(_tokenId2, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(_tokenId2, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.revertedWith("Not authorized to mint");
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -253,15 +282,19 @@ describe("CryptoArtNFT", function () {
 
 			// Allow addr1 to mint
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 			await expect(cryptoArtNFT.connect(addr1).burn(id));
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
@@ -276,9 +309,11 @@ describe("CryptoArtNFT", function () {
 
 			// Allow addr1 to mint
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -293,9 +328,11 @@ describe("CryptoArtNFT", function () {
 
 			// Allow addr1 to mint
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.01"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.01"),
+					})
 			).to.not.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -309,9 +346,11 @@ describe("CryptoArtNFT", function () {
 			);
 
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(_tokenId1, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(_tokenId1, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 
@@ -325,9 +364,17 @@ describe("CryptoArtNFT", function () {
 			);
 
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(_tokenId1, newSignaturePostBurn, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						_tokenId1,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						newSignaturePostBurn,
+						{
+							value: ethers.parseEther("0.1"),
+						}
+					)
 			).to.not.be.reverted;
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
@@ -346,9 +393,11 @@ describe("CryptoArtNFT", function () {
 			);
 
 			await expect(
-				cryptoArtNFT.connect(addr1).mint(id, signature, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: ethers.parseEther("0.1"),
+					})
 			).to.not.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -370,9 +419,11 @@ describe("CryptoArtNFT", function () {
 				_tokenId1
 			);
 
-			await cryptoArtNFT.connect(addr1).mint(id, signature, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 
 			// Burn the token
@@ -387,9 +438,11 @@ describe("CryptoArtNFT", function () {
 				_tokenId1
 			);
 
-			await cryptoArtNFT.connect(addr1).mint(id, signature, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 
 			// Burn the token
@@ -406,9 +459,11 @@ describe("CryptoArtNFT", function () {
 				_tokenId1
 			);
 
-			await cryptoArtNFT.connect(addr1).mint(id, signature, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 
 			// Burn the token
@@ -420,14 +475,18 @@ describe("CryptoArtNFT", function () {
 		it("Should update burnCount after batch burning tokens", async function () {
 			const { id: idToken1, signature: signatureToken1 } =
 				await getSignatureForMint(cryptoArtNFT, addr1.address, _tokenId1);
-			await cryptoArtNFT.connect(addr1).mint(idToken1, signatureToken1, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(idToken1, MintTypesEnum.OpenMint, _priceInWei, signatureToken1, {
+					value: ethers.parseEther("0.1"),
+				});
 			const { id: idToken2, signature: signatureToken2 } =
 				await getSignatureForMint(cryptoArtNFT, addr1.address, _tokenId2);
-			await cryptoArtNFT.connect(addr1).mint(idToken2, signatureToken2, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(idToken2, MintTypesEnum.OpenMint, _priceInWei, signatureToken2, {
+					value: ethers.parseEther("0.1"),
+				});
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(2);
 
@@ -443,24 +502,36 @@ describe("CryptoArtNFT", function () {
 				addr1.address,
 				_tokenId1
 			);
-			await cryptoArtNFT.connect(addr1).mint(id, signature, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
 
 			// Burn the token
 			await cryptoArtNFT.connect(addr1).burn(id);
 			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(1);
 
-			const { id: idToken2, signature: signature2 } =
-				await getSignatureForBurnableMint(
-					cryptoArtNFT,
-					addr1.address,
-					_tokenId1,
-					1
+			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.Burn,
+				_priceInWei,
+				1
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mintWithBurns(
+					idToken2,
+					MintTypesEnum.Burn,
+					_priceInWei,
+					1,
+					signature2,
+					{
+						value: ethers.parseEther("0.1"),
+					}
 				);
-			await cryptoArtNFT.connect(addr1).mintWithBurns(idToken2, 1, signature2, {
-				value: ethers.parseEther("0.1"),
-			});
 			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(0);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
@@ -469,11 +540,15 @@ describe("CryptoArtNFT", function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
-				_tokenId1
+				_tokenId1,
+				MintTypesEnum.Burn,
+				_priceInWei
 			);
-			await cryptoArtNFT.connect(addr1).mint(id, signature, {
-				value: ethers.parseEther("0.1"),
-			});
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.Burn, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
 
 			// Burn the token
 			await cryptoArtNFT.connect(addr1).burn(id);
@@ -485,9 +560,18 @@ describe("CryptoArtNFT", function () {
 				_tokenId1
 			);
 			await expect(
-				cryptoArtNFT.connect(addr1).mintWithBurns(idToken2, 2, signature2, {
-					value: ethers.parseEther("0.1"),
-				})
+				cryptoArtNFT
+					.connect(addr1)
+					.mintWithBurns(
+						idToken2,
+						MintTypesEnum.Burn,
+						_priceInWei,
+						2,
+						signature2,
+						{
+							value: ethers.parseEther("0.1"),
+						}
+					)
 			).to.be.revertedWith("Not enough burns available.");
 		});
 	});
@@ -498,10 +582,10 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				true
+				MintTypesEnum.Claimable
 			);
 
-			await cryptoArtNFT.connect(addr1).claimable(id, signature);
+			await cryptoArtNFT.connect(addr1).claimable(id, _priceInWei, signature);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
@@ -510,11 +594,11 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				false
+				MintTypesEnum.OpenMint
 			);
 
 			await expect(
-				cryptoArtNFT.connect(addr1).claimable(id, signature)
+				cryptoArtNFT.connect(addr1).claimable(id, _priceInWei, signature)
 			).to.be.revertedWith("Not authorized to mint");
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
 		});
