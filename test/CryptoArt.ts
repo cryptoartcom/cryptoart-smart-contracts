@@ -24,7 +24,7 @@ const _signerAuthorityWallet = new ethers.Wallet(
 	process.env.MINT_ACCOUNT_KEY!,
 	ethers.provider
 );
-const _priceInWei = ethers.parseEther("0.0001");
+const _priceInWei = ethers.parseEther("0.001");
 
 const getSignatureForMint = async (
 	contractAddress: CryptoArtNFT,
@@ -102,26 +102,6 @@ describe("CryptoArtNFT", function () {
 		});
 	});
 
-	// describe("Owner Privileges", function () {
-	// 	it("should allow the owner to update the merkle root", async function () {
-	// 		const newMerkleRoot =
-	// 			"0x1234567890123456789012345678901234567890123456789012345678901234";
-	// 		await cryptoArtNFT.connect(owner).updateMerkleRoot(newMerkleRoot);
-	// 		expect(await cryptoArtNFT.merkleRoot()).to.equal(newMerkleRoot);
-	// 	});
-	// });
-
-	// describe("Non-owner Privileges", function () {
-	// 	it("should not allow non-owners to update the merkle root", async function () {
-	// 		const newMerkleRoot =
-	// 			"0x1234567890123456789012345678901234567890123456789012345678901234";
-	// 		await expect(cryptoArtNFT.connect(addr1).updateMerkleRoot(newMerkleRoot))
-	// 			.to.be.reverted;
-	// 	});
-
-	// 	// ... more test cases for non-owner functions ...
-	// });
-
 	describe("Minting", function () {
 		it("Mint only if valid signature: valid", async function () {
 			const { id, signature } = await getSignatureForMint(
@@ -138,7 +118,7 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT
 					.connect(addr1)
 					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
-						value: ethers.parseEther("0.1"),
+						value: _priceInWei,
 					})
 			).to.not.be.reverted;
 
