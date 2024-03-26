@@ -516,6 +516,44 @@ describe("CryptoArtNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Should allow burn and mint", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
+
+			// Burn the token
+			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId2,
+				MintTypesEnum.Burn,
+				_priceInWei,
+				1
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.burnAndMint(
+					[id],
+					idToken2,
+					MintTypesEnum.Burn,
+					_priceInWei,
+					[id].length,
+					signature2,
+					{
+						value: _priceInWei,
+					}
+				);
+			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(0);
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
 		it("Should revert minting with burns when burnCount is less than burns used", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,

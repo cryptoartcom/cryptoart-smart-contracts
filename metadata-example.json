@@ -1,9 +1,9 @@
 {
-  "name": "Test NFT Name",
-  "description": "A detailed description of your NFT",
+  "name": "NFT Name #01",
+  "description": "First NFT",
   "image": "ipfs://bafybeigf4pl6nsf7cpqsiejilxhdkuhyoq5chfdqbij2ayl5ehhielslxe",
-  "artist": "Name of the Artist",
-  "category": "The Category",
+  "artist": "Artist #1",
+  "category": "Category #1",
   "group_id": "123",
   "img_group_id": "456",
   "attributes": [
