@@ -192,4 +192,14 @@ contract CryptoArtNFT is
     ) public onlyOwner {
         _owner = newOwner;
     }
+
+    // add tests for this
+    function withdraw() public onlyOwner {
+      uint balance = address(this).balance;
+
+      // Always check if the balance is greater than zero to prevent failure in case of a zero balance withdrawal
+      require(balance > 0, "No funds available for withdrawal");
+
+      payable(msg.sender).transfer(balance);
+    }
 }
