@@ -134,6 +134,7 @@ contract CryptoArtNFT is
         _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, burnsToUse, signature);
 
         _mint(msg.sender, _tokenId);
+        emit Minted(_tokenId);
         _setTokenURI(_tokenId, _tokenId.toString());
 
         burnCount[msg.sender] -= burnsToUse;
