@@ -19,6 +19,11 @@ const config: HardhatUserConfig = {
 			url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
 			accounts: SEPOLIA_ACCOUNT_KEY,
 		},
+		hardhat: {
+			accounts: {
+				accountsBalance: "10000000000000000000000", // 10,000 ETH
+			},
+		},
 	},
 	etherscan: {
 		apiKey: {

@@ -41,6 +41,10 @@ contract CryptoArtNFT is
     address private _authoritySigner;
 
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
+    // Define events for NFT lifecycle
+    event Minted(uint256 tokenId);
+    event Claimed(uint256 tokenId);
+    event Burned(uint256 tokenId);
 
     function initialize(address contractOwner, address contractAuthoritySigner) public initializer {
         __ERC721_init("CryptoArtNFT", "CANFT");
@@ -110,6 +114,7 @@ contract CryptoArtNFT is
 
         _mint(msg.sender, _tokenId);
         _setTokenURI(_tokenId, _tokenId.toString());
+        emit Minted(_tokenId);
     }
 
     function claimable(uint256 _tokenId, uint256 tokenPrice, bytes memory signature) public {
@@ -119,6 +124,7 @@ contract CryptoArtNFT is
 
         _mint(msg.sender, _tokenId);
         _setTokenURI(_tokenId, _tokenId.toString());
+        emit Claimed(_tokenId);
     }
 
     function mintWithBurns(uint256 _tokenId, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) public payable {
@@ -146,6 +152,7 @@ contract CryptoArtNFT is
       // Only allow the owner to burn their token
       require(ownerOf(tokenId) == msg.sender || isApprovedForAll(ownerOf(tokenId), msg.sender), "Caller is not owner nor approved");
       _burn(tokenId);
+      emit Burned(tokenId);
       burnCount[_msgSender()] += 1;
     }
 

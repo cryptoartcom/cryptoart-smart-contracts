@@ -93,6 +93,23 @@ describe("CryptoArtNFT", function () {
 		cryptoArtNFT = proxyContract as unknown as CryptoArtNFT;
 	});
 
+	beforeEach(async function () {
+		// Get array of signers
+		const [defaultAccount] = await ethers.getSigners();
+
+		// Send amount of ETH
+		const amount = ethers.parseEther("10"); // Change to desired amount
+
+		// Send transaction from default account (with a lot of ETH) to _owner
+		const tx = await defaultAccount.sendTransaction({
+			to: _owner.address,
+			value: amount,
+		});
+
+		// Wait for the transaction to finish
+		await tx.wait();
+	});
+
 	describe("Deployment", function () {
 		it("Should set the right Owner & Authority Signer", async function () {
 			expect(await cryptoArtNFT.owner()).to.equal(_owner.address);
@@ -123,6 +140,28 @@ describe("CryptoArtNFT", function () {
 			).to.not.be.reverted;
 
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
+		it("Emits a Minted event when minting a token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+						value: _priceInWei,
+					})
+			)
+				.to.emit(cryptoArtNFT, "Minted")
+				.withArgs(id);
 		});
 
 		it("Mint only if valid signature: invalid signer", async function () {
@@ -411,6 +450,26 @@ describe("CryptoArtNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
 		});
 
+		it("Emits a Burned event when burning a token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, _priceInWei, signature, {
+					value: ethers.parseEther("0.1"),
+				});
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+
+			// Burn the token
+			await expect(cryptoArtNFT.connect(addr1).burn(1))
+				.to.emit(cryptoArtNFT, "Burned")
+				.withArgs(1);
+		});
+
 		it("Should not allow non-token owner to burn a token", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
@@ -607,6 +666,21 @@ describe("CryptoArtNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Emits a Claimed event when claiming a token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.Claimable
+			);
+
+			await expect(
+				cryptoArtNFT.connect(addr1).claimable(id, _priceInWei, signature)
+			)
+				.to.emit(cryptoArtNFT, "Claimed")
+				.withArgs(id);
+		});
+
 		it("Should not allow user to claim an unclaimable token", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
@@ -619,6 +693,51 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT.connect(addr1).claimable(id, _priceInWei, signature)
 			).to.be.revertedWith("Not authorized to mint");
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
+		});
+	});
+
+	describe("Withdraw", function () {
+		it("withdraw should transfer all contract balance to the owner", async function () {
+			// Mint to transfer ETH to contract
+			const amount = ethers.parseEther("1");
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				amount,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, amount, signature, {
+					value: amount,
+				});
+
+			// Check current balance
+			const initialOwnerBalance = await ethers.provider.getBalance(
+				_owner.address
+			);
+
+			const tx = await cryptoArtNFT.connect(_owner).withdraw();
+			await tx.wait();
+
+			const finalOwnerBalance = await ethers.provider.getBalance(
+				_owner.address
+			);
+			expect(BigInt(finalOwnerBalance)).to.be.greaterThanOrEqual(
+				initialOwnerBalance
+			);
+		});
+
+		it("withdraw should revert if called by non-owner", async function () {
+			await expect(cryptoArtNFT.connect(addr2).withdraw()).to.be.reverted;
+		});
+
+		it("withdraw should revert if contract has no balance", async function () {
+			await expect(cryptoArtNFT.connect(_owner).withdraw()).to.be.revertedWith(
+				"No funds available for withdrawal"
+			);
 		});
 	});
 });
