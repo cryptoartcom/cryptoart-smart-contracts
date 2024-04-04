@@ -198,10 +198,10 @@ contract CryptoArtNFT is
     function updateOwner(
         address newOwner
     ) public onlyOwner {
+        transferOwnership(newOwner);
         _owner = newOwner;
     }
 
-    // add tests for this
     function withdraw() public onlyOwner {
       uint balance = address(this).balance;
 

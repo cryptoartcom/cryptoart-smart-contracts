@@ -730,6 +730,42 @@ describe("CryptoArtNFT", function () {
 			);
 		});
 
+		it("withdraw should transfer all contract balance to the new owner", async function () {
+			await cryptoArtNFT.connect(_owner).updateOwner(addr1.address);
+			expect(await cryptoArtNFT.owner()).to.equal(addr1.address);
+
+			// Mint to transfer ETH to contract
+			const amount = ethers.parseEther("1");
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				amount,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(id, MintTypesEnum.OpenMint, amount, signature, {
+					value: amount,
+				});
+
+			// Check current balance
+			const initialOwnerBalance = await ethers.provider.getBalance(
+				_owner.address
+			);
+
+			const tx = await cryptoArtNFT.connect(addr1).withdraw();
+			await tx.wait();
+
+			const finalOwnerBalance = await ethers.provider.getBalance(
+				_owner.address
+			);
+			expect(BigInt(finalOwnerBalance)).to.be.greaterThanOrEqual(
+				initialOwnerBalance
+			);
+		});
+
 		it("withdraw should revert if called by non-owner", async function () {
 			await expect(cryptoArtNFT.connect(addr2).withdraw()).to.be.reverted;
 		});

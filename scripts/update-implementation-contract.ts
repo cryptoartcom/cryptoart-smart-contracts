@@ -1,7 +1,8 @@
 import { ethers, upgrades } from "hardhat";
 
 async function main(): Promise<void> {
-	const currentProxy = "0xb7f83160D8b7106516c18b533aaeFe4458E11Cf4";
+	// current TransparentUpgradeableProxy address. Not the proxy itself
+	const currentProxy = "0xF3AB7991ce6Bccb53331fa9CB9aA6599699774F5";
 	const CryptoArtNFT = await ethers.getContractFactory("CryptoArtNFT");
 
 	const cryptoArtNFT = await upgrades.upgradeProxy(currentProxy, CryptoArtNFT);
