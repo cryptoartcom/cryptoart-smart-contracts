@@ -113,7 +113,6 @@ contract CryptoArtNFT is
         _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, 0, signature);
 
         _mint(msg.sender, _tokenId);
-        _setTokenURI(_tokenId, _tokenId.toString());
         emit Minted(_tokenId);
     }
 
@@ -123,7 +122,6 @@ contract CryptoArtNFT is
         _validateAuthorizedMint(msg.sender, _tokenId, 'claimable', tokenPrice, 0, signature);
 
         _mint(msg.sender, _tokenId);
-        _setTokenURI(_tokenId, _tokenId.toString());
         emit Claimed(_tokenId);
     }
 
@@ -135,7 +133,6 @@ contract CryptoArtNFT is
 
         _mint(msg.sender, _tokenId);
         emit Minted(_tokenId);
-        _setTokenURI(_tokenId, _tokenId.toString());
 
         burnCount[msg.sender] -= burnsToUse;
     }
