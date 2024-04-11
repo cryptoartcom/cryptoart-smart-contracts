@@ -138,11 +138,7 @@ contract CryptoArtNFT is
     }
 
     function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
-        try this.ownerOf(_tokenId) returns (address _owner) {
-            return (_owner == address(0));
-        } catch {
-            return true;
-        }
+        return _ownerOf(_tokenId) == address(0);
     }
 
     // Burn
