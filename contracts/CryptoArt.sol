@@ -43,6 +43,7 @@ contract CryptoArtNFT is
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     // Define events for NFT lifecycle
     event Minted(uint256 tokenId);
+    event MintedByBurning(uint256 tokenId);
     event Claimed(uint256 tokenId);
     event Burned(uint256 tokenId);
 
@@ -132,7 +133,7 @@ contract CryptoArtNFT is
         _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, burnsToUse, signature);
 
         _mint(msg.sender, _tokenId);
-        emit Minted(_tokenId);
+        emit MintedByBurning(_tokenId);
 
         burnCount[msg.sender] -= burnsToUse;
     }
