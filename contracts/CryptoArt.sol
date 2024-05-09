@@ -43,9 +43,10 @@ contract CryptoArtNFT is
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     // Define events for NFT lifecycle
     event Minted(uint256 tokenId);
-    event MintedByBurning(uint256 tokenId);
+    event MintedByBurning(uint256 tokenId, uint256[] burnedTokenIds);
     event Claimed(uint256 tokenId);
     event Burned(uint256 tokenId);
+    event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 
     function initialize(address contractOwner, address contractAuthoritySigner) public initializer {
         __ERC721_init("CryptoArtNFT", "CANFT");
@@ -126,16 +127,33 @@ contract CryptoArtNFT is
         emit Claimed(_tokenId);
     }
 
-    function mintWithBurns(uint256 _tokenId, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) public payable {
+    function mintWithBurns(uint256 _tokenId, uint256[] memory burnedTokenIds, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) public payable {
         require(burnCount[msg.sender] >= burnsToUse, "Not enough burns available.");
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
         _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, burnsToUse, signature);
 
         _mint(msg.sender, _tokenId);
-        emit MintedByBurning(_tokenId);
+        emit MintedByBurning(_tokenId, burnedTokenIds);
 
         burnCount[msg.sender] -= burnsToUse;
+    }
+
+    function mintWithTrade(uint256 _mintedTokenId, uint256[] memory tradedTokenIds, string memory mintType, uint256 tokenPrice, bytes memory signature) public payable {
+        require(_tokenNotExists(_mintedTokenId), "Token already minted.");
+        require(tradedTokenIds.length > 0, "No tokens provided for trade");
+
+        // Transfer ownership of the traded tokens to the owner
+        for (uint i = 0; i < tradedTokenIds.length; i++) {
+            uint256 tokenId = tradedTokenIds[i];
+            require(ownerOf(tokenId) == msg.sender, "Sender must own the tokens to trade");
+            _transfer(msg.sender, _owner, tokenId);
+        }
+
+        _validateAuthorizedMint(msg.sender, _mintedTokenId, mintType, tokenPrice, tradedTokenIds.length, signature);
+
+        _mint(msg.sender, _mintedTokenId);
+        emit MintedByTrading(_mintedTokenId, tradedTokenIds);
     }
 
     function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
@@ -161,11 +179,11 @@ contract CryptoArtNFT is
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
         batchBurn(tokenIds);
-        mintWithBurns(_tokenId, mintType, tokenPrice, burnsToUse, signature);
+        mintWithBurns(_tokenId, tokenIds, mintType, tokenPrice, burnsToUse, signature);
     }
 
-    function _validateAuthorizedMint(address minter, uint256 tokenId,string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) internal {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, mintType, tokenPrice, burnsToUse, _useNonce(minter), block.chainid, address(this)));
+    function _validateAuthorizedMint(address minter, uint256 tokenId,string memory mintType, uint256 tokenPrice, uint256 tokenList, bytes memory signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, mintType, tokenPrice, tokenList, _useNonce(minter), block.chainid, address(this)));
         address signer = _signatureWallet(contentHash, signature);
         require(signer == currentAuthoritySigner(), "Not authorized to mint");
     }

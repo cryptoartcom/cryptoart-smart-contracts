@@ -197,7 +197,7 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT
 					.connect(addr1)
 					.mint(_tokenId2, MintTypesEnum.OpenMint, _priceInWei, signature, {
-						value: ethers.parseEther("0.1"),
+						value: _priceInWei,
 					})
 			).to.be.revertedWith("Not authorized to mint");
 
@@ -206,7 +206,7 @@ describe("CryptoArtNFT", function () {
 				cryptoArtNFT
 					.connect(addr2)
 					.mint(_tokenId1, MintTypesEnum.Whitelist, _priceInWei, signature, {
-						value: ethers.parseEther("0.1"),
+						value: _priceInWei,
 					})
 			).to.be.revertedWith("Not authorized to mint");
 
@@ -563,6 +563,7 @@ describe("CryptoArtNFT", function () {
 				.connect(addr1)
 				.mintWithBurns(
 					idToken2,
+					[id],
 					MintTypesEnum.Burn,
 					_priceInWei,
 					1,
@@ -641,6 +642,7 @@ describe("CryptoArtNFT", function () {
 					.connect(addr1)
 					.mintWithBurns(
 						idToken2,
+						[id],
 						MintTypesEnum.Burn,
 						_priceInWei,
 						2,
@@ -650,6 +652,71 @@ describe("CryptoArtNFT", function () {
 						}
 					)
 			).to.be.revertedWith("Not enough burns available.");
+		});
+	});
+
+	describe("MintWithTrade", function () {
+		it("Should trade two tokens and mint a new one", async function () {
+			// Mint initial tokens with signatures
+			const { signature: sig1 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(_tokenId1, MintTypesEnum.OpenMint, _priceInWei, sig1, {
+					value: _priceInWei,
+				});
+
+			const { signature: sig2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId2,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(_tokenId2, MintTypesEnum.OpenMint, _priceInWei, sig2, {
+					value: _priceInWei,
+				});
+
+			// Ensure initial balances
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(2);
+
+			// Get signature for trading the minted tokens for a new token
+			const _newTokenId = 3;
+			const { signature: tradeSignature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_newTokenId,
+				MintTypesEnum.OpenMint,
+				ethers.parseEther("0"),
+				2 // Now indicating number of tokens being traded
+			);
+
+			// Perform the trade and mint new token
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mintWithTrade(
+						_newTokenId,
+						[_tokenId1, _tokenId2],
+						MintTypesEnum.OpenMint,
+						ethers.parseEther("0"),
+						tradeSignature
+					)
+			)
+				.to.emit(cryptoArtNFT, "MintedByTrading")
+				.withArgs(_newTokenId, [_tokenId1, _tokenId2]);
+
+			// Assert final balances
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1); // Now should have only the new token
 		});
 	});
 
