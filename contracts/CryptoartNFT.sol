@@ -20,7 +20,7 @@ interface IERC2981 {
     ) external view returns (address receiver, uint256 royaltyAmount);
 }
 
-contract CryptoArtNFT is
+contract CryptoartNFT is
     IERC4906,
     ERC721URIStorageUpgradeable,
     IERC2981,
@@ -49,7 +49,7 @@ contract CryptoArtNFT is
     event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 
     function initialize(address contractOwner, address contractAuthoritySigner) public initializer {
-        __ERC721_init("CryptoArtNFT", "CANFT");
+        __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __Ownable_init(contractOwner);
 
@@ -144,10 +144,13 @@ contract CryptoArtNFT is
         require(tradedTokenIds.length > 0, "No tokens provided for trade");
 
         // Transfer ownership of the traded tokens to the owner
-        for (uint i = 0; i < tradedTokenIds.length; i++) {
+        uint256 tradedTokensArrayLength = tradedTokenIds.length;
+        for (uint256 i = 0; i < tradedTokensArrayLength; i++) {
+          unchecked {
             uint256 tokenId = tradedTokenIds[i];
             require(ownerOf(tokenId) == msg.sender, "Sender must own the tokens to trade");
             _transfer(msg.sender, _owner, tokenId);
+          }
         }
 
         _validateAuthorizedMint(msg.sender, _mintedTokenId, mintType, tokenPrice, tradedTokenIds.length, signature);
@@ -166,12 +169,17 @@ contract CryptoArtNFT is
       require(ownerOf(tokenId) == msg.sender || isApprovedForAll(ownerOf(tokenId), msg.sender), "Caller is not owner nor approved");
       _burn(tokenId);
       emit Burned(tokenId);
-      burnCount[_msgSender()] += 1;
+      unchecked {
+        burnCount[_msgSender()] += 1;
+      }
     }
 
     function batchBurn(uint256[] memory tokenIds) public virtual {
-      for (uint i = 0; i < tokenIds.length; i++) {
+      uint256 tokensArrayLength = tokenIds.length;
+      for (uint256 i = 0; i < tokensArrayLength; i++) {
+        unchecked {
           burn(tokenIds[i]);
+        }
       }
     }
 
@@ -215,11 +223,12 @@ contract CryptoArtNFT is
     }
 
     function withdraw() public onlyOwner {
-      uint balance = address(this).balance;
+      uint256 balance = address(this).balance;
 
       // Always check if the balance is greater than zero to prevent failure in case of a zero balance withdrawal
       require(balance > 0, "No funds available for withdrawal");
 
-      payable(msg.sender).transfer(balance);
+      (bool success, ) = payable(msg.sender).call{value: balance}("");
+      require(success, "Transfer failed.");
     }
 }

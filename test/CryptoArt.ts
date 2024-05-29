@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades, network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import MerkleTree from "merkletreejs";
-import { CryptoArtNFT } from "../typechain-types";
+import { CryptoartNFT as CryptoArtNFT } from "../typechain-types";
 import { AbiCoder } from "ethers";
 import { keccak256 } from "ethereumjs-util";
 
@@ -74,7 +74,7 @@ const getSignatureForMint = async (
 	};
 };
 
-describe("CryptoArtNFT", function () {
+describe("CryptoartNFT", function () {
 	let cryptoArtNFT: CryptoArtNFT;
 	let addr1: HardhatEthersSigner;
 	let addr2: HardhatEthersSigner;
@@ -82,7 +82,7 @@ describe("CryptoArtNFT", function () {
 
 	beforeEach(async function () {
 		[addr1, addr2, fakeSigner] = await ethers.getSigners();
-		const CryptoArtNFTFactory = await ethers.getContractFactory("CryptoArtNFT");
+		const CryptoArtNFTFactory = await ethers.getContractFactory("CryptoartNFT");
 		const proxyContract = await upgrades.deployProxy(
 			CryptoArtNFTFactory,
 			[_owner.address, _signerAuthorityWallet.address],
