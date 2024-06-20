@@ -782,7 +782,7 @@ describe("CryptoartNFT", function () {
 			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
-				_tokenId1,
+				_tokenId2,
 				MintTypesEnum.Burn,
 				_priceInWei,
 				1
@@ -1201,6 +1201,155 @@ describe("CryptoartNFT", function () {
 				);
 
 			expect(await cryptoArtNFT.tokenURI(id)).to.equal(redeemableTrueURI);
+
+			const tokenUris = (await cryptoArtNFT.tokenURIs(id))[1];
+			expect(tokenUris.length).to.equal(2);
+		});
+
+		it("Should return 2 token URIs on mint by trading", async function () {
+			// Mint initial tokens with signatures
+			const { signature: sig1 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					_tokenId1,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					sig1,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const { signature: sig2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId2,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					_tokenId2,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					sig2,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			// Ensure initial balances
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(2);
+
+			// Get signature for trading the minted tokens for a new token
+			const _newTokenId = 3;
+			const { signature: tradeSignature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_newTokenId,
+				MintTypesEnum.OpenMint,
+				ethers.parseEther("0"),
+				2 // Now indicating number of tokens being traded
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mintWithTrade(
+					_newTokenId,
+					[_tokenId1, _tokenId2],
+					MintTypesEnum.OpenMint,
+					ethers.parseEther("0"),
+					redeemableTrueURI,
+					redeemableFalseURI,
+					tradeSignature
+				);
+
+			const tokenUris = (await cryptoArtNFT.tokenURIs(_newTokenId))[1];
+			expect(tokenUris.length).to.equal(2);
+		});
+
+		it("Should return 2 token URIs on mint by burning", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: ethers.parseEther("0.1"),
+					}
+				);
+
+			// Burn the token
+			await cryptoArtNFT.connect(addr1).burn(id);
+
+			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId2,
+				MintTypesEnum.Burn,
+				_priceInWei,
+				1
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mintWithBurns(
+					idToken2,
+					[id],
+					MintTypesEnum.Burn,
+					_priceInWei,
+					1,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature2,
+					{
+						value: ethers.parseEther("0.1"),
+					}
+				);
+
+			const tokenUris = (await cryptoArtNFT.tokenURIs(idToken2))[1];
+			expect(tokenUris.length).to.equal(2);
+		});
+
+		it("Should return 2 token URIs on claim mint", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.Claimable
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.claimable(
+					id,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature
+				);
 
 			const tokenUris = (await cryptoArtNFT.tokenURIs(id))[1];
 			expect(tokenUris.length).to.equal(2);
