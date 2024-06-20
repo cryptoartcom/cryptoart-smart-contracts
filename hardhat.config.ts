@@ -12,7 +12,28 @@ const SEPOLIA_ACCOUNT_KEY = process.env.SEPOLIA_ACCOUNT_KEY
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
-	solidity: "0.8.20",
+	solidity: {
+		version: "0.8.20",
+		settings: {
+			optimizer: {
+				enabled: true,
+				runs: 200,
+			},
+			viaIR: true,
+		},
+		compilers: [
+			{
+				version: "0.8.20",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 200,
+					},
+					viaIR: true,
+				},
+			},
+		],
+	},
 	defaultNetwork: "hardhat",
 	networks: {
 		sepolia: {

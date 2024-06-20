@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
+import {IERC7160} from "./IERC7160.sol";
 
 using Strings for uint256;
 
@@ -21,6 +22,7 @@ interface IERC2981 {
 }
 
 contract CryptoartNFT is
+    IERC7160,
     IERC4906,
     ERC721URIStorageUpgradeable,
     IERC2981,
@@ -39,6 +41,11 @@ contract CryptoartNFT is
 
     address private _owner;
     address private _authoritySigner;
+
+    // IERC7160
+    mapping(uint256 => string[]) private _tokenURIs;
+    mapping(uint256 => uint256) private _pinnedURIIndices;
+    mapping(uint256 => bool) private _hasPinnedTokenURI;
 
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     // Define events for NFT lifecycle
@@ -108,30 +115,32 @@ contract CryptoartNFT is
     }
 
     // Mint
-    function mint(uint256 _tokenId, string memory mintType, uint256 tokenPrice, bytes memory signature) public payable {
+    function mint(uint256 _tokenId, string memory mintType, uint256 tokenPrice, string memory redeemableTrueURI, string memory redeemableFalseURI, bytes memory signature) public payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
         require(msg.value >= tokenPrice, "Not enough Ether to mint NFT.");
 
-        _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, 0, signature);
-
+        _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, 0, redeemableTrueURI, redeemableFalseURI, signature);
+        
         _mint(msg.sender, _tokenId);
+        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI);
+
         emit Minted(_tokenId);
     }
 
-    function claimable(uint256 _tokenId, uint256 tokenPrice, bytes memory signature) public {
+    function claimable(uint256 _tokenId, uint256 tokenPrice, string memory redeemableTrueURI, string memory redeemableFalseURI, bytes memory signature) public {
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
-        _validateAuthorizedMint(msg.sender, _tokenId, 'claimable', tokenPrice, 0, signature);
+        _validateAuthorizedMint(msg.sender, _tokenId, 'claimable', tokenPrice, 0, redeemableTrueURI, redeemableFalseURI, signature);
 
         _mint(msg.sender, _tokenId);
         emit Claimed(_tokenId);
     }
 
-    function mintWithBurns(uint256 _tokenId, uint256[] memory burnedTokenIds, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) public payable {
+    function mintWithBurns(uint256 _tokenId, uint256[] memory burnedTokenIds, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, string memory redeemableTrueURI, string memory redeemableFalseURI, bytes memory signature) public payable {
         require(burnCount[msg.sender] >= burnsToUse, "Not enough burns available.");
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
-        _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, burnsToUse, signature);
+        _validateAuthorizedMint(msg.sender, _tokenId, mintType, tokenPrice, burnsToUse, redeemableTrueURI, redeemableFalseURI, signature);
 
         _mint(msg.sender, _tokenId);
         emit MintedByBurning(_tokenId, burnedTokenIds);
@@ -139,7 +148,7 @@ contract CryptoartNFT is
         burnCount[msg.sender] -= burnsToUse;
     }
 
-    function mintWithTrade(uint256 _mintedTokenId, uint256[] memory tradedTokenIds, string memory mintType, uint256 tokenPrice, bytes memory signature) public payable {
+    function mintWithTrade(uint256 _mintedTokenId, uint256[] memory tradedTokenIds, string memory mintType, uint256 tokenPrice, string memory redeemableTrueURI, string memory redeemableFalseURI, bytes memory signature) public payable {
         require(_tokenNotExists(_mintedTokenId), "Token already minted.");
         require(tradedTokenIds.length > 0, "No tokens provided for trade");
 
@@ -153,7 +162,7 @@ contract CryptoartNFT is
           }
         }
 
-        _validateAuthorizedMint(msg.sender, _mintedTokenId, mintType, tokenPrice, tradedTokenIds.length, signature);
+        _validateAuthorizedMint(msg.sender, _mintedTokenId, mintType, tokenPrice, tradedTokenIds.length, redeemableTrueURI, redeemableFalseURI, signature);
 
         _mint(msg.sender, _mintedTokenId);
         emit MintedByTrading(_mintedTokenId, tradedTokenIds);
@@ -183,15 +192,15 @@ contract CryptoartNFT is
       }
     }
 
-    function burnAndMint(uint256[] memory tokenIds, uint256 _tokenId, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, bytes memory signature) public payable {
+    function burnAndMint(uint256[] memory tokenIds, uint256 _tokenId, string memory mintType, uint256 tokenPrice, uint256 burnsToUse, string memory redeemableTrueURI, string memory redeemableFalseURI, bytes memory signature) public payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
         batchBurn(tokenIds);
-        mintWithBurns(_tokenId, tokenIds, mintType, tokenPrice, burnsToUse, signature);
+        mintWithBurns(_tokenId, tokenIds, mintType, tokenPrice, burnsToUse, redeemableTrueURI, redeemableFalseURI, signature);
     }
 
-    function _validateAuthorizedMint(address minter, uint256 tokenId,string memory mintType, uint256 tokenPrice, uint256 tokenList, bytes memory signature) internal {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, mintType, tokenPrice, tokenList, _useNonce(minter), block.chainid, address(this)));
+    function _validateAuthorizedMint(address minter, uint256 tokenId, string memory mintType, uint256 tokenPrice, uint256 tokenList, string memory redeemableTrueURI, string memory redeemableFalseURI, bytes memory signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, mintType, tokenPrice, tokenList, redeemableTrueURI, redeemableFalseURI, _useNonce(minter), block.chainid, address(this)));
         address signer = _signatureWallet(contentHash, signature);
         require(signer == currentAuthoritySigner(), "Not authorized to mint");
     }
@@ -230,5 +239,87 @@ contract CryptoartNFT is
 
       (bool success, ) = payable(msg.sender).call{value: balance}("");
       require(success, "Transfer failed.");
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                IERC7160
+    //////////////////////////////////////////////////////////////////////////*/
+    // @notice Returns the pinned URI index or the last token URI index (length - 1).
+    function _getTokenURIIndex(uint256 tokenId) internal view returns (uint256) {
+      return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
+    }
+
+    // @notice Implementation of ERC721.tokenURI for backwards compatibility.
+    // @inheritdoc ERC721.tokenURI
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+      require(!_tokenNotExists(tokenId), "ERC721: URI query for nonexistent token");
+
+      uint256 index = _getTokenURIIndex(tokenId);
+      string[] memory uris = _tokenURIs[tokenId];
+      string memory uri = uris[index];
+
+      // Revert if no URI is found for the token.
+      require(bytes(uri).length > 0, "ERC721: not URI found");
+      return uri;
+    }
+
+    // @inheritdoc IERC721MultiMetadata.tokenURIs
+    function tokenURIs(uint256 tokenId) external view returns (uint256 index, string[] memory uris, bool pinned) {
+      require(!_tokenNotExists(tokenId), "ERC721: URI query for nonexistent token");
+      return (_getTokenURIIndex(tokenId), _tokenURIs[tokenId], _hasPinnedTokenURI[tokenId]);
+    }
+
+    // @inheritdoc IERC721MultiMetadata.pinTokenURI
+    // pin the index-1 URI of the token, which has redeemable attribute on false
+    function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner {
+      require(index == 1, "Only the second URI can be pinned by Contract.");
+
+      _pinnedURIIndices[tokenId] = index;
+      _hasPinnedTokenURI[tokenId] = true;
+      emit TokenUriPinned(tokenId, index);
+      emit MetadataUpdate(tokenId);
+    }
+
+    // holder unpairs the token in order to redeem physically again
+    // pin the first URI of the token, which has redeemable attribute on true
+    function pinRedeemableTrueTokenUri(uint256 tokenId, bytes memory signature) external {
+      require(msg.sender == ownerOf(tokenId), "Unauthorized");
+
+      _validateAuthorizedUnpair(msg.sender, tokenId, signature);
+
+      _pinnedURIIndices[tokenId] = 0;
+      _hasPinnedTokenURI[tokenId] = true;
+      emit TokenUriPinned(tokenId, 0);
+      emit MetadataUpdate(tokenId);
+    }
+
+    // @inheritdoc IERC721MultiMetadata.unpinTokenURI
+    function unpinTokenURI(uint256 tokenId) external pure {
+      return;
+    }
+    
+    // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
+    function hasPinnedTokenURI(uint256 tokenId) external view returns (bool pinned) {
+      return _hasPinnedTokenURI[tokenId];
+    }
+
+    /// @notice Sets base metadata for the token
+    // contract can only set first and second URIs for metadata redeemable on true and false
+    function setUri(uint256 tokenId, string memory redeemableTrueURI, string memory redeemableFalseURI) private {
+      require(_tokenURIs[tokenId].length == 0, "URI already set for token");
+
+      _tokenURIs[tokenId].push(redeemableTrueURI);
+      _tokenURIs[tokenId].push(redeemableFalseURI);
+      _pinnedURIIndices[tokenId] = 0;
+      _hasPinnedTokenURI[tokenId] = true;
+
+      emit TokenUriPinned(tokenId, 0);
+      emit MetadataUpdate(tokenId);
+    }
+
+    function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes memory signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
+        address signer = _signatureWallet(contentHash, signature);
+        require(signer == currentAuthoritySigner(), "Not authorized to unpair");
     }
 }
