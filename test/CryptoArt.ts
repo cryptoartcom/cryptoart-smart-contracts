@@ -1598,4 +1598,220 @@ describe("CryptoartNFT", function () {
 				.withArgs(id);
 		});
 	});
+
+	describe("Story", function () {
+		it("Should add Story to minted token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			expect(await cryptoArtNFT.connect(addr1).addStory(id, "", story))
+				.to.emit(cryptoArtNFT, "Story")
+				.withArgs(id, addr1.address, addr1.address, story);
+		});
+
+		it("Should revert addStory if wallet is not NFT owner", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			await expect(
+				cryptoArtNFT.connect(addr2).addStory(id, "", story)
+			).to.be.revertedWith("Caller is not the owner of the token");
+		});
+
+		it("Should revert addStory if token is not minted", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			await expect(
+				cryptoArtNFT.connect(addr1).addStory(_tokenId2, "", story)
+			).to.be.revertedWith("Token does not exist");
+		});
+
+		it("Should toggle story visibility if token owner", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			await cryptoArtNFT.connect(addr1).addStory(id, "", story);
+
+			expect(
+				await cryptoArtNFT
+					.connect(addr1)
+					.toggleStoryVisibility(id, "123", false)
+			)
+				.to.emit(cryptoArtNFT, "ToggleStoryVisibility")
+				.withArgs(id, "123", false);
+		});
+
+		it("Should toggle story visibility if contract owner", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			await cryptoArtNFT.connect(addr1).addStory(id, "", story);
+
+			expect(
+				await cryptoArtNFT
+					.connect(_owner)
+					.toggleStoryVisibility(id, "123", false)
+			)
+				.to.emit(cryptoArtNFT, "ToggleStoryVisibility")
+				.withArgs(id, "123", false);
+		});
+
+		it("Should revert toggle story visibility if not token owner", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			await cryptoArtNFT.connect(addr1).addStory(id, "", story);
+
+			await expect(
+				cryptoArtNFT.connect(addr2).toggleStoryVisibility(id, "123", false)
+			).to.be.revertedWith("Caller is not the owner of the token");
+		});
+
+		it("Should revert toggle story visibility if token not exists", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a story";
+			await cryptoArtNFT.connect(addr1).addStory(id, "", story);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.toggleStoryVisibility(_tokenId2, "123", false)
+			).to.be.revertedWith("Token does not exist");
+		});
+	});
 });
