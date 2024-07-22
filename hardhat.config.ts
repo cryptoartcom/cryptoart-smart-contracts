@@ -6,7 +6,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const INFURA_API_KEY = process.env.INFURA_API_KEY;
-const SEPOLIA_ACCOUNT_KEY = process.env.SEPOLIA_ACCOUNT_KEY
+const ACCOUNT_KEY = process.env.SEPOLIA_ACCOUNT_KEY
 	? [process.env.SEPOLIA_ACCOUNT_KEY]
 	: [""];
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
@@ -38,7 +38,19 @@ const config: HardhatUserConfig = {
 	networks: {
 		sepolia: {
 			url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
-			accounts: SEPOLIA_ACCOUNT_KEY,
+			accounts: ACCOUNT_KEY,
+		},
+		// for mainnet
+		"base-mainnet": {
+			url: "https://mainnet.base.org",
+			accounts: ACCOUNT_KEY,
+			gasPrice: 1000000000,
+		},
+		// for testnet
+		"base-sepolia": {
+			url: "https://sepolia.base.org",
+			accounts: ACCOUNT_KEY,
+			gasPrice: 1000000000,
 		},
 		hardhat: {
 			accounts: {
@@ -49,7 +61,21 @@ const config: HardhatUserConfig = {
 	etherscan: {
 		apiKey: {
 			sepolia: ETHERSCAN_API_KEY,
+			"base-sepolia": "ZCJVX1CRR1NA1GNCGXXJ9T822YD535SQAX",
+			// "base-sepolia": process.env.BASE_SEPOLIA_BLOCKSCOUT_API_KEY as string,
 		},
+		customChains: [
+			{
+				network: "base-sepolia",
+				chainId: 84532,
+				urls: {
+					apiURL: "https://api-sepolia.basescan.org/api",
+					browserURL: "https://sepolia.basescan.org",
+					// apiURL: "https://base-sepolia.blockscout.com/api",
+					// browserURL: "https://base-sepolia.blockscout.com",
+				},
+			},
+		],
 	},
 };
 
