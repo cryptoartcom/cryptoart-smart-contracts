@@ -146,6 +146,7 @@ contract CryptoartNFT is
         uint256 tokenPrice,
         string memory redeemableTrueURI,
         string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex,
         bytes memory signature
     ) public payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
@@ -159,11 +160,12 @@ contract CryptoartNFT is
             0,
             redeemableTrueURI,
             redeemableFalseURI,
+            redeemableDefaultIndex,
             signature
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI);
+        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
 
         emit Minted(_tokenId);
     }
@@ -173,6 +175,7 @@ contract CryptoartNFT is
         uint256 tokenPrice,
         string memory redeemableTrueURI,
         string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex,
         bytes memory signature
     ) public {
         require(_tokenNotExists(_tokenId), "Token already minted.");
@@ -185,11 +188,12 @@ contract CryptoartNFT is
             0,
             redeemableTrueURI,
             redeemableFalseURI,
+            redeemableDefaultIndex,
             signature
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI);
+        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
 
         emit Claimed(_tokenId);
     }
@@ -202,6 +206,7 @@ contract CryptoartNFT is
         uint256 burnsToUse,
         string memory redeemableTrueURI,
         string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex,
         bytes memory signature
     ) public payable {
         require(
@@ -218,11 +223,12 @@ contract CryptoartNFT is
             burnsToUse,
             redeemableTrueURI,
             redeemableFalseURI,
+            redeemableDefaultIndex,
             signature
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI);
+        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
 
         emit MintedByBurning(_tokenId, burnedTokenIds);
         burnCount[msg.sender] -= burnsToUse;
@@ -235,6 +241,7 @@ contract CryptoartNFT is
         uint256 tokenPrice,
         string memory redeemableTrueURI,
         string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex,
         bytes memory signature
     ) public payable {
         require(_tokenNotExists(_mintedTokenId), "Token already minted.");
@@ -261,11 +268,12 @@ contract CryptoartNFT is
             tradedTokenIds.length,
             redeemableTrueURI,
             redeemableFalseURI,
+            redeemableDefaultIndex,
             signature
         );
 
         _mint(msg.sender, _mintedTokenId);
-        setUri(_mintedTokenId, redeemableTrueURI, redeemableFalseURI);
+        setUri(_mintedTokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
 
         emit MintedByTrading(_mintedTokenId, tradedTokenIds);
     }
@@ -306,6 +314,7 @@ contract CryptoartNFT is
         uint256 burnsToUse,
         string memory redeemableTrueURI,
         string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex,
         bytes memory signature
     ) public payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
@@ -319,6 +328,7 @@ contract CryptoartNFT is
             burnsToUse,
             redeemableTrueURI,
             redeemableFalseURI,
+            redeemableDefaultIndex,
             signature
         );
     }
@@ -331,6 +341,7 @@ contract CryptoartNFT is
         uint256 tokenList,
         string memory redeemableTrueURI,
         string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex,
         bytes memory signature
     ) internal {
         bytes32 contentHash = keccak256(
@@ -342,6 +353,7 @@ contract CryptoartNFT is
                 tokenList,
                 redeemableTrueURI,
                 redeemableFalseURI,
+                redeemableDefaultIndex,
                 _useNonce(minter),
                 block.chainid,
                 address(this)
@@ -483,16 +495,17 @@ contract CryptoartNFT is
     function setUri(
         uint256 tokenId,
         string memory redeemableTrueURI,
-        string memory redeemableFalseURI
+        string memory redeemableFalseURI,
+        uint256 redeemableDefaultIndex
     ) private {
         require(_tokenURIs[tokenId].length == 0, "URI already set for token");
 
         _tokenURIs[tokenId].push(redeemableTrueURI);
         _tokenURIs[tokenId].push(redeemableFalseURI);
-        _pinnedURIIndices[tokenId] = 0;
+        _pinnedURIIndices[tokenId] = redeemableDefaultIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
-        emit TokenUriPinned(tokenId, 0);
+        emit TokenUriPinned(tokenId, redeemableDefaultIndex);
         emit MetadataUpdate(tokenId);
     }
 

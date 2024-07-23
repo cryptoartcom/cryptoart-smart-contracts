@@ -36,7 +36,8 @@ const getSignatureForMint = async (
 	mintType: mintTypes = "openMint",
 	priceInWei: bigint = _priceInWei,
 	burnsToUse: number = 0,
-	signer: HardhatEthersSigner | null = null
+	signer: HardhatEthersSigner | null = null,
+	redeemableIndex: number = 0
 ) => {
 	const signerAuthority = signer ?? _signerAuthorityWallet;
 	const nonce = await contractAddress.nonces(minter);
@@ -54,6 +55,7 @@ const getSignatureForMint = async (
 			"string",
 			"uint256",
 			"uint256",
+			"uint256",
 			"address",
 		],
 		[
@@ -64,6 +66,7 @@ const getSignatureForMint = async (
 			burnsToUse,
 			redeemableTrueURI,
 			redeemableFalseURI,
+			redeemableIndex,
 			nonce,
 			chainId,
 			verifyingContract,
@@ -174,6 +177,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: _priceInWei,
@@ -204,6 +208,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: _priceInWei,
@@ -234,6 +239,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -260,6 +266,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: _priceInWei,
@@ -277,6 +284,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: _priceInWei,
@@ -294,6 +302,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -322,6 +331,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -347,6 +357,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -362,6 +373,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -389,6 +401,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -404,6 +417,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -431,6 +445,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -447,6 +462,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -474,6 +490,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -501,6 +518,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.01"),
@@ -511,6 +529,73 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Mint with redeemability set on true by default", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0,
+				null,
+				0
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			expect(await cryptoArtNFT.tokenURI(id)).to.equal(redeemableTrueURI);
+		});
+
+		it("Mint with redeemability set on false by default", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0,
+				null,
+				1
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						1,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			expect(await cryptoArtNFT.tokenURI(id)).to.equal(redeemableFalseURI);
+		});
 		// it("Mint after burning using a new signature voucher", async function () {
 		// 	const { signature } = await getSignatureForMint(
 		// 		cryptoArtNFT,
@@ -527,7 +612,7 @@ describe("CryptoartNFT", function () {
 		// 				_priceInWei,
 		// 				redeemableTrueURI,
 		// 				redeemableFalseURI,
-		// 				signature,
+		// 				0, signature,
 		// 				{
 		// 					value: ethers.parseEther("0.1"),
 		// 				}
@@ -584,6 +669,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature,
 						{
 							value: ethers.parseEther("0.1"),
@@ -618,6 +704,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -645,6 +732,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -673,6 +761,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -702,6 +791,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -726,6 +816,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signatureToken1,
 					{
 						value: ethers.parseEther("0.1"),
@@ -741,6 +832,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signatureToken2,
 					{
 						value: ethers.parseEther("0.1"),
@@ -769,6 +861,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -797,6 +890,7 @@ describe("CryptoartNFT", function () {
 					1,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature2,
 					{
 						value: ethers.parseEther("0.1"),
@@ -820,6 +914,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -845,6 +940,7 @@ describe("CryptoartNFT", function () {
 					[id].length,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature2,
 					{
 						value: _priceInWei,
@@ -870,6 +966,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -896,6 +993,7 @@ describe("CryptoartNFT", function () {
 						2,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature2,
 						{
 							value: ethers.parseEther("0.1"),
@@ -924,6 +1022,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					sig1,
 					{
 						value: _priceInWei,
@@ -946,6 +1045,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					sig2,
 					{
 						value: _priceInWei,
@@ -977,6 +1077,7 @@ describe("CryptoartNFT", function () {
 						ethers.parseEther("0"),
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						tradeSignature
 					)
 			)
@@ -1004,6 +1105,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature
 				);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
@@ -1025,6 +1127,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature
 					)
 			)
@@ -1048,6 +1151,7 @@ describe("CryptoartNFT", function () {
 						_priceInWei,
 						redeemableTrueURI,
 						redeemableFalseURI,
+						0,
 						signature
 					)
 			).to.be.revertedWith("Not authorized to mint");
@@ -1075,6 +1179,7 @@ describe("CryptoartNFT", function () {
 					amount,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: amount,
@@ -1119,6 +1224,7 @@ describe("CryptoartNFT", function () {
 					amount,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: amount,
@@ -1169,6 +1275,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1194,6 +1301,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1224,6 +1332,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					sig1,
 					{
 						value: _priceInWei,
@@ -1246,6 +1355,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					sig2,
 					{
 						value: _priceInWei,
@@ -1275,6 +1385,7 @@ describe("CryptoartNFT", function () {
 					ethers.parseEther("0"),
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					tradeSignature
 				);
 
@@ -1296,6 +1407,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: ethers.parseEther("0.1"),
@@ -1323,6 +1435,7 @@ describe("CryptoartNFT", function () {
 					1,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature2,
 					{
 						value: ethers.parseEther("0.1"),
@@ -1348,6 +1461,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature
 				);
 
@@ -1371,6 +1485,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1410,6 +1525,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1447,6 +1563,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1484,6 +1601,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1516,6 +1634,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1544,6 +1663,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1579,6 +1699,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1616,6 +1737,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1644,6 +1766,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1672,6 +1795,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1700,6 +1824,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1734,6 +1859,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1768,6 +1894,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
@@ -1798,6 +1925,7 @@ describe("CryptoartNFT", function () {
 					_priceInWei,
 					redeemableTrueURI,
 					redeemableFalseURI,
+					0,
 					signature,
 					{
 						value: _priceInWei,
