@@ -177,8 +177,8 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) public {
-        require(_tokenNotExists(_tokenId), "Token already minted.");
+    ) public payable {
+        require(_tokenNotExists(_tokenId), "Token already minted or claimed.");
 
         _validateAuthorizedMint(
             msg.sender,

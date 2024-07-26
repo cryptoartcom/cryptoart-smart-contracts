@@ -1111,6 +1111,31 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Should allow user to claim a token by paying", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.Claimable,
+				_priceInWei
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.claimable(
+					id,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
 		it("Emits a Claimed event when claiming a token", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
