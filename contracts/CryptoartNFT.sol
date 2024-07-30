@@ -452,9 +452,13 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.pinTokenURI
+    // pin the index-0 URI of the token, which has redeemable attribute on true
     // pin the index-1 URI of the token, which has redeemable attribute on false
     function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner {
-        require(index == 1, "Only the second URI can be pinned by Contract.");
+        require(
+            index < _tokenURIs[tokenId].length,
+            "Index out of bounds for token URI"
+        );
 
         _pinnedURIIndices[tokenId] = index;
         _hasPinnedTokenURI[tokenId] = true;
