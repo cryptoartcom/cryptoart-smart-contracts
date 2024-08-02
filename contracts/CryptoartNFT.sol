@@ -52,6 +52,9 @@ contract CryptoartNFT is
     mapping(uint256 => uint256) private _pinnedURIIndices;
     mapping(uint256 => bool) private _hasPinnedTokenURI;
 
+    // State variable to keep track of total supply
+    uint256 private _totalSupply;
+
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     
     // Define events for NFT lifecycle
@@ -583,4 +586,18 @@ contract CryptoartNFT is
         string calldata creatorName,
         string calldata story
     ) external override {}
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                Supply
+    //////////////////////////////////////////////////////////////////////////*/
+    
+    // Getter for total supply
+    function totalSupply() public view returns (uint256) {
+        return _totalSupply;
+    }
+
+    // Function to set the total supply (onlyOwner)
+    function setTotalSupply(uint256 newTotalSupply) public onlyOwner {
+        _totalSupply = newTotalSupply;
+    }
 }
