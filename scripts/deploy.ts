@@ -14,10 +14,7 @@ async function main(): Promise<void> {
 
 	const cryptoartNFT = await upgrades.deployProxy(
 		CryptoartNFT,
-		[
-			"0x1102Fe8E99b366Ef19fa9F49Ef1002B077D2Ff1F",
-			"0x1102Fe8E99b366Ef19fa9F49Ef1002B077D2Ff1F",
-		],
+		[process.env.WALLET_NUMBER as string, process.env.WALLET_NUMBER as string],
 		{
 			initializer: "initialize",
 		}

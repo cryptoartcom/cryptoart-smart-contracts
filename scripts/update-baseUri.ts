@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { CryptoArtNFT } from "../typechain-types";
+import { CryptoartNFT as CryptoArtNFT } from "../typechain-types";
 
 async function main(): Promise<void> {
 	const CryptoArtNFTFactory = await ethers.getContractFactory("CryptoArtNFT");
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
 	);
 
 	// Connect to the deployed contract
-	const contractAddress = "0x658B81d9deC39B0CffCC4d987c26159C75cEC5c5"; // Replace with your deployed contract address
+	const contractAddress = process.env.CONTRACT as string;
 	const contract = (await CryptoArtNFTFactory.attach(
 		contractAddress
 	)) as CryptoArtNFT;
@@ -21,8 +21,9 @@ async function main(): Promise<void> {
 	try {
 		await contract
 			.connect(ownerAccount)
-			.updateMerkleRoot(
-				"0xac1966dc28e3f7816e147d03b5d40a62212bd55c18ea6ce5e46903cefdb8595b"
+			.updateMetadata(
+				0,
+				"bafkreibelgtnszgsraph3pgrdad2pmk6pi2wa3phu6zh3y3zkbzdme7ejq"
 			);
 	} catch (error) {
 		console.log("Failed!!!", error);

@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { CryptoArtNFT } from "../typechain-types";
+import { CryptoartNFT as CryptoArtNFT } from "../typechain-types";
 
 async function main(): Promise<void> {
 	const CryptoArtNFTFactory = await ethers.getContractFactory("CryptoArtNFT");
@@ -15,9 +15,9 @@ async function main(): Promise<void> {
 	);
 
 	// Address of the recipient account (could be another wallet controlled by you for testing)
-	const recipientAddress = "0x39377075e741823D0fb2f85bc34D539E17af5926"; // Replace with the recipient's address
+	const recipientAddress = process.env.WALLET_NUMBER as string;
 
-	const contractAddress = "0xF3AB7991ce6Bccb53331fa9CB9aA6599699774F5"; // Your deployed contract's address
+	const contractAddress = process.env.CONTRACT as string;
 	const contract = CryptoArtNFTFactory.attach(contractAddress).connect(
 		sellerAccount
 	) as CryptoArtNFT;
