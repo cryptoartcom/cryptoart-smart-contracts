@@ -51,3 +51,23 @@ To use the hardhat commands, a .env file will need to be created which defines:
 - CONTRACT: the contract address
 - ETHERSCAN_API_KEY: the etherscan api key for hardhat
 - BASE_SEPOLIA_ETHERSCAN_API_KEY: the etherscan api key for base sepolia
+
+## Audit prep checklist ([reference](https://diligence.consensys.net/posts/2019/09/how-to-prepare-for-a-smart-contract-audit/))
+
+- [x] Documentation (A plain english description of what you are building, and why you are building it. Should indicate the actions and states that should and should not be possible)
+  - [x] For the overall system
+  - [x] For each unique contract within the system
+- [x] Clean code
+  - [x] Run a linter (like [EthLint](https://www.ethlint.com/))
+  - [x] Fix compiler warnings
+  - [x] Remove TODO and FIXME comments
+  - [x] Delete unused code
+- [x] Testing
+  - [x] README gives clear instructions for running tests
+  - [x] Testing dependencies are packaged with the code OR are listed including versions
+- [ ] Automated Analysis
+  - [ ] Analysis with [MythX](https://mythx.io/)
+  - [ ] [Other tools](https://consensys.github.io/smart-contract-best-practices/security_tools/)
+- [x] Frozen code
+  - [x] Halt development of the contract code
+  - [x] Provide commit hash for the audit to target

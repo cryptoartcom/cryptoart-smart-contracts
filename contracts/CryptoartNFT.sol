@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
@@ -12,6 +12,7 @@ import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import {IERC7160} from "./IERC7160.sol";
 import {IStory} from "./IStory.sol";
 
+/* solium-disable-next-line */
 using Strings for uint256;
 
 // Interface for royalties (EIP-2981)
