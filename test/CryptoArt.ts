@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ethers, upgrades, network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { CryptoartNFT as CryptoArtNFT } from "../typechain-types";
+import { MockReceiver } from "../typechain-types/contracts/MockReceiver";
 
 // mint types
 type mintTypes = "openMint" | "whitelist" | "claimable" | "burn";
@@ -217,6 +218,36 @@ describe("CryptoartNFT", function () {
 			)
 				.to.emit(cryptoArtNFT, "Minted")
 				.withArgs(id);
+		});
+
+		it("Should revert when not enough Ether is sent to mint", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			const insufficientPrice = _priceInWei - 1n;
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: insufficientPrice,
+						}
+					)
+			).to.be.revertedWith("Not enough Ether to mint NFT.");
 		});
 
 		it("Mint only if valid signature: invalid signer", async function () {
@@ -689,6 +720,15 @@ describe("CryptoartNFT", function () {
 			await expect(cryptoArtNFT.connect(addr1).updateRoyalties(_owner, 500)).to
 				.be.reverted;
 		});
+
+		it("Should revert when setting royalty percentage too high", async function () {
+			const tooHighPercentage = 10001; // 100.01%
+			await expect(
+				cryptoArtNFT
+					.connect(_owner)
+					.updateRoyalties(_owner.address, tooHighPercentage)
+			).to.be.revertedWith("Royalty percentage too high");
+		});
 	});
 
 	describe("Metadata", function () {
@@ -722,6 +762,18 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.tokenURI(_tokenId1)).to.equal(
 				newBaseURI + redeemableTrueURI
 			);
+		});
+
+		it("Should revert when non-owner tries to set base URI", async function () {
+			const newBaseURI = "https://example.com/";
+			await expect(cryptoArtNFT.connect(addr1).setBaseURI(newBaseURI)).to.be
+				.reverted;
+		});
+
+		it("Should revert when non-owner tries to trigger metadata update", async function () {
+			const tokenId = 1;
+			await expect(cryptoArtNFT.connect(addr1).triggerMetadataUpdate(tokenId))
+				.to.be.reverted;
 		});
 
 		it("Should update metadata", async function () {
@@ -834,6 +886,173 @@ describe("CryptoartNFT", function () {
 			(
 				await expect(cryptoArtNFT.connect(addr1).setTotalSupply(1000))
 			).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+	});
+
+	describe("mintWithBurns", function () {
+		it("Should revert when trying to mint an already minted token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// First mint
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			// Attempt to mint the same token with burns
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mintWithBurns(
+						id,
+						[],
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						0,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					)
+			).to.be.revertedWith("Token already minted.");
+		});
+	});
+
+	describe("mintWithTrade", function () {
+		it("Should revert when trying to mint an already minted token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// First mint
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			// Attempt to mint the same token with trade
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mintWithTrade(
+						id,
+						[_tokenId2],
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					)
+			).to.be.revertedWith("Token already minted.");
+		});
+
+		it("Should revert when no tokens are provided for trade", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mintWithTrade(
+						id,
+						[],
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					)
+			).to.be.revertedWith("No tokens provided for trade");
+		});
+
+		it("Should revert when sender doesn't own the tokens to trade", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			const { id: id2, signature: signature2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr2.address,
+				_tokenId2,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// Mint a token for addr2
+			await cryptoArtNFT
+				.connect(addr2)
+				.mint(
+					id2,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature2,
+					{ value: _priceInWei }
+				);
+
+			// Attempt to trade with a token owned by addr2
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mintWithTrade(
+						id,
+						[id2],
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					)
+			).to.be.revertedWith("Sender must own the tokens to trade");
 		});
 	});
 
@@ -1150,6 +1369,36 @@ describe("CryptoartNFT", function () {
 					)
 			).to.be.revertedWith("Not enough burns available.");
 		});
+
+		it("Should allow approved address to burn token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			await cryptoArtNFT.connect(addr1).setApprovalForAll(addr2.address, true);
+
+			await expect(cryptoArtNFT.connect(addr2).burn(id))
+				.to.emit(cryptoArtNFT, "Burned")
+				.withArgs(id);
+		});
 	});
 
 	describe("MintWithTrade", function () {
@@ -1331,9 +1580,55 @@ describe("CryptoartNFT", function () {
 			).to.be.revertedWith("Not authorized to mint");
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
 		});
+
+		it("Should revert when trying to claim an already minted token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.Claimable
+			);
+
+			// First claim (should succeed)
+			await cryptoArtNFT
+				.connect(addr1)
+				.claimable(
+					id,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature
+				);
+
+			// Second claim (should fail)
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.claimable(
+						id,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature
+					)
+			).to.be.revertedWith("Token already minted or claimed.");
+		});
 	});
 
 	describe("Withdraw", function () {
+		let mockReceiver: MockReceiver;
+
+		beforeEach(async function () {
+			// Deploy the MockReceiver contract
+			const MockReceiverFactory = await ethers.getContractFactory(
+				"MockReceiver"
+			);
+			mockReceiver = await MockReceiverFactory.deploy();
+			// await mockReceiver.deployed();
+		});
+
 		it("withdraw should transfer all contract balance to the owner", async function () {
 			// Mint to transfer ETH to contract
 			const amount = ethers.parseEther("1");
@@ -1429,6 +1724,63 @@ describe("CryptoartNFT", function () {
 			await expect(cryptoArtNFT.connect(_owner).withdraw()).to.be.revertedWith(
 				"No funds available for withdrawal"
 			);
+		});
+
+		it("Should revert when transfer fails", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.not.be.reverted;
+
+			// Set the owner to the mock receiver
+			const mockReceiverAddress = await mockReceiver.getAddress();
+			await cryptoArtNFT.connect(_owner).updateOwner(mockReceiverAddress);
+
+			// Add funds to the MockReceiver
+			await ethers.provider.send("hardhat_setBalance", [
+				mockReceiverAddress,
+				ethers.toBeHex(ethers.parseEther("10.0")),
+			]);
+
+			// Impersonate the MockReceiver
+			await ethers.provider.send("hardhat_impersonateAccount", [
+				mockReceiverAddress,
+			]);
+			const impersonatedSigner = await ethers.provider.getSigner(
+				mockReceiverAddress
+			);
+
+			// Attempt to withdraw using the impersonated MockReceiver as the new owner
+			await expect(
+				cryptoArtNFT.connect(impersonatedSigner).withdraw()
+			).to.be.revertedWith("Transfer failed.");
+
+			// Stop impersonating the account
+			await ethers.provider.send("hardhat_stopImpersonatingAccount", [
+				mockReceiverAddress,
+			]);
 		});
 	});
 
@@ -2114,6 +2466,499 @@ describe("CryptoartNFT", function () {
 					.connect(addr1)
 					.toggleStoryVisibility(_tokenId2, "123", false)
 			).to.be.revertedWith("Token does not exist");
+		});
+	});
+
+	describe("Creator Story", function () {
+		it("Should add Creator Story to minted token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a creator story";
+			expect(await cryptoArtNFT.connect(addr1).addCreatorStory(id, "", story))
+				.to.emit(cryptoArtNFT, "CreatorStory")
+				.withArgs(id, addr1.address, story);
+		});
+
+		it("Should revert addCreatorStory if caller is not the token owner", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			const story = "This is a creator story";
+			await expect(cryptoArtNFT.connect(addr2).addCreatorStory(id, "", story))
+				.to.be.reverted;
+		});
+	});
+
+	describe("Token URI Pinning", function () {
+		it("Should return correct hasPinnedTokenURI status", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+			expect(await cryptoArtNFT.hasPinnedTokenURI(id)).to.be.false;
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+			expect(await cryptoArtNFT.hasPinnedTokenURI(id)).to.be.true;
+		});
+
+		it("Should unpin token URI", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			expect(await cryptoArtNFT.hasPinnedTokenURI(id)).to.be.true;
+			expect(await cryptoArtNFT.connect(_owner).unpinTokenURI(id))
+				.to.emit(cryptoArtNFT, "TokenUriUnpinned")
+				.withArgs(id);
+			expect(await cryptoArtNFT.hasPinnedTokenURI(id)).to.be.true;
+		});
+
+		it("Should revert unpinTokenURI if caller is not the contract owner", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			await expect(cryptoArtNFT.connect(addr1).unpinTokenURI(id)).to.not.be
+				.reverted;
+		});
+	});
+
+	describe("Authorized Mint Validation", function () {
+		it("Should validate authorized mint", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.not.be.reverted;
+		});
+
+		it("Should revert on unauthorized mint", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr2)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+	});
+
+	describe("Collection Story", function () {
+		it("Should add Collection Story", async function () {
+			const story = "This is a collection story";
+			expect(await cryptoArtNFT.connect(_owner).addCollectionStory("", story))
+				.to.emit(cryptoArtNFT, "CollectionStory")
+				.withArgs(_owner.address, story);
+		});
+
+		it("Should execute addCollectionStory empty", async function () {
+			const story = "This is a collection story";
+			await expect(cryptoArtNFT.connect(addr1).addCollectionStory("", story)).to
+				.not.be.reverted;
+		});
+	});
+
+	describe("Initialization", function () {
+		it("Should initialize with non-zero address", async function () {
+			const CryptoArtNFTFactory = await ethers.getContractFactory(
+				"CryptoartNFT"
+			);
+			const proxyContract = await upgrades.deployProxy(
+				CryptoArtNFTFactory,
+				[_owner.address, _signerAuthorityWallet.address],
+				{
+					initializer: "initialize",
+				}
+			);
+			const nft = proxyContract as unknown as CryptoArtNFT;
+
+			expect(await nft.owner()).to.equal(_owner.address);
+			expect(await nft.currentAuthoritySigner()).to.equal(
+				_signerAuthorityWallet.address
+			);
+		});
+
+		it("Should not initialize with zero address", async function () {
+			const CryptoArtNFTFactory = await ethers.getContractFactory(
+				"CryptoartNFT"
+			);
+
+			await expect(
+				upgrades.deployProxy(
+					CryptoArtNFTFactory,
+					[ethers.ZeroAddress, _signerAuthorityWallet.address],
+					{
+						initializer: "initialize",
+					}
+				)
+			).to.be.reverted;
+		});
+	});
+
+	describe("Authorized Minting", function () {
+		it("Should allow minting with valid signature", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.ownerOf(id)).to.equal(addr1.address);
+		});
+
+		it("Should revert minting with invalid signature", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// Use a different signer to generate an invalid signature
+			const invalidSignature = await fakeSigner.signMessage(
+				ethers.getBytes(signature)
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						invalidSignature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+
+		it("Should revert minting with mismatched parameters", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// Try to mint with a different tokenId
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(
+					_tokenId2, // Different tokenId
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+
+		it("Should revert minting with expired nonce", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// First mint should succeed
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				);
+
+			// Try to mint again with the same signature (nonce should be expired)
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						_tokenId2,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+
+		it("Should revert minting with incorrect mint type", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(
+					id,
+					MintTypesEnum.Whitelist, // Different mint type
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: _priceInWei,
+					}
+				)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+
+		it("Should revert minting with incorrect token price", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			const incorrectPrice = _priceInWei * 2n;
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mint(
+					id,
+					MintTypesEnum.OpenMint,
+					incorrectPrice, // Different price
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: incorrectPrice,
+					}
+				)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+	});
+
+	describe("burnAndMint", function () {
+		it("Should revert when trying to mint an already minted token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// First mint
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			// Attempt to burn and mint the same token
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.burnAndMint(
+						[_tokenId2],
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						1,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					)
+			).to.be.revertedWith("Token already minted.");
+		});
+	});
+
+	describe("updateOwner", function () {
+		it("Should revert when non-owner tries to update owner", async function () {
+			await expect(cryptoArtNFT.connect(addr1).updateOwner(addr2.address)).to.be
+				.reverted;
 		});
 	});
 });

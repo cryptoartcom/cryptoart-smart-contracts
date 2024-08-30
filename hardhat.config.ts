@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
+require("@nomicfoundation/hardhat-foundry");
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -36,10 +37,10 @@ const config: HardhatUserConfig = {
 	},
 	defaultNetwork: "hardhat",
 	networks: {
-		sepolia: {
-			url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
-			accounts: ACCOUNT_KEY,
-		},
+		// sepolia: {
+		// 	url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
+		// 	accounts: ACCOUNT_KEY,
+		// },
 		// for mainnet
 		"base-mainnet": {
 			url: "https://mainnet.base.org",
@@ -53,6 +54,7 @@ const config: HardhatUserConfig = {
 			gasPrice: 1000000000,
 		},
 		hardhat: {
+			allowUnlimitedContractSize: true,
 			accounts: {
 				accountsBalance: "10000000000000000000000", // 10,000 ETH
 			},
