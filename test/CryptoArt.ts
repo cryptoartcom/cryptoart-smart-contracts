@@ -596,56 +596,6 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 			expect(await cryptoArtNFT.tokenURI(id)).to.equal(redeemableFalseURI);
 		});
-		// it("Mint after burning using a new signature voucher", async function () {
-		// 	const { signature } = await getSignatureForMint(
-		// 		cryptoArtNFT,
-		// 		addr1.address,
-		// 		_tokenId1
-		// 	);
-
-		// 	await expect(
-		// 		cryptoArtNFT
-		// 			.connect(addr1)
-		// 			.mint(
-		// 				_tokenId1,
-		// 				MintTypesEnum.OpenMint,
-		// 				_priceInWei,
-		// 				redeemableTrueURI,
-		// 				redeemableFalseURI,
-		// 				0, signature,
-		// 				{
-		// 					value: ethers.parseEther("0.1"),
-		// 				}
-		// 			)
-		// 	).to.not.be.reverted;
-		// 	expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
-
-		// 	await cryptoArtNFT.connect(addr1).burn(_tokenId1);
-		// 	expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
-
-		// 	const { signature: newSignaturePostBurn } = await getSignatureForMint(
-		// 		cryptoArtNFT,
-		// 		addr1.address,
-		// 		_tokenId1
-		// 	);
-
-		// 	await expect(
-		// 		cryptoArtNFT
-		// 			.connect(addr1)
-		// 			.mint(
-		// 				_tokenId1,
-		// 				MintTypesEnum.OpenMint,
-		// 				_priceInWei,
-		// 				redeemableTrueURI,
-		// 				redeemableFalseURI,
-		// 				newSignaturePostBurn,
-		// 				{
-		// 					value: ethers.parseEther("0.1"),
-		// 				}
-		// 			)
-		// 	).to.not.be.reverted;
-		// 	expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
-		// });
 	});
 
 	describe("Nonce", function () {
@@ -685,6 +635,205 @@ describe("CryptoartNFT", function () {
 			expect(nonceBeforeSuccessfullyMint + 1n).equal(
 				nonceAfterSuccessfullyMint
 			);
+		});
+	});
+
+	describe("Interface Support", function () {
+		it("Should support ERC721 interface", async function () {
+			expect(await cryptoArtNFT.supportsInterface("0x80ac58cd")).to.be.true;
+		});
+
+		it("Should support ERC721Metadata interface", async function () {
+			expect(await cryptoArtNFT.supportsInterface("0x5b5e139f")).to.be.true;
+		});
+
+		it("Should support IERC165 interface", async function () {
+			expect(await cryptoArtNFT.supportsInterface("0x49064906")).to.be.true;
+		});
+	});
+
+	describe("Royalties", function () {
+		it("Should return correct royalty info", async function () {
+			const tokenId = 1;
+			const salePrice = ethers.parseEther("1");
+			const [receiver, royaltyAmount] = await cryptoArtNFT.royaltyInfo(
+				tokenId,
+				salePrice
+			);
+			const royaltyPercentage = await cryptoArtNFT.royaltyPercentage();
+
+			expect(receiver).to.equal(_owner.address);
+			expect(royaltyAmount).to.equal((salePrice * royaltyPercentage) / 10000n); // Assuming 2.5% royalty
+		});
+
+		it("Should update royalties", async function () {
+			const newRoyaltyPercentage = 750; // 7.5%
+			await expect(
+				cryptoArtNFT
+					.connect(_owner)
+					.updateRoyalties(_owner, newRoyaltyPercentage)
+			)
+				.to.emit(cryptoArtNFT, "RoyaltiesUpdated")
+				.withArgs(_owner, newRoyaltyPercentage);
+
+			const tokenId = 1;
+			const salePrice = ethers.parseEther("1");
+			const [, royaltyAmount] = await cryptoArtNFT.royaltyInfo(
+				tokenId,
+				salePrice
+			);
+			expect(royaltyAmount).to.equal((salePrice * 75n) / 1000n);
+		});
+
+		it("Should revert when non-owner tries to update royalties", async function () {
+			await expect(cryptoArtNFT.connect(addr1).updateRoyalties(_owner, 500)).to
+				.be.reverted;
+		});
+	});
+
+	describe("Metadata", function () {
+		it("Should set base URI", async function () {
+			const newBaseURI = "https://ipfs.io/ipfs/";
+			await expect(cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)).to.not
+				.be.reverted;
+
+			// Mint a token to test the new base URI
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			expect(await cryptoArtNFT.tokenURI(_tokenId1)).to.equal(
+				newBaseURI + redeemableTrueURI
+			);
+		});
+
+		it("Should update metadata", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.not.be.reverted;
+
+			const tokenId = id;
+			const newURI = redeemableTrueURI;
+			await expect(cryptoArtNFT.connect(_owner).updateMetadata(tokenId, newURI))
+				.to.emit(cryptoArtNFT, "MetadataUpdate")
+				.withArgs(tokenId);
+
+			expect(await cryptoArtNFT.tokenURI(tokenId)).to.equal(newURI);
+		});
+
+		it("Should trigger metadata update", async function () {
+			const tokenId = 1;
+			await expect(cryptoArtNFT.connect(_owner).triggerMetadataUpdate(tokenId))
+				.to.emit(cryptoArtNFT, "MetadataUpdate")
+				.withArgs(tokenId);
+		});
+
+		it("Should revert when non-owner tries to update metadata", async function () {
+			await expect(cryptoArtNFT.connect(addr1).updateMetadata(1, "newURI")).to
+				.be.reverted;
+		});
+	});
+
+	describe("Authority Signer", function () {
+		it("Should update authority signer", async function () {
+			const newSigner = addr1.address;
+			await expect(
+				cryptoArtNFT.connect(_owner).updateAuthoritySigner(newSigner)
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.currentAuthoritySigner()).to.equal(newSigner);
+		});
+
+		it("Should revert when non-owner tries to update authority signer", async function () {
+			(
+				await expect(
+					cryptoArtNFT.connect(addr1).updateAuthoritySigner(addr2.address)
+				)
+			).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+	});
+
+	describe("Total Supply", function () {
+		it("Should return correct total supply", async function () {
+			const initialSupply = await cryptoArtNFT.totalSupply();
+
+			// Mint a token
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			await cryptoArtNFT.connect(_owner).setTotalSupply(1n);
+
+			const newSupply = await cryptoArtNFT.totalSupply();
+			expect(newSupply).to.equal(initialSupply + 1n);
+		});
+
+		it("Should set total supply", async function () {
+			const newSupply = 1000n;
+			await expect(cryptoArtNFT.connect(_owner).setTotalSupply(newSupply)).to
+				.not.be.reverted;
+
+			expect(await cryptoArtNFT.totalSupply()).to.equal(newSupply);
+		});
+
+		it("Should revert when non-owner tries to set total supply", async function () {
+			(
+				await expect(cryptoArtNFT.connect(addr1).setTotalSupply(1000))
+			).to.be.revertedWith("Ownable: caller is not the owner");
 		});
 	});
 
