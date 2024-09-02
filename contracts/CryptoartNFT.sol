@@ -45,7 +45,6 @@ contract CryptoartNFT is
     // Burn
     mapping(address => uint256) public burnCount;
 
-    address private _owner;
     address private _authoritySigner;
 
     // IERC7160
@@ -83,7 +82,7 @@ contract CryptoartNFT is
         baseURI = "";
         royaltyPercentage = 250; // default to 2.5% royalty
 
-        _owner = contractOwner;
+        transferOwnership(contractOwner); // Ownable's transferOwnership
         _authoritySigner = contractAuthoritySigner;
     }
 
@@ -260,7 +259,7 @@ contract CryptoartNFT is
                     ownerOf(tokenId) == msg.sender,
                     "Sender must own the tokens to trade"
                 );
-                _transfer(msg.sender, _owner, tokenId);
+                _transfer(msg.sender, owner(), tokenId);
             }
         }
 
@@ -383,10 +382,6 @@ contract CryptoartNFT is
         return _authoritySigner;
     }
 
-    function owner() public view virtual override returns (address) {
-        return _owner;
-    }
-
     function updateAuthoritySigner(
         address newAuthoritySigner
     ) public onlyOwner {
@@ -395,7 +390,6 @@ contract CryptoartNFT is
 
     function updateOwner(address newOwner) public onlyOwner {
         transferOwnership(newOwner);
-        _owner = newOwner;
     }
 
     function withdraw() public onlyOwner {

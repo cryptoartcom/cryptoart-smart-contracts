@@ -13,12 +13,6 @@ enum MintTypesEnum {
 	Burn = "burn",
 }
 
-// token data
-const _tokenId1 = 1;
-const _tokenId2 = 2;
-const redeemableTrueURI = "https://ipfs.io/ipfs/QmZ";
-const redeemableFalseURI = "https://ipfs.io/ipfs/QmY";
-
 // wallets
 const _owner = new ethers.Wallet(
 	process.env.MINT_ACCOUNT_KEY!,
@@ -28,6 +22,12 @@ const _signerAuthorityWallet = new ethers.Wallet(
 	process.env.MINT_ACCOUNT_KEY!,
 	ethers.provider
 );
+// token data
+const _tokenId1 = 1;
+const _tokenId2 = 2;
+const redeemableTrueURI = "https://ipfs.io/ipfs/QmZ";
+const redeemableFalseURI = "https://ipfs.io/ipfs/QmY";
+
 const _priceInWei = ethers.parseEther("0.001");
 
 const getSignatureForMint = async (
@@ -114,13 +114,30 @@ const getSignatureForUnpair = async (
 
 describe("CryptoartNFT", function () {
 	let cryptoArtNFT: CryptoArtNFT;
+	let defaultFundingAccount: HardhatEthersSigner;
 	let addr1: HardhatEthersSigner;
 	let addr2: HardhatEthersSigner;
 	let fakeSigner: HardhatEthersSigner;
 
 	beforeEach(async function () {
-		[addr1, addr2, fakeSigner] = await ethers.getSigners();
-		const CryptoArtNFTFactory = await ethers.getContractFactory("CryptoartNFT");
+		[defaultFundingAccount, addr1, addr2, fakeSigner] =
+			await ethers.getSigners();
+		const amount = ethers.parseEther("10");
+
+		await defaultFundingAccount.sendTransaction({
+			to: _owner.address,
+			value: amount,
+		});
+
+		await defaultFundingAccount.sendTransaction({
+			to: _signerAuthorityWallet.address,
+			value: amount,
+		});
+
+		const CryptoArtNFTFactory = await ethers.getContractFactory(
+			"CryptoartNFT",
+			_owner
+		);
 		const proxyContract = await upgrades.deployProxy(
 			CryptoArtNFTFactory,
 			[_owner.address, _signerAuthorityWallet.address],
@@ -2685,7 +2702,8 @@ describe("CryptoartNFT", function () {
 	describe("Initialization", function () {
 		it("Should initialize with non-zero address", async function () {
 			const CryptoArtNFTFactory = await ethers.getContractFactory(
-				"CryptoartNFT"
+				"CryptoartNFT",
+				_owner
 			);
 			const proxyContract = await upgrades.deployProxy(
 				CryptoArtNFTFactory,
