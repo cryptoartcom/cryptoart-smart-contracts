@@ -45,6 +45,7 @@ contract CryptoartNFT is
     // Burn
     mapping(address => uint256) public burnCount;
 
+    address private __gap; // Gap to maintain storage layout
     address private _authoritySigner;
 
     // IERC7160
