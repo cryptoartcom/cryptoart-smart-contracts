@@ -6,7 +6,6 @@ require("@nomicfoundation/hardhat-foundry");
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const INFURA_API_KEY = process.env.INFURA_API_KEY;
 const ACCOUNT_KEY = process.env.SEPOLIA_ACCOUNT_KEY
 	? [process.env.SEPOLIA_ACCOUNT_KEY]
 	: [""];
