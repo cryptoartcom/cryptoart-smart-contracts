@@ -206,6 +206,35 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Should revert on tampered metadata URIs", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				0
+			);
+
+			// Allow addr1 to mint
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						`${redeemableFalseURI}/tampered`,
+						0,
+						signature,
+						{
+							value: _priceInWei,
+						}
+					)
+			).to.be.revertedWith("Not authorized to mint");
+		});
+
 		it("Emits a Minted event when minting a token", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
