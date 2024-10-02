@@ -84,7 +84,6 @@ contract CryptoartNFT is
         baseURI = "";
         royaltyPercentage = 250; // default to 2.5% royalty
 
-        transferOwnership(contractOwner); // Ownable's transferOwnership
         _authoritySigner = contractAuthoritySigner;
     }
 
