@@ -74,7 +74,7 @@ contract CryptoartNFT is
     function initialize(
         address contractOwner,
         address contractAuthoritySigner
-    ) public initializer {
+    ) external initializer {
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __Ownable_init(contractOwner);
@@ -115,7 +115,7 @@ contract CryptoartNFT is
     function updateRoyalties(
         address payable newReceiver,
         uint256 newPercentage
-    ) public onlyOwner {
+    ) external onlyOwner {
         require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
         royaltyReceiver = newReceiver;
         royaltyPercentage = newPercentage;
@@ -124,14 +124,14 @@ contract CryptoartNFT is
     }
 
     // Metadata
-    function setBaseURI(string memory newBaseURI) public onlyOwner {
+    function setBaseURI(string memory newBaseURI) external onlyOwner {
         baseURI = newBaseURI;
     }
 
     function updateMetadata(
         uint256 _tokenId,
         string memory _newMetadataURI
-    ) public onlyOwner {
+    ) external onlyOwner {
         _setTokenURI(_tokenId, _newMetadataURI);
         triggerMetadataUpdate(_tokenId);
     }
@@ -153,7 +153,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) public payable {
+    ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
         require(msg.value >= tokenPrice, "Not enough Ether to mint NFT.");
 
@@ -182,7 +182,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) public payable {
+    ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted or claimed.");
 
         _validateAuthorizedMint(
@@ -248,7 +248,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) public payable {
+    ) external payable {
         require(_tokenNotExists(_mintedTokenId), "Token already minted.");
         require(tradedTokenIds.length > 0, "No tokens provided for trade");
 
@@ -319,7 +319,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) public payable {
+    ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
 
         batchBurn(tokenIds);
@@ -379,11 +379,11 @@ contract CryptoartNFT is
 
     function updateAuthoritySigner(
         address newAuthoritySigner
-    ) public onlyOwner {
+    ) external onlyOwner {
         _authoritySigner = newAuthoritySigner;
     }
 
-    function withdraw() public onlyOwner {
+    function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
 
         // Always check if the balance is greater than zero to prevent failure in case of a zero balance withdrawal
@@ -578,12 +578,12 @@ contract CryptoartNFT is
     //////////////////////////////////////////////////////////////////////////*/
     
     // Getter for total supply
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return _totalSupply;
     }
 
     // Function to set the total supply (onlyOwner)
-    function setTotalSupply(uint256 newTotalSupply) public onlyOwner {
+    function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
         _totalSupply = newTotalSupply;
     }
 }
