@@ -168,7 +168,7 @@ describe("CryptoartNFT", function () {
 	describe("Deployment", function () {
 		it("Should set the right Owner & Authority Signer", async function () {
 			expect(await cryptoArtNFT.owner()).to.equal(_owner.address);
-			expect(await cryptoArtNFT.currentAuthoritySigner()).to.equals(
+			expect(await cryptoArtNFT._authoritySigner()).to.equals(
 				_signerAuthorityWallet.address
 			);
 		});
@@ -849,7 +849,7 @@ describe("CryptoartNFT", function () {
 				cryptoArtNFT.connect(_owner).updateAuthoritySigner(newSigner)
 			).to.not.be.reverted;
 
-			expect(await cryptoArtNFT.currentAuthoritySigner()).to.equal(newSigner);
+			expect(await cryptoArtNFT._authoritySigner()).to.equal(newSigner);
 		});
 
 		it("Should revert when non-owner tries to update authority signer", async function () {
@@ -1689,7 +1689,7 @@ describe("CryptoartNFT", function () {
 		});
 
 		it("withdraw should transfer all contract balance to the new owner", async function () {
-			await cryptoArtNFT.connect(_owner).updateOwner(addr1.address);
+			await cryptoArtNFT.connect(_owner).transferOwnership(addr1.address);
 			expect(await cryptoArtNFT.owner()).to.equal(addr1.address);
 
 			// Mint to transfer ETH to contract
@@ -1773,7 +1773,7 @@ describe("CryptoartNFT", function () {
 
 			// Set the owner to the mock receiver
 			const mockReceiverAddress = await mockReceiver.getAddress();
-			await cryptoArtNFT.connect(_owner).updateOwner(mockReceiverAddress);
+			await cryptoArtNFT.connect(_owner).transferOwnership(mockReceiverAddress);
 
 			// Add funds to the MockReceiver
 			await ethers.provider.send("hardhat_setBalance", [
@@ -2715,7 +2715,7 @@ describe("CryptoartNFT", function () {
 			const nft = proxyContract as unknown as CryptoArtNFT;
 
 			expect(await nft.owner()).to.equal(_owner.address);
-			expect(await nft.currentAuthoritySigner()).to.equal(
+			expect(await nft._authoritySigner()).to.equal(
 				_signerAuthorityWallet.address
 			);
 		});
@@ -2975,8 +2975,8 @@ describe("CryptoartNFT", function () {
 
 	describe("updateOwner", function () {
 		it("Should revert when non-owner tries to update owner", async function () {
-			await expect(cryptoArtNFT.connect(addr1).updateOwner(addr2.address)).to.be
-				.reverted;
+			await expect(cryptoArtNFT.connect(addr1).transferOwnership(addr2.address))
+				.to.be.reverted;
 		});
 	});
 });

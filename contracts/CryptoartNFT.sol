@@ -46,7 +46,7 @@ contract CryptoartNFT is
     mapping(address => uint256) public burnCount;
 
     address private __gap; // Gap to maintain storage layout
-    address private _authoritySigner;
+    address public _authoritySigner;
 
     // IERC7160
     mapping(uint256 => string[]) private _tokenURIs;
@@ -78,6 +78,7 @@ contract CryptoartNFT is
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __Ownable_init(contractOwner);
+        __Nonces_init();
 
         royaltyReceiver = payable(contractOwner); // default to the contract creator
         baseURI = "";
@@ -104,7 +105,7 @@ contract CryptoartNFT is
 
     // Royalties
     function royaltyInfo(
-        uint256 _tokenId,
+        uint256,
         uint256 _salePrice
     ) external view override returns (address receiver, uint256 royaltyAmount) {
         royaltyAmount = (_salePrice * royaltyPercentage) / ROYALTY_BASE;
@@ -304,9 +305,7 @@ contract CryptoartNFT is
     function batchBurn(uint256[] memory tokenIds) public virtual {
         uint256 tokensArrayLength = tokenIds.length;
         for (uint256 i = 0; i < tokensArrayLength; i++) {
-            unchecked {
-                burn(tokenIds[i]);
-            }
+          burn(tokenIds[i]);
         }
     }
 
@@ -364,7 +363,7 @@ contract CryptoartNFT is
             )
         );
         address signer = _signatureWallet(contentHash, signature);
-        require(signer == currentAuthoritySigner(), "Not authorized to mint");
+        require(signer == _authoritySigner, "Not authorized to mint");
     }
 
     function _signatureWallet(
@@ -378,19 +377,10 @@ contract CryptoartNFT is
             );
     }
 
-    // ownership
-    function currentAuthoritySigner() public view returns (address) {
-        return _authoritySigner;
-    }
-
     function updateAuthoritySigner(
         address newAuthoritySigner
     ) public onlyOwner {
         _authoritySigner = newAuthoritySigner;
-    }
-
-    function updateOwner(address newOwner) public onlyOwner {
-        transferOwnership(newOwner);
     }
 
     function withdraw() public onlyOwner {
@@ -482,7 +472,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.unpinTokenURI
-    function unpinTokenURI(uint256 tokenId) external pure {
+    function unpinTokenURI(uint256) external pure {
         return;
     }
 
@@ -527,7 +517,7 @@ contract CryptoartNFT is
             )
         );
         address signer = _signatureWallet(contentHash, signature);
-        require(signer == currentAuthoritySigner(), "Not authorized to unpair");
+        require(signer == _authoritySigner, "Not authorized to unpair");
     }
 
     /*//////////////////////////////////////////////////////////////////////////
