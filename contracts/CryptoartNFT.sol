@@ -43,7 +43,7 @@ contract CryptoartNFT is
     // metadata
     string public baseURI;
     // Burn
-    mapping(address => uint256) public burnCount;
+    mapping(address => uint256) public __burn_gap;
 
     address private __gap; // Gap to maintain storage layout
     address public _authoritySigner;
@@ -202,42 +202,6 @@ contract CryptoartNFT is
         emit Claimed(_tokenId);
     }
 
-    function mintWithBurns(
-        uint256 _tokenId,
-        uint256[] memory burnedTokenIds,
-        string memory mintType,
-        uint256 tokenPrice,
-        uint256 burnsToUse,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
-        uint256 redeemableDefaultIndex,
-        bytes memory signature
-    ) public payable {
-        require(
-            burnCount[msg.sender] >= burnsToUse,
-            "Not enough burns available."
-        );
-        require(_tokenNotExists(_tokenId), "Token already minted.");
-
-        _validateAuthorizedMint(
-            msg.sender,
-            _tokenId,
-            mintType,
-            tokenPrice,
-            burnsToUse,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex,
-            signature
-        );
-
-        _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
-
-        emit MintedByBurning(_tokenId, burnedTokenIds);
-        burnCount[msg.sender] -= burnsToUse;
-    }
-
     function mintWithTrade(
         uint256 _mintedTokenId,
         uint256[] memory tradedTokenIds,
@@ -290,15 +254,11 @@ contract CryptoartNFT is
     function burn(uint256 tokenId) public virtual {
         // Only allow the owner to burn their token
         require(
-            ownerOf(tokenId) == msg.sender ||
-                isApprovedForAll(ownerOf(tokenId), msg.sender),
-            "Caller is not owner nor approved"
+            ownerOf(tokenId) == msg.sender,
+            "Caller is not owner of the token"
         );
         _burn(tokenId);
         emit Burned(tokenId);
-        unchecked {
-            burnCount[_msgSender()] += 1;
-        }
     }
 
     function batchBurn(uint256[] memory tokenIds) public virtual {
@@ -308,6 +268,7 @@ contract CryptoartNFT is
         }
     }
 
+    // Connect wallet and mint tokens by burning others first
     function burnAndMint(
         uint256[] memory tokenIds,
         uint256 _tokenId,
@@ -320,11 +281,16 @@ contract CryptoartNFT is
         bytes memory signature
     ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
+        require(
+          tokenIds.length == burnsToUse,
+          "Not enough tokens to burn."
+        );
 
         batchBurn(tokenIds);
-        mintWithBurns(
+
+        _validateAuthorizedMint(
+            msg.sender,
             _tokenId,
-            tokenIds,
             mintType,
             tokenPrice,
             burnsToUse,
@@ -333,6 +299,11 @@ contract CryptoartNFT is
             redeemableDefaultIndex,
             signature
         );
+
+        _mint(msg.sender, _tokenId);
+        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+
+        emit MintedByBurning(_tokenId, tokenIds);
     }
 
     function _validateAuthorizedMint(

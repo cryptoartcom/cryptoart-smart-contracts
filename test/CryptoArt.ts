@@ -935,51 +935,6 @@ describe("CryptoartNFT", function () {
 		});
 	});
 
-	describe("mintWithBurns", function () {
-		it("Should revert when trying to mint an already minted token", async function () {
-			const { id, signature } = await getSignatureForMint(
-				cryptoArtNFT,
-				addr1.address,
-				_tokenId1,
-				MintTypesEnum.OpenMint,
-				_priceInWei,
-				0
-			);
-
-			// First mint
-			await cryptoArtNFT
-				.connect(addr1)
-				.mint(
-					id,
-					MintTypesEnum.OpenMint,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature,
-					{ value: _priceInWei }
-				);
-
-			// Attempt to mint the same token with burns
-			await expect(
-				cryptoArtNFT
-					.connect(addr1)
-					.mintWithBurns(
-						id,
-						[],
-						MintTypesEnum.OpenMint,
-						_priceInWei,
-						0,
-						redeemableTrueURI,
-						redeemableFalseURI,
-						0,
-						signature,
-						{ value: _priceInWei }
-					)
-			).to.be.revertedWith("Token already minted.");
-		});
-	});
-
 	describe("mintWithTrade", function () {
 		it("Should revert when trying to mint an already minted token", async function () {
 			const { id, signature } = await getSignatureForMint(
@@ -1185,7 +1140,7 @@ describe("CryptoartNFT", function () {
 
 			// Burn the token
 			await expect(cryptoArtNFT.connect(addr2).burn(id)).to.be.revertedWith(
-				"Caller is not owner nor approved"
+				"Caller is not owner of the token"
 			);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
@@ -1216,7 +1171,6 @@ describe("CryptoartNFT", function () {
 			// Burn the token
 			await cryptoArtNFT.connect(addr1).burn(1);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
-			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(1);
 		});
 
 		it("Should update burnCount after batch burning tokens", async function () {
@@ -1258,10 +1212,9 @@ describe("CryptoartNFT", function () {
 			// Burn the token
 			await cryptoArtNFT.connect(addr1).batchBurn([1, 2]);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
-			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(2);
 		});
 
-		it("Should allow minting with burns and decrease burnCount", async function () {
+		it("Should allow minting with burns", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
@@ -1282,10 +1235,6 @@ describe("CryptoartNFT", function () {
 					}
 				);
 
-			// Burn the token
-			await cryptoArtNFT.connect(addr1).burn(id);
-			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(1);
-
 			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
@@ -1296,9 +1245,9 @@ describe("CryptoartNFT", function () {
 			);
 			await cryptoArtNFT
 				.connect(addr1)
-				.mintWithBurns(
-					idToken2,
+				.burnAndMint(
 					[id],
+					idToken2,
 					MintTypesEnum.Burn,
 					_priceInWei,
 					1,
@@ -1310,8 +1259,56 @@ describe("CryptoartNFT", function () {
 						value: ethers.parseEther("0.1"),
 					}
 				);
-			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(0);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
+		it("Should revert with not enough tokens provided", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: ethers.parseEther("0.1"),
+					}
+				);
+
+			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId2,
+				MintTypesEnum.Burn,
+				_priceInWei,
+				1
+			);
+			expect(
+				await cryptoArtNFT
+					.connect(addr1)
+					.burnAndMint(
+						[id],
+						idToken2,
+						MintTypesEnum.Burn,
+						_priceInWei,
+						1,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature2,
+						{
+							value: ethers.parseEther("0.1"),
+						}
+					)
+			).to.be.revertedWith("Not enough tokens to burn.");
 		});
 
 		it("Should allow burn and mint", async function () {
@@ -1360,90 +1357,7 @@ describe("CryptoartNFT", function () {
 						value: _priceInWei,
 					}
 				);
-			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(0);
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
-		});
-
-		it("Should revert minting with burns when burnCount is less than burns used", async function () {
-			const { id, signature } = await getSignatureForMint(
-				cryptoArtNFT,
-				addr1.address,
-				_tokenId1,
-				MintTypesEnum.Burn,
-				_priceInWei
-			);
-			await cryptoArtNFT
-				.connect(addr1)
-				.mint(
-					id,
-					MintTypesEnum.Burn,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature,
-					{
-						value: ethers.parseEther("0.1"),
-					}
-				);
-
-			// Burn the token
-			await cryptoArtNFT.connect(addr1).burn(id);
-			expect(await cryptoArtNFT.burnCount(addr1.address)).to.equal(1);
-
-			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
-				cryptoArtNFT,
-				addr1.address,
-				_tokenId1
-			);
-			await expect(
-				cryptoArtNFT
-					.connect(addr1)
-					.mintWithBurns(
-						idToken2,
-						[id],
-						MintTypesEnum.Burn,
-						_priceInWei,
-						2,
-						redeemableTrueURI,
-						redeemableFalseURI,
-						0,
-						signature2,
-						{
-							value: ethers.parseEther("0.1"),
-						}
-					)
-			).to.be.revertedWith("Not enough burns available.");
-		});
-
-		it("Should allow approved address to burn token", async function () {
-			const { id, signature } = await getSignatureForMint(
-				cryptoArtNFT,
-				addr1.address,
-				_tokenId1,
-				MintTypesEnum.OpenMint,
-				_priceInWei,
-				0
-			);
-
-			await cryptoArtNFT
-				.connect(addr1)
-				.mint(
-					id,
-					MintTypesEnum.OpenMint,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature,
-					{ value: _priceInWei }
-				);
-
-			await cryptoArtNFT.connect(addr1).setApprovalForAll(addr2.address, true);
-
-			await expect(cryptoArtNFT.connect(addr2).burn(id))
-				.to.emit(cryptoArtNFT, "Burned")
-				.withArgs(id);
 		});
 	});
 
@@ -1986,9 +1900,6 @@ describe("CryptoartNFT", function () {
 					}
 				);
 
-			// Burn the token
-			await cryptoArtNFT.connect(addr1).burn(id);
-
 			const { id: idToken2, signature: signature2 } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
@@ -1999,9 +1910,9 @@ describe("CryptoartNFT", function () {
 			);
 			await cryptoArtNFT
 				.connect(addr1)
-				.mintWithBurns(
-					idToken2,
+				.burnAndMint(
 					[id],
+					idToken2,
 					MintTypesEnum.Burn,
 					_priceInWei,
 					1,
