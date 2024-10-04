@@ -810,6 +810,13 @@ describe("CryptoartNFT", function () {
 			);
 		});
 
+		it("Should emit BaseURISet event", async function () {
+			const newBaseURI = "https://ipfs.io/ipfs/";
+			await expect(
+				cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)
+			).to.a.emit(cryptoArtNFT, "BaseURISet");
+		});
+
 		it("Should revert when non-owner tries to set base URI", async function () {
 			const newBaseURI = "https://example.com/";
 			await expect(cryptoArtNFT.connect(addr1).setBaseURI(newBaseURI)).to.be
@@ -881,6 +888,13 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT._authoritySigner()).to.equal(newSigner);
 		});
 
+		it("Should emit AuthoritySignerUpdated", async function () {
+			const newSigner = addr1.address;
+			expect(
+				await cryptoArtNFT.connect(_owner).updateAuthoritySigner(newSigner)
+			).to.emit(cryptoArtNFT, "AuthoritySignerUpdated");
+		});
+
 		it("Should revert when non-owner tries to update authority signer", async function () {
 			(
 				await expect(
@@ -926,6 +940,13 @@ describe("CryptoartNFT", function () {
 				.not.be.reverted;
 
 			expect(await cryptoArtNFT.totalSupply()).to.equal(newSupply);
+		});
+
+		it("Should emit TotalSupplySet", async function () {
+			const newSupply = 1000n;
+			expect(
+				await cryptoArtNFT.connect(_owner).setTotalSupply(newSupply)
+			).to.emit(cryptoArtNFT, "TotalSupplySet");
 		});
 
 		it("Should revert when non-owner tries to set total supply", async function () {
@@ -2658,6 +2679,22 @@ describe("CryptoartNFT", function () {
 			expect(await nft._authoritySigner()).to.equal(
 				_signerAuthorityWallet.address
 			);
+		});
+
+		it("Should emit event on initialize", async function () {
+			const CryptoArtNFTFactory = await ethers.getContractFactory(
+				"CryptoartNFT",
+				_owner
+			);
+			expect(
+				await upgrades.deployProxy(
+					CryptoArtNFTFactory,
+					[_owner.address, _signerAuthorityWallet.address],
+					{
+						initializer: "initialize",
+					}
+				)
+			).to.emit(cryptoArtNFT, "Initialized");
 		});
 
 		it("Should not initialize with zero address", async function () {
