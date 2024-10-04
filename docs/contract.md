@@ -478,4 +478,10 @@ function totalSupply() external view returns (uint256) {
 function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
 // ...
 }
+
+/// @notice Handles payment for minting and refunds excess ETH
+/// @param tokenPrice The price required to mint the token
+function _handlePaymentAndRefund(uint256 tokenPrice) private {
+    // ...
+}
 ```

@@ -29,7 +29,7 @@ This function allows users to mint new tokens. It supports various minting types
 
 1. Validates the minting authorization using `_validateAuthorizedMint`.
 2. Checks if the token doesn't already exist.
-3. Verifies that sufficient payment is sent.
+3. Handles payment and potential refund using `_handlePaymentAndRefund`.
 4. Mints the token to the caller's address.
 5. Sets the token's URIs using `setUri`.
 6. Emits a `Minted` event.
@@ -63,7 +63,7 @@ This function allows users to claim tokens that have been pre-authorized for the
 
 1. Validates the claiming authorization using `_validateAuthorizedMint`.
 2. Checks if the token doesn't already exist.
-3. Verifies that sufficient payment is sent.
+3. Handles payment and potential refund using `_handlePaymentAndRefund`.
 4. Mints the token to the caller's address.
 5. Sets the token's URIs using `setUri`.
 6. Emits a `Claimed` event.
@@ -89,11 +89,12 @@ This function allows users to trade in existing tokens to mint a new token.
 
 1. Validates the minting authorization using `_validateAuthorizedMint`.
 2. Checks if the new token doesn't already exist.
-3. Verifies that the caller owns all the tokens being traded.
-4. Transfer to another wallet the traded tokens.
-5. Mints the new token to the caller's address.
-6. Sets the new token's URIs using `setUri`.
-7. Emits a `MintedByTrading` event.
+3. Handles payment and potential refund using `_handlePaymentAndRefund`.
+4. Verifies that the caller owns all the tokens being traded.
+5. Transfer to another wallet the traded tokens.
+6. Mints the new token to the caller's address.
+7. Sets the new token's URIs using `setUri`.
+8. Emits a `MintedByTrading` event.
 
 ### 4. Burn and Mint (`burnAndMint` function)
 
@@ -117,11 +118,12 @@ This function allows users to burn existing tokens to mint a new token.
 
 1. Validates the minting authorization using `_validateAuthorizedMint`.
 2. Checks if the new token doesn't already exist.
-3. Verifies that the caller owns all the tokens being burned.
-4. Burns the specified tokens.
-5. Mints the new token to the caller's address.
-6. Sets the new token's URIs using `setUri`.
-7. Emits a `MintedByBurning` event.
+3. Handles payment and potential refund using `_handlePaymentAndRefund`.
+4. Verifies that the caller owns all the tokens being burned.
+5. Burns the specified tokens.
+6. Mints the new token to the caller's address.
+7. Sets the new token's URIs using `setUri`.
+8. Emits a `MintedByBurning` event.
 
 ## Key Supporting Functions
 
@@ -183,6 +185,23 @@ These functions allow token owners to burn their tokens, either individually or 
 1. Verify that the caller owns the token(s).
 2. Burn the token(s) using the ERC721 `_burn` function.
 3. Emit `Burned` event(s).
+
+### 4. Payment Handling and Refund (`_handlePaymentAndRefund`)
+
+```ts
+function _handlePaymentAndRefund(uint256 tokenPrice) private
+```
+
+This private function manages the payment process for minting operations, including handling refunds for excess payments.
+
+**Key Steps:**
+
+1. Verifies that the sent amount (`msg.value`) is at least the required `tokenPrice`.
+2. Calculates any excess payment by subtracting `tokenPrice` from `msg.value`.
+3. If there's an excess payment, it attempts to refund the excess amount to the sender.
+4. If the refund fails, the entire transaction is reverted with an error message.
+
+This function is called within the minting functions (`mint`, `claimable`, `mintWithTrade`, and `burnAndMint`) to ensure correct payment handling and to provide automatic refunds for overpayments.
 
 ## Conclusion
 
