@@ -56,7 +56,11 @@ contract CryptoartNFT is
     // State variable to keep track of total supply
     uint256 private _totalSupply;
 
+    event Initialized(address contractOwner, address contractAuthoritySigner);
+    event BaseURISet(string newBaseURI);
+    event TotalSupplySet(uint256 newTotalSupply);
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
+    event AuthoritySignerUpdated(address newAuthoritySigner);
     
     // Define events for NFT lifecycle
     event Minted(uint256 tokenId);
@@ -85,6 +89,7 @@ contract CryptoartNFT is
         royaltyPercentage = 250; // default to 2.5% royalty
 
         _authoritySigner = contractAuthoritySigner;
+        emit Initialized(contractOwner, contractAuthoritySigner);
     }
 
     /// @dev See {IERC165-supportsInterface}.
@@ -125,6 +130,7 @@ contract CryptoartNFT is
     // Metadata
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         baseURI = newBaseURI;
+        emit BaseURISet(newBaseURI);
     }
 
     function updateMetadata(
@@ -351,6 +357,7 @@ contract CryptoartNFT is
         address newAuthoritySigner
     ) external onlyOwner {
         _authoritySigner = newAuthoritySigner;
+        emit AuthoritySignerUpdated(newAuthoritySigner);
     }
 
     function withdraw() external onlyOwner {
@@ -555,5 +562,6 @@ contract CryptoartNFT is
     // Function to set the total supply (onlyOwner)
     function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
         _totalSupply = newTotalSupply;
+        emit TotalSupplySet(newTotalSupply);
     }
 }
