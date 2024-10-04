@@ -206,6 +206,49 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Should refund excess payment", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei
+			);
+
+			const excessAmount = ethers.parseEther("0.1");
+			const totalPayment = _priceInWei + excessAmount;
+
+			const initialBalance = await ethers.provider.getBalance(addr1.address);
+
+			const tx = await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{
+						value: totalPayment,
+					}
+				);
+
+			const receipt = await tx.wait();
+			const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+
+			const finalBalance = await ethers.provider.getBalance(addr1.address);
+
+			// Check that the user's balance has decreased by exactly _priceInWei + gas fees
+			expect(initialBalance - finalBalance).to.be.closeTo(
+				_priceInWei + gasUsed,
+				ethers.parseEther("0.001") // Allow for small discrepancies due to gas price fluctuations
+			);
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
 		it("Should revert on tampered metadata URIs", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
@@ -978,6 +1021,127 @@ describe("CryptoartNFT", function () {
 			).to.be.revertedWith("Token already minted.");
 		});
 
+		it("Should successfully mint by trade", async function () {
+			// First, mint two initial tokens
+			for (let i = 0; i < 2; i++) {
+				const { id, signature } = await getSignatureForMint(
+					cryptoArtNFT,
+					addr1.address,
+					i + 1,
+					MintTypesEnum.OpenMint,
+					_priceInWei
+				);
+				await cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					);
+			}
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(2);
+
+			// Now, mint a new token by trading the two initial tokens
+			const newTokenId = 3;
+			const { signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				newTokenId,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				2 // Number of tokens to trade
+			);
+
+			await expect(
+				cryptoArtNFT.connect(addr1).mintWithTrade(
+					newTokenId,
+					[1, 2], // IDs of tokens to trade
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				)
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
+		});
+
+		it("Should refund excess payment when minting by trade", async function () {
+			// First, mint two initial tokens
+			for (let i = 0; i < 2; i++) {
+				const { id, signature } = await getSignatureForMint(
+					cryptoArtNFT,
+					addr1.address,
+					i + 1,
+					MintTypesEnum.OpenMint,
+					_priceInWei
+				);
+				await cryptoArtNFT
+					.connect(addr1)
+					.mint(
+						id,
+						MintTypesEnum.OpenMint,
+						_priceInWei,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					);
+			}
+
+			const newTokenId = 3;
+			const { signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				newTokenId,
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				2 // Number of tokens to trade
+			);
+
+			const excessAmount = ethers.parseEther("0.1");
+			const totalPayment = _priceInWei + excessAmount;
+
+			const initialBalance = await ethers.provider.getBalance(addr1.address);
+
+			const tx = await cryptoArtNFT.connect(addr1).mintWithTrade(
+				newTokenId,
+				[1, 2], // IDs of tokens to trade
+				MintTypesEnum.OpenMint,
+				_priceInWei,
+				redeemableTrueURI,
+				redeemableFalseURI,
+				0,
+				signature,
+				{ value: totalPayment }
+			);
+
+			const receipt = await tx.wait();
+			const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+
+			const finalBalance = await ethers.provider.getBalance(addr1.address);
+
+			// Check that the user's balance has decreased by exactly _priceInWei + gas fees
+			expect(initialBalance - finalBalance).to.be.closeTo(
+				_priceInWei + gasUsed,
+				ethers.parseEther("0.001") // Allow for small discrepancies due to gas price fluctuations
+			);
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
+		});
+
 		it("Should revert when no tokens are provided for trade", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
@@ -1453,19 +1617,24 @@ describe("CryptoartNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				MintTypesEnum.Claimable
+				MintTypesEnum.Claimable,
+				0n
 			);
 
-			await cryptoArtNFT
-				.connect(addr1)
-				.claimable(
-					id,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature
-				);
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.claimable(
+						id,
+						0n,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						signature,
+						{ value: _priceInWei }
+					)
+			).to.not.be.reverted;
+
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
@@ -1494,12 +1663,53 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
 		});
 
+		it("Should refund excess payment when claiming a token", async function () {
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId2,
+				MintTypesEnum.Claimable,
+				_priceInWei
+			);
+
+			const excessAmount = ethers.parseEther("0.1");
+			const totalPayment = _priceInWei + excessAmount;
+
+			const initialBalance = await ethers.provider.getBalance(addr1.address);
+
+			const tx = await cryptoArtNFT
+				.connect(addr1)
+				.claimable(
+					id,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: totalPayment }
+				);
+
+			const receipt = await tx.wait();
+			const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+
+			const finalBalance = await ethers.provider.getBalance(addr1.address);
+
+			// Check that the user's balance has decreased by exactly _priceInWei + gas fees
+			expect(initialBalance - finalBalance).to.be.closeTo(
+				_priceInWei + gasUsed,
+				ethers.parseEther("0.001") // Allow for small discrepancies due to gas price fluctuations
+			);
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+		});
+
 		it("Emits a Claimed event when claiming a token", async function () {
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				MintTypesEnum.Claimable
+				MintTypesEnum.Claimable,
+				_priceInWei
 			);
 
 			await expect(
@@ -1511,7 +1721,8 @@ describe("CryptoartNFT", function () {
 						redeemableTrueURI,
 						redeemableFalseURI,
 						0,
-						signature
+						signature,
+						{ value: _priceInWei }
 					)
 			)
 				.to.emit(cryptoArtNFT, "Claimed")
@@ -1523,7 +1734,8 @@ describe("CryptoartNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				MintTypesEnum.OpenMint
+				MintTypesEnum.OpenMint,
+				0n
 			);
 
 			await expect(
@@ -1531,11 +1743,12 @@ describe("CryptoartNFT", function () {
 					.connect(addr1)
 					.claimable(
 						id,
-						_priceInWei,
+						0n,
 						redeemableTrueURI,
 						redeemableFalseURI,
 						0,
-						signature
+						signature,
+						{ value: 0n }
 					)
 			).to.be.revertedWith("Not authorized to mint");
 			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(0);
@@ -1546,20 +1759,14 @@ describe("CryptoartNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				MintTypesEnum.Claimable
+				MintTypesEnum.Claimable,
+				0n
 			);
 
 			// First claim (should succeed)
 			await cryptoArtNFT
 				.connect(addr1)
-				.claimable(
-					id,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature
-				);
+				.claimable(id, 0n, redeemableTrueURI, redeemableFalseURI, 0, signature);
 
 			// Second claim (should fail)
 			await expect(
@@ -1567,7 +1774,7 @@ describe("CryptoartNFT", function () {
 					.connect(addr1)
 					.claimable(
 						id,
-						_priceInWei,
+						0n,
 						redeemableTrueURI,
 						redeemableFalseURI,
 						0,
@@ -1934,19 +2141,13 @@ describe("CryptoartNFT", function () {
 				cryptoArtNFT,
 				addr1.address,
 				_tokenId1,
-				MintTypesEnum.Claimable
+				MintTypesEnum.Claimable,
+				0n
 			);
 
 			await cryptoArtNFT
 				.connect(addr1)
-				.claimable(
-					id,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature
-				);
+				.claimable(id, 0n, redeemableTrueURI, redeemableFalseURI, 0, signature);
 
 			const tokenUris = (await cryptoArtNFT.tokenURIs(id))[1];
 			expect(tokenUris.length).to.equal(2);
@@ -2917,6 +3118,129 @@ describe("CryptoartNFT", function () {
 		it("Should revert when non-owner tries to update owner", async function () {
 			await expect(cryptoArtNFT.connect(addr1).transferOwnership(addr2.address))
 				.to.be.reverted;
+		});
+
+		it("Should allow burn and mint", async function () {
+			// First, mint an initial token
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+
+			// Now, burn the token and mint a new one
+			const newTokenId = _tokenId2;
+			const { signature: burnSignature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				newTokenId,
+				MintTypesEnum.Burn,
+				_priceInWei,
+				1 // Number of tokens to burn
+			);
+
+			await expect(
+				cryptoArtNFT
+					.connect(addr1)
+					.burnAndMint(
+						[id],
+						newTokenId,
+						MintTypesEnum.Burn,
+						_priceInWei,
+						1,
+						redeemableTrueURI,
+						redeemableFalseURI,
+						0,
+						burnSignature,
+						{ value: _priceInWei }
+					)
+			).to.not.be.reverted;
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
+		});
+
+		it("Should refund excess payment when burning and minting", async function () {
+			// First, mint an initial token
+			const { id, signature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				_tokenId1,
+				MintTypesEnum.OpenMint,
+				_priceInWei
+			);
+			await cryptoArtNFT
+				.connect(addr1)
+				.mint(
+					id,
+					MintTypesEnum.OpenMint,
+					_priceInWei,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					signature,
+					{ value: _priceInWei }
+				);
+
+			const newTokenId = _tokenId2;
+			const { signature: burnSignature } = await getSignatureForMint(
+				cryptoArtNFT,
+				addr1.address,
+				newTokenId,
+				MintTypesEnum.Burn,
+				_priceInWei,
+				1 // Number of tokens to burn
+			);
+
+			const excessAmount = ethers.parseEther("0.1");
+			const totalPayment = _priceInWei + excessAmount;
+
+			const initialBalance = await ethers.provider.getBalance(addr1.address);
+
+			const tx = await cryptoArtNFT
+				.connect(addr1)
+				.burnAndMint(
+					[id],
+					newTokenId,
+					MintTypesEnum.Burn,
+					_priceInWei,
+					1,
+					redeemableTrueURI,
+					redeemableFalseURI,
+					0,
+					burnSignature,
+					{ value: totalPayment }
+				);
+
+			const receipt = await tx.wait();
+			const gasUsed = receipt!.gasUsed * receipt!.gasPrice;
+
+			const finalBalance = await ethers.provider.getBalance(addr1.address);
+
+			// Check that the user's balance has decreased by exactly _priceInWei + gas fees
+			expect(initialBalance - finalBalance).to.be.closeTo(
+				_priceInWei + gasUsed,
+				ethers.parseEther("0.001") // Allow for small discrepancies due to gas price fluctuations
+			);
+
+			expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+			expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
 		});
 	});
 });

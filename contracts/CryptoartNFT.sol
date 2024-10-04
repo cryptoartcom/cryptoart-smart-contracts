@@ -154,7 +154,7 @@ contract CryptoartNFT is
         bytes memory signature
     ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
-        require(msg.value >= tokenPrice, "Not enough Ether to mint NFT.");
+        _handlePaymentAndRefund(tokenPrice);
 
         _validateAuthorizedMint(
             msg.sender,
@@ -183,6 +183,7 @@ contract CryptoartNFT is
         bytes memory signature
     ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted or claimed.");
+        _handlePaymentAndRefund(tokenPrice);
 
         _validateAuthorizedMint(
             msg.sender,
@@ -214,6 +215,7 @@ contract CryptoartNFT is
     ) external payable {
         require(_tokenNotExists(_mintedTokenId), "Token already minted.");
         require(tradedTokenIds.length > 0, "No tokens provided for trade");
+        _handlePaymentAndRefund(tokenPrice);
 
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
@@ -285,6 +287,7 @@ contract CryptoartNFT is
           tokenIds.length == burnsToUse,
           "Not enough tokens to burn."
         );
+        _handlePaymentAndRefund(tokenPrice);
 
         batchBurn(tokenIds);
 
@@ -304,6 +307,15 @@ contract CryptoartNFT is
         setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
 
         emit MintedByBurning(_tokenId, tokenIds);
+    }
+
+    function _handlePaymentAndRefund(uint256 tokenPrice) private {
+        require(msg.value >= tokenPrice, "Not enough Ether to mint NFT.");
+        uint256 excess = msg.value - tokenPrice;
+        if (excess > 0) {
+            (bool success, ) = payable(msg.sender).call{value: excess}("");
+            require(success, "Failed to refund excess payment");
+        }
     }
 
     function _validateAuthorizedMint(
