@@ -95,6 +95,23 @@ event Story(uint256 tokenId, address collector, string collectorName, string sto
 /// @param storyId The unique identifier of the story.
 /// @param visible The new visibility status of the story.
 event ToggleStoryVisibility(uint256 tokenId, string storyId, bool visible);
+
+/// @dev Emitted on contract initialization.
+/// @param contractOwner The address that will own the contract.
+/// @param contractAuthoritySigner The address authorized to sign minting transactions.
+event Initialized(address contractOwner, address contractAuthoritySigner);
+
+/// @dev Emitted when the base URI is updated.
+/// @param newBaseURI The new base URI.
+event BaseURISet(string newBaseURI);
+
+/// @dev Emitted when the total supply is updated.
+/// @param newTotalSupply The new total supply.
+event TotalSupplySet(uint256 newTotalSupply);
+
+/// @dev Emitted when the authority signer is updated.
+/// @param newAuthoritySigner The new address authorized to sign minting transactions.
+event AuthoritySignerUpdated(address newAuthoritySigner);
 ```
 
 ## Functions
