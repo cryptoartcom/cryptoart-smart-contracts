@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC7160} from "./IERC7160.sol";
 import {IStory} from "./IStory.sol";
 
@@ -26,18 +27,19 @@ contract CryptoartNFT is
     IStory
 {
     using ECDSA for bytes32;
+    using SafeCast for uint256;
 
     /// @dev String representation for address
     using Strings for address;
 
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
-    uint96 public royaltyPercentage;
+    uint256 public royaltyPercentage;
     address payable public royaltyReceiver; // the account to receive all royalties
     // metadata
     string public baseURI;
     
     // Gaps
-    mapping(address => uint256) public burnCount;
+    mapping(address => uint256) public burnCount; // Gap to maintain storage layout
     address private _owner; // Gap to maintain storage layout
 
     address public _authoritySigner;
@@ -83,7 +85,7 @@ contract CryptoartNFT is
 
         royaltyReceiver = payable(contractOwner); // default to the contract creator
         royaltyPercentage = 250; // default to 2.5% royalty
-        _setDefaultRoyalty(royaltyReceiver, royaltyPercentage);
+        _setDefaultRoyalty(royaltyReceiver, royaltyPercentage.toUint96());
 
         _authoritySigner = contractAuthoritySigner;
         emit Initialized(contractOwner, contractAuthoritySigner);
@@ -107,13 +109,13 @@ contract CryptoartNFT is
 
     function updateRoyalties(
         address payable newReceiver,
-        uint96 newPercentage
+        uint256 newPercentage
     ) external onlyOwner {
         require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
         royaltyReceiver = newReceiver;
         royaltyPercentage = newPercentage;
 
-        _setDefaultRoyalty(newReceiver, newPercentage);
+        _setDefaultRoyalty(newReceiver, newPercentage.toUint96());
 
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
