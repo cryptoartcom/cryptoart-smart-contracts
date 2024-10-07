@@ -770,6 +770,10 @@ describe("CryptoartNFT", function () {
 		it("Should support IERC165 interface", async function () {
 			expect(await cryptoArtNFT.supportsInterface("0x49064906")).to.be.true;
 		});
+
+		it("Should support EIP-2981 interface", async function () {
+			expect(await cryptoArtNFT.supportsInterface("0x2a55205a")).to.be.true;
+		});
 	});
 
 	describe("Royalties", function () {
