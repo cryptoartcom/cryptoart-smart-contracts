@@ -9,25 +9,18 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import {IERC7160} from "./IERC7160.sol";
 import {IStory} from "./IStory.sol";
 
 /* solium-disable-next-line */
 using Strings for uint256;
 
-// Interface for royalties (EIP-2981)
-interface IERC2981 {
-    function royaltyInfo(
-        uint256 _tokenId,
-        uint256 _salePrice
-    ) external view returns (address receiver, uint256 royaltyAmount);
-}
-
 contract CryptoartNFT is
     IERC7160,
     IERC4906,
     ERC721URIStorageUpgradeable,
-    IERC2981,
+    ERC721RoyaltyUpgradeable,
     OwnableUpgradeable,
     NoncesUpgradeable,
     IStory
@@ -38,14 +31,15 @@ contract CryptoartNFT is
     using Strings for address;
 
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
-    uint256 public royaltyPercentage;
+    uint96 public royaltyPercentage;
     address payable public royaltyReceiver; // the account to receive all royalties
     // metadata
     string public baseURI;
-    // Burn
-    mapping(address => uint256) public __burn_gap;
+    
+    // Gaps
+    mapping(address => uint256) public burnCount;
+    address private _owner; // Gap to maintain storage layout
 
-    address private __gap; // Gap to maintain storage layout
     address public _authoritySigner;
 
     // IERC7160
@@ -81,12 +75,15 @@ contract CryptoartNFT is
     ) external initializer {
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
+        __ERC721Royalty_init();
         __Ownable_init(contractOwner);
         __Nonces_init();
 
-        royaltyReceiver = payable(contractOwner); // default to the contract creator
         baseURI = "";
+
+        royaltyReceiver = payable(contractOwner); // default to the contract creator
         royaltyPercentage = 250; // default to 2.5% royalty
+        _setDefaultRoyalty(royaltyReceiver, royaltyPercentage);
 
         _authoritySigner = contractAuthoritySigner;
         emit Initialized(contractOwner, contractAuthoritySigner);
@@ -99,30 +96,24 @@ contract CryptoartNFT is
         public
         view
         virtual
-        override(IERC165, ERC721URIStorageUpgradeable)
+        override(IERC165, ERC721URIStorageUpgradeable, ERC721RoyaltyUpgradeable)
         returns (bool)
     {
         return
-            interfaceId == bytes4(0x49064906) ||
+            interfaceId == type(IERC7160).interfaceId ||
+            interfaceId == type(IERC4906).interfaceId ||
             super.supportsInterface(interfaceId);
-    }
-
-    // Royalties
-    function royaltyInfo(
-        uint256,
-        uint256 _salePrice
-    ) external view override returns (address receiver, uint256 royaltyAmount) {
-        royaltyAmount = (_salePrice * royaltyPercentage) / ROYALTY_BASE;
-        return (royaltyReceiver, royaltyAmount);
     }
 
     function updateRoyalties(
         address payable newReceiver,
-        uint256 newPercentage
+        uint96 newPercentage
     ) external onlyOwner {
         require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
         royaltyReceiver = newReceiver;
         royaltyPercentage = newPercentage;
+
+        _setDefaultRoyalty(newReceiver, newPercentage);
 
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
@@ -266,6 +257,7 @@ contract CryptoartNFT is
             "Caller is not owner of the token"
         );
         _burn(tokenId);
+        _resetTokenRoyalty(tokenId);
         emit Burned(tokenId);
     }
 
@@ -397,9 +389,13 @@ contract CryptoartNFT is
 
     // @notice Implementation of ERC721.tokenURI for backwards compatibility.
     // @inheritdoc ERC721.tokenURI
-    function tokenURI(
-        uint256 tokenId
-    ) public view virtual override returns (string memory) {
+    function tokenURI(uint256 tokenId)
+        public 
+        view
+        virtual 
+        override(ERC721URIStorageUpgradeable, ERC721Upgradeable)
+        returns (string memory) 
+    {
         require(
             !_tokenNotExists(tokenId),
             "ERC721: URI query for nonexistent token"
@@ -410,7 +406,7 @@ contract CryptoartNFT is
         string memory uri = uris[index];
 
         // Revert if no URI is found for the token.
-        require(bytes(uri).length > 0, "ERC721: not URI found");
+        require(bytes(uri).length > 0, "ERC721: no URI found");
         return string(abi.encodePacked(_baseURI(), uri));
     }
 
