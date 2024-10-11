@@ -214,7 +214,6 @@ contract CryptoartNFT is
     ) external payable {
         require(_tokenNotExists(_mintedTokenId), "Token already minted.");
         require(tradedTokenIds.length > 0, "No tokens provided for trade");
-        _handlePaymentAndRefund(tokenPrice);
 
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
@@ -287,7 +286,6 @@ contract CryptoartNFT is
           tokenIds.length == burnsToUse,
           "Not enough tokens to burn."
         );
-        _handlePaymentAndRefund(tokenPrice);
 
         batchBurn(tokenIds);
 

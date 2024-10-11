@@ -89,12 +89,11 @@ This function allows users to trade in existing tokens to mint a new token.
 
 1. Validates the minting authorization using `_validateAuthorizedMint`.
 2. Checks if the new token doesn't already exist.
-3. Handles payment and potential refund using `_handlePaymentAndRefund`.
-4. Verifies that the caller owns all the tokens being traded.
-5. Transfer to another wallet the traded tokens.
-6. Mints the new token to the caller's address.
-7. Sets the new token's URIs using `setUri`.
-8. Emits a `MintedByTrading` event.
+3. Verifies that the caller owns all the tokens being traded.
+4. Transfer to another wallet the traded tokens.
+5. Mints the new token to the caller's address.
+6. Sets the new token's URIs using `setUri`.
+7. Emits a `MintedByTrading` event.
 
 ### 4. Burn and Mint (`burnAndMint` function)
 
@@ -118,12 +117,11 @@ This function allows users to burn existing tokens to mint a new token.
 
 1. Validates the minting authorization using `_validateAuthorizedMint`.
 2. Checks if the new token doesn't already exist.
-3. Handles payment and potential refund using `_handlePaymentAndRefund`.
-4. Verifies that the caller owns all the tokens being burned.
-5. Burns the specified tokens.
-6. Mints the new token to the caller's address.
-7. Sets the new token's URIs using `setUri`.
-8. Emits a `MintedByBurning` event.
+3. Verifies that the caller owns all the tokens being burned.
+4. Burns the specified tokens.
+5. Mints the new token to the caller's address.
+6. Sets the new token's URIs using `setUri`.
+7. Emits a `MintedByBurning` event.
 
 ## Key Supporting Functions
 
