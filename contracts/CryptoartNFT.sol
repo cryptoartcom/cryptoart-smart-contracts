@@ -54,13 +54,14 @@ contract CryptoartNFT is
 
     // Trading
     // Wallet in charge of receiving all tokens transfered for minting
-    address private _nftReceiver;
+    address public _nftReceiver;
 
     event Initialized(address contractOwner, address contractAuthoritySigner);
     event BaseURISet(string newBaseURI);
     event TotalSupplySet(uint256 newTotalSupply);
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     event AuthoritySignerUpdated(address newAuthoritySigner);
+    event NftReceiverUpdated(address newNftReceiver);
     
     // Define events for NFT lifecycle
     event Minted(uint256 tokenId);
@@ -367,6 +368,13 @@ contract CryptoartNFT is
     ) external onlyOwner {
         _authoritySigner = newAuthoritySigner;
         emit AuthoritySignerUpdated(newAuthoritySigner);
+    }
+
+    function updateNftReceiver(
+        address newNftReceiver
+    ) external onlyOwner {
+        _nftReceiver = newNftReceiver;
+        emit NftReceiverUpdated(newNftReceiver);
     }
 
     function withdraw() external onlyOwner {

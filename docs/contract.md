@@ -115,6 +115,10 @@ event TotalSupplySet(uint256 newTotalSupply);
 /// @dev Emitted when the authority signer is updated.
 /// @param newAuthoritySigner The new address authorized to sign minting transactions.
 event AuthoritySignerUpdated(address newAuthoritySigner);
+
+/// @dev Emitted when the NFT receiver address is updated.
+/// @param newNftReceiver The new address to receive all traded NFTs.
+event NftReceiverUpdated(address newNftReceiver);
 ```
 
 ## Functions
@@ -330,6 +334,14 @@ bytes memory signature
 /// @param newAuthoritySigner The new address to be set as the authority signer
 function updateAuthoritySigner(
 address newAuthoritySigner
+) external onlyOwner {
+// ...
+}
+
+/// @notice Updates the NFT receiver address
+/// @param newNftReceiver The new address to be set as the NFT receiver
+function updateNftReceiver(
+address newNftReceiver
 ) external onlyOwner {
 // ...
 }

@@ -951,6 +951,28 @@ describe("CryptoartNFT", function () {
 		});
 	});
 
+	describe("NFT Receiver", function () {
+		it("Should allow the owner to update the NFT receiver", async function () {
+			const newReceiver = addr1.address;
+
+			// Call the updateNftReceiver function
+			await expect(cryptoArtNFT.connect(_owner).updateNftReceiver(newReceiver))
+				.to.emit(cryptoArtNFT, "NftReceiverUpdated")
+				.withArgs(newReceiver);
+
+			// Verify the new NFT receiver address
+			expect(await cryptoArtNFT._nftReceiver()).to.equal(newReceiver);
+		});
+
+		it("Should revert if a non-owner tries to update the NFT receiver", async function () {
+			const newReceiver = addr1.address;
+
+			// Attempt to call the updateNftReceiver function from a non-owner account
+			await expect(cryptoArtNFT.connect(addr2).updateNftReceiver(newReceiver))
+				.to.be.reverted;
+		});
+	});
+
 	describe("Total Supply", function () {
 		it("Should return correct total supply", async function () {
 			const initialSupply = await cryptoArtNFT.totalSupply();
