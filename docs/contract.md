@@ -16,25 +16,28 @@ address payable public royaltyReceiver;
 string public baseURI;
 
 /// @dev Mapping to track burned tokens. Used for maintaining upgrade compatibility.
-mapping(address => uint256) public \_\_burn_gap;
+mapping(address => uint256) public __burn_gap;
 
 /// @dev Unused variable to maintain storage layout for upgrades.
-address private \_\_gap;
+address private __gap;
 
 /// @dev The address authorized to sign minting transactions.
-address public \_authoritySigner;
+address public _authoritySigner;
 
 /// @dev Mapping from token ID to an array of token URIs (IERC7160).
-mapping(uint256 => string[]) private \_tokenURIs;
+mapping(uint256 => string[]) private _tokenURIs;
 
 /// @dev Mapping from token ID to the index of the pinned URI (IERC7160).
-mapping(uint256 => uint256) private \_pinnedURIIndices;
+mapping(uint256 => uint256) private _pinnedURIIndices;
 
 /// @dev Mapping from token ID to a boolean indicating if the token has a pinned URI (IERC7160).
-mapping(uint256 => bool) private \_hasPinnedTokenURI;
+mapping(uint256 => bool) private _hasPinnedTokenURI;
 
 /// @dev The total number of tokens minted. Used for internal tracking.
-uint256 private \_totalSupply;
+uint256 private _totalSupply;
+
+/// @dev Wallet in charge of receiving all tokens transferred for minting.
+address private nftReceiver;
 ```
 
 ## Events
@@ -68,8 +71,8 @@ event Burned(uint256 tokenId);
 event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 
 /// @dev Emitted when a token's metadata is updated.
-/// @param \_tokenId The ID of the token whose metadata was updated.
-event MetadataUpdate(uint256 \_tokenId);
+/// @param _tokenId The ID of the token whose metadata was updated.
+event MetadataUpdate(uint256 _tokenId);
 
 /// @dev Emitted when a token's URI is pinned to a specific index.
 /// @param tokenId The ID of the token.
@@ -137,12 +140,12 @@ bytes4 interfaceId
 }
 
 /// @notice Provides royalty information for a token
-/// @param \_salePrice The sale price of the token
+/// @param _salePrice The sale price of the token
 /// @return receiver The address that should receive the royalties
 /// @return royaltyAmount The royalty amount to be paid
 function royaltyInfo(
 uint256,
-uint256 \_salePrice
+uint256 _salePrice
 ) external view override returns (address receiver, uint256 royaltyAmount) {
 // ...
 }
@@ -164,29 +167,29 @@ function setBaseURI(string memory newBaseURI) external onlyOwner {
 }
 
 /// @notice Updates the metadata URI for a specific token
-/// @param \_tokenId The ID of the token to update
-/// @param \_newMetadataURI The new metadata URI
+/// @param _tokenId The ID of the token to update
+/// @param _newMetadataURI The new metadata URI
 function updateMetadata(
-uint256 \_tokenId,
-string memory \_newMetadataURI
+uint256 _tokenId,
+string memory _newMetadataURI
 ) external onlyOwner {
 // ...
 }
 
 /// @notice Triggers a metadata update event for a specific token. This can help marketplaces to be synchronized
-/// @param \_tokenId The ID of the token to update
-function triggerMetadataUpdate(uint256 \_tokenId) public onlyOwner {
+/// @param _tokenId The ID of the token to update
+function triggerMetadataUpdate(uint256 _tokenId) public onlyOwner {
 // ... existing code ...
 }
 
 /// @notice Returns the base URI for token metadata
 /// @return string The base URI
-function \_baseURI() internal view virtual override returns (string memory) {
+function _baseURI() internal view virtual override returns (string memory) {
 // ...
 }
 
 /// @notice Mints a new token
-/// @param \_tokenId The ID of the token to mint
+/// @param _tokenId The ID of the token to mint
 /// @param mintType The type of minting operation (openMint or whitelist)
 /// @param tokenPrice The price to mint the token
 /// @param redeemableTrueURI The URI for the redeemable true state
@@ -194,7 +197,7 @@ function \_baseURI() internal view virtual override returns (string memory) {
 /// @param redeemableDefaultIndex The default index for the redeemable state
 /// @param signature The signature authorizing the mint
 function mint(
-uint256 \_tokenId,
+uint256 _tokenId,
 string memory mintType,
 uint256 tokenPrice,
 string memory redeemableTrueURI,
@@ -206,14 +209,14 @@ bytes memory signature
 }
 
 /// @notice Claims a token
-/// @param \_tokenId The ID of the token to claim
+/// @param _tokenId The ID of the token to claim
 /// @param tokenPrice The price to claim the token
 /// @param redeemableTrueURI The URI for the redeemable true state
 /// @param redeemableFalseURI The URI for the redeemable false state
 /// @param redeemableDefaultIndex The default index for the redeemable state
 /// @param signature The signature authorizing the claim
 function claimable(
-uint256 \_tokenId,
+uint256 _tokenId,
 uint256 tokenPrice,
 string memory redeemableTrueURI,
 string memory redeemableFalseURI,
@@ -224,7 +227,7 @@ bytes memory signature
 }
 
 /// @notice Mints a new token by trading in existing tokens
-/// @param \_mintedTokenId The ID of the new token to mint
+/// @param _mintedTokenId The ID of the new token to mint
 /// @param tradedTokenIds An array of token IDs to trade in
 /// @param mintType The type of minting operation (openMint or whitelist)
 /// @param tokenPrice The price to mint the token
@@ -233,7 +236,7 @@ bytes memory signature
 /// @param redeemableDefaultIndex The default index for the redeemable state
 /// @param signature The signature authorizing the mint
 function mintWithTrade(
-uint256 \_mintedTokenId,
+uint256 _mintedTokenId,
 uint256[] memory tradedTokenIds,
 string memory mintType,
 uint256 tokenPrice,
@@ -246,9 +249,9 @@ bytes memory signature
 }
 
 /// @notice Checks if a token does not exist
-/// @param \_tokenId The ID of the token to check
+/// @param _tokenId The ID of the token to check
 /// @return bool True if the token does not exist, false otherwise
-function \_tokenNotExists(uint256 \_tokenId) internal view returns (bool) {
+function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
 // ...
 }
 
@@ -266,7 +269,7 @@ function batchBurn(uint256[] memory tokenIds) public virtual {
 
 /// @notice Burns tokens and mints a new one
 /// @param tokenIds An array of token IDs to burn
-/// @param \_tokenId The ID of the new token to mint
+/// @param _tokenId The ID of the new token to mint
 /// @param mintType The type of minting operation (burn)
 /// @param tokenPrice The price to mint the token
 /// @param burnsToUse The number of tokens to burn
@@ -276,7 +279,7 @@ function batchBurn(uint256[] memory tokenIds) public virtual {
 /// @param signature The signature authorizing the mint
 function burnAndMint(
 uint256[] memory tokenIds,
-uint256 \_tokenId,
+uint256 _tokenId,
 string memory mintType,
 uint256 tokenPrice,
 uint256 burnsToUse,
@@ -298,7 +301,7 @@ bytes memory signature
 /// @param redeemableFalseURI The URI for the redeemable false state
 /// @param redeemableDefaultIndex The default index for the redeemable state
 /// @param signature The signature authorizing the mint
-function \_validateAuthorizedMint(
+function _validateAuthorizedMint(
 address minter,
 uint256 tokenId,
 string memory mintType,
@@ -316,7 +319,7 @@ bytes memory signature
 /// @param contentHash The hash of the content that was signed
 /// @param signature The signature to verify
 /// @return address The address that signed the message
-function \_signatureWallet(
+function _signatureWallet(
 bytes32 contentHash,
 bytes memory signature
 ) private pure returns (address) {
@@ -339,7 +342,7 @@ function withdraw() external onlyOwner {
 /// @notice Gets the index of the current token URI
 /// @param tokenId The ID of the token
 /// @return uint256 The index of the current token URI
-function \_getTokenURIIndex(
+function _getTokenURIIndex(
 uint256 tokenId
 ) internal view returns (uint256) {
 // ...
@@ -415,7 +418,7 @@ uint256 redeemableDefaultIndex
 /// @param minter The address attempting to unpair
 /// @param tokenId The ID of the token
 /// @param signature The signature authorizing the operation
-function \_validateAuthorizedUnpair(
+function _validateAuthorizedUnpair(
 address minter,
 uint256 tokenId,
 bytes memory signature

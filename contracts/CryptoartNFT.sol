@@ -52,6 +52,10 @@ contract CryptoartNFT is
     // State variable to keep track of total supply
     uint256 private _totalSupply;
 
+    // Trading
+    // Wallet in charge of receiving all tokens transfered for minting
+    address private _nftReceiver;
+
     event Initialized(address contractOwner, address contractAuthoritySigner);
     event BaseURISet(string newBaseURI);
     event TotalSupplySet(uint256 newTotalSupply);
@@ -87,6 +91,7 @@ contract CryptoartNFT is
         royaltyPercentage = 250; // default to 2.5% royalty
         _setDefaultRoyalty(royaltyReceiver, royaltyPercentage.toUint96());
 
+        _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7;
         _authoritySigner = contractAuthoritySigner;
         emit Initialized(contractOwner, contractAuthoritySigner);
     }
@@ -224,7 +229,7 @@ contract CryptoartNFT is
                     ownerOf(tokenId) == msg.sender,
                     "Sender must own the tokens to trade"
                 );
-                _transfer(msg.sender, owner(), tokenId);
+                _transfer(msg.sender, _nftReceiver, tokenId);
             }
         }
 
