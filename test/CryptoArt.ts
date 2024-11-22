@@ -1123,7 +1123,7 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
 		});
 
-		it.skip("Should refund excess payment when minting by trade", async function () {
+		it("Should refund excess payment when minting by trade", async function () {
 			// First, mint two initial tokens
 			for (let i = 0; i < 2; i++) {
 				const { id, signature } = await getSignatureForMint(
@@ -3296,7 +3296,7 @@ describe("CryptoartNFT", function () {
 			expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
 		});
 
-		it.skip("Should refund excess payment when burning and minting", async function () {
+		it("Should refund excess payment when burning and minting", async function () {
 			// First, mint an initial token
 			const { id, signature } = await getSignatureForMint(
 				cryptoArtNFT,
