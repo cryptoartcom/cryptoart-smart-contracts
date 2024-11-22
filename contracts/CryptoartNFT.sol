@@ -33,8 +33,7 @@ contract CryptoartNFT is
     using Strings for address;
 
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
-    uint256 public royaltyPercentage;
-    address payable public royaltyReceiver; // the account to receive all royalties
+    uint96 public defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
     // metadata
     string public baseURI;
     
@@ -88,9 +87,7 @@ contract CryptoartNFT is
 
         baseURI = "";
 
-        royaltyReceiver = payable(contractOwner); // default to the contract creator
-        royaltyPercentage = 250; // default to 2.5% royalty
-        _setDefaultRoyalty(royaltyReceiver, royaltyPercentage.toUint96());
+        _setDefaultRoyalty(payable(contractOwner), defaultRoyaltyPercentage);
 
         _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7;
         _authoritySigner = contractAuthoritySigner;
@@ -115,13 +112,11 @@ contract CryptoartNFT is
 
     function updateRoyalties(
         address payable newReceiver,
-        uint256 newPercentage
+        uint96 newPercentage
     ) external onlyOwner {
         require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
-        royaltyReceiver = newReceiver;
-        royaltyPercentage = newPercentage;
 
-        _setDefaultRoyalty(newReceiver, newPercentage.toUint96());
+        _setDefaultRoyalty(newReceiver, newPercentage);
 
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }

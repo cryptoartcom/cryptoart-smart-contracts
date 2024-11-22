@@ -784,7 +784,8 @@ describe("CryptoartNFT", function () {
 				tokenId,
 				salePrice
 			);
-			const royaltyPercentage = await cryptoArtNFT.royaltyPercentage();
+
+			const royaltyPercentage = await cryptoArtNFT.defaultRoyaltyPercentage();
 
 			expect(receiver).to.equal(_owner.address);
 			expect(royaltyAmount).to.equal((salePrice * royaltyPercentage) / 10000n); // Assuming 2.5% royalty
