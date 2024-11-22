@@ -270,8 +270,9 @@ contract CryptoartNFT is
 
     function batchBurn(uint256[] memory tokenIds) public virtual {
         uint256 tokensArrayLength = tokenIds.length;
-        for (uint256 i = 0; i < tokensArrayLength; i++) {
+        for (uint256 i; i < tokensArrayLength;) {
           burn(tokenIds[i]);
+          unchecked { ++i; }
         }
     }
 
