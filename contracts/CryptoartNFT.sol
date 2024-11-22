@@ -33,10 +33,12 @@ contract CryptoartNFT is
     using Strings for address;
 
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
-    uint96 public defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
+    uint96 public constant defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
     // metadata
     string public baseURI;
-    
+
+    uint256 private constant MAX_BATCH_SIZE = 50;
+
     // Gaps
     mapping(address => uint256) public burnCount; // Gap to maintain storage layout
     address private _owner; // Gap to maintain storage layout
@@ -61,7 +63,7 @@ contract CryptoartNFT is
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     event AuthoritySignerUpdated(address newAuthoritySigner);
     event NftReceiverUpdated(address newNftReceiver);
-    
+
     // Define events for NFT lifecycle
     event Minted(uint256 tokenId);
     event MintedByBurning(uint256 tokenId, uint256[] burnedTokenIds);
@@ -123,6 +125,8 @@ contract CryptoartNFT is
 
     // Metadata
     function setBaseURI(string memory newBaseURI) external onlyOwner {
+        require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
+        require(_isValidURI(newBaseURI), "Invalid URI format");
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
@@ -131,6 +135,7 @@ contract CryptoartNFT is
         uint256 _tokenId,
         string memory _newMetadataURI
     ) external onlyOwner {
+        require(!_tokenNotExists(_tokenId), "Token does not exist");
         _setTokenURI(_tokenId, _newMetadataURI);
         triggerMetadataUpdate(_tokenId);
     }
@@ -169,7 +174,12 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _tokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit Minted(_tokenId);
     }
@@ -198,7 +208,12 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _tokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit Claimed(_tokenId);
     }
@@ -242,13 +257,14 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _mintedTokenId);
-        setUri(_mintedTokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _mintedTokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit MintedByTrading(_mintedTokenId, tradedTokenIds);
-    }
-
-    function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
-        return _ownerOf(_tokenId) == address(0);
     }
 
     // Burn
@@ -264,10 +280,25 @@ contract CryptoartNFT is
     }
 
     function batchBurn(uint256[] memory tokenIds) public virtual {
+        require(tokenIds.length > 0, "Token arrays cannot be empty");
+        require(
+            tokenIds.length <= MAX_BATCH_SIZE,
+            "Batch size exceeds maximum"
+        );
+
+        // Check for duplicates
+        for (uint i; i < tokenIds.length - 1; i++) {
+            for (uint j = i + 1; j < tokenIds.length; j++) {
+                require(tokenIds[i] != tokenIds[j], "Duplicate token IDs");
+            }
+        }
+
         uint256 tokensArrayLength = tokenIds.length;
-        for (uint256 i; i < tokensArrayLength;) {
-          burn(tokenIds[i]);
-          unchecked { ++i; }
+        for (uint256 i; i < tokensArrayLength; ) {
+            burn(tokenIds[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -284,10 +315,7 @@ contract CryptoartNFT is
         bytes memory signature
     ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
-        require(
-          tokenIds.length == burnsToUse,
-          "Not enough tokens to burn."
-        );
+        require(tokenIds.length == burnsToUse, "Not enough tokens to burn.");
 
         batchBurn(tokenIds);
 
@@ -304,7 +332,12 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _tokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit MintedByBurning(_tokenId, tokenIds);
     }
@@ -366,9 +399,7 @@ contract CryptoartNFT is
         emit AuthoritySignerUpdated(newAuthoritySigner);
     }
 
-    function updateNftReceiver(
-        address newNftReceiver
-    ) external onlyOwner {
+    function updateNftReceiver(address newNftReceiver) external onlyOwner {
         _nftReceiver = newNftReceiver;
         emit NftReceiverUpdated(newNftReceiver);
     }
@@ -398,12 +429,14 @@ contract CryptoartNFT is
 
     // @notice Implementation of ERC721.tokenURI for backwards compatibility.
     // @inheritdoc ERC721.tokenURI
-    function tokenURI(uint256 tokenId)
-        public 
+    function tokenURI(
+        uint256 tokenId
+    )
+        public
         view
-        virtual 
+        virtual
         override(ERC721URIStorageUpgradeable, ERC721Upgradeable)
-        returns (string memory) 
+        returns (string memory)
     {
         require(
             !_tokenNotExists(tokenId),
@@ -570,7 +603,7 @@ contract CryptoartNFT is
     /*//////////////////////////////////////////////////////////////////////////
                                 Supply
     //////////////////////////////////////////////////////////////////////////*/
-    
+
     // Getter for total supply
     function totalSupply() external view returns (uint256) {
         return _totalSupply;
@@ -580,5 +613,29 @@ contract CryptoartNFT is
     function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
         _totalSupply = newTotalSupply;
         emit TotalSupplySet(newTotalSupply);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                Helper functions
+    //////////////////////////////////////////////////////////////////////////*/
+    function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
+        return _ownerOf(_tokenId) == address(0);
+    }
+
+    function _isValidURI(string memory uri) internal pure returns (bool) {
+        bytes memory uriBytes = bytes(uri);
+        if (uriBytes.length == 0) return false;
+
+        // Basic URI format validation
+        // Should start with http://, https://, ipfs://, or ar://
+        bytes4 protocol;
+        assembly {
+            protocol := mload(add(uri, 32))
+        }
+
+        return (protocol == 0x68747470 || // "http"
+            protocol == 0x68747470 || // "http"
+            protocol == 0x69706673 || // "ipfs"
+            protocol == 0x61722f2f); // "ar://"
     }
 }
