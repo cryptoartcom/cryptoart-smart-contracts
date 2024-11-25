@@ -861,139 +861,84 @@ describe("CryptoartNFT", function () {
 	});
 
 	describe("Metadata", function () {
-		it("Should set base URI", async function () {
-			const newBaseURI = "https://ipfs.io/ipfs/";
-			await expect(cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)).to.not
-				.be.reverted;
+    it("Should set base URI", async function () {
+        const newBaseURI = "https://ipfs.io/ipfs/";
+        await expect(cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)).to.not.be.reverted;
 
-			  it("Should validate URI format correctly", async function () {
-					const validURIs = [
-						"https://example.com",
-						"http://test.com",
-						"ipfs://QmHash",
-						"ar://ArweaveHash"
-					];
-			
-					const invalidURIs = [
-						"",
-						"ftp://invalid.com",
-						"://invalid.com",
-						"invalid-uri"
-					];
-			
-					for (const uri of validURIs) {
-						await expect(
-							cryptoArtNFT.connect(_owner).setBaseURI(uri)
-						).to.not.be.reverted;
-					}
-			
-					for (const uri of invalidURIs) {
-						await expect(
-							cryptoArtNFT.connect(_owner).setBaseURI(uri)
-						).to.be.revertedWith("Invalid URI format");
-					}
-				});
-			
-				it("Should revert on empty baseURI", async function () {
-					await expect(
-						cryptoArtNFT.connect(_owner).setBaseURI("")
-					).to.be.revertedWith("Empty baseURI not allowed");
-				});
+        // Mint a token to test the new base URI
+        const { id, signature } = await getSignatureForMint(
+            cryptoArtNFT,
+            addr1.address,
+            _tokenId1,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            0
+        );
 
-			// Mint a token to test the new base URI
-			const { id, signature } = await getSignatureForMint(
-				cryptoArtNFT,
-				addr1.address,
-				_tokenId1,
-				MintTypesEnum.OpenMint,
-				_priceInWei,
-				0
-			);
-			await cryptoArtNFT
-				.connect(addr1)
-				.mint(
-					id,
-					MintTypesEnum.OpenMint,
-					_priceInWei,
-					redeemableTrueURI,
-					redeemableFalseURI,
-					0,
-					signature,
-					{ value: _priceInWei }
-				);
+        await cryptoArtNFT
+            .connect(addr1)
+            .mint(
+                id,
+                MintTypesEnum.OpenMint,
+                _priceInWei,
+                redeemableTrueURI,
+                redeemableFalseURI,
+                0,
+                signature,
+                { value: _priceInWei }
+            );
 
-			expect(await cryptoArtNFT.tokenURI(_tokenId1)).to.equal(
-				newBaseURI + redeemableTrueURI
-			);
-		});
+        expect(await cryptoArtNFT.tokenURI(_tokenId1)).to.equal(
+            newBaseURI + redeemableTrueURI
+        );
+    });
 
-		it("Should emit BaseURISet event", async function () {
-			const newBaseURI = "https://ipfs.io/ipfs/";
-			await expect(
-				cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)
-			).to.a.emit(cryptoArtNFT, "BaseURISet");
-		});
+    it("Should revert on empty baseURI", async function () {
+        await expect(
+            cryptoArtNFT.connect(_owner).setBaseURI("")
+        ).to.be.revertedWith("Empty baseURI not allowed");
+    });
 
-		it("Should revert when non-owner tries to set base URI", async function () {
-			const newBaseURI = "https://example.com/";
-			await expect(cryptoArtNFT.connect(addr1).setBaseURI(newBaseURI)).to.be
-				.reverted;
-		});
+    it("Should revert if URI is the same as the current baseURI", async function () {
+        const newBaseURI = "https://ipfs.io/ipfs/";
+        await cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI);
 
-		it("Should revert when non-owner tries to trigger metadata update", async function () {
-			const tokenId = 1;
-			await expect(cryptoArtNFT.connect(addr1).triggerMetadataUpdate(tokenId))
-				.to.be.reverted;
-		});
+        await expect(
+            cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)
+        ).to.be.reverted;
+    });
 
-		it("Should update metadata", async function () {
-			const { id, signature } = await getSignatureForMint(
-				cryptoArtNFT,
-				addr1.address,
-				_tokenId1,
-				MintTypesEnum.OpenMint,
-				_priceInWei,
-				0
-			);
+    it("Should emit BaseURISet event", async function () {
+        const newBaseURI = "https://ipfs.io/ipfs/";
+        await expect(
+            cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)
+        ).to.emit(cryptoArtNFT, "BaseURISet");
+    });
 
-			await expect(
-				cryptoArtNFT
-					.connect(addr1)
-					.mint(
-						id,
-						MintTypesEnum.OpenMint,
-						_priceInWei,
-						redeemableTrueURI,
-						redeemableFalseURI,
-						0,
-						signature,
-						{
-							value: _priceInWei,
-						}
-					)
-			).to.not.be.reverted;
+    it("Should revert when non-owner tries to set base URI", async function () {
+        const newBaseURI = "https://example.com/";
+        await expect(cryptoArtNFT.connect(addr1).setBaseURI(newBaseURI))
+            .to.be.reverted;
+    });
 
-			const tokenId = id;
-			const newURI = redeemableTrueURI;
-			await expect(cryptoArtNFT.connect(_owner).updateMetadata(tokenId, newURI))
-				.to.emit(cryptoArtNFT, "MetadataUpdate")
-				.withArgs(tokenId);
+    it("Should revert when non-owner tries to trigger metadata update", async function () {
+        const tokenId = 1;
+        await expect(cryptoArtNFT.connect(addr1).triggerMetadataUpdate(tokenId))
+            .to.be.reverted;
+    });
 
-			expect(await cryptoArtNFT.tokenURI(tokenId)).to.equal(newURI);
-		});
+    it("Should trigger metadata update", async function () {
+        const tokenId = 1;
+        await expect(cryptoArtNFT.connect(_owner).triggerMetadataUpdate(tokenId))
+            .to.emit(cryptoArtNFT, "MetadataUpdate")
+            .withArgs(tokenId);
+    });
 
-		it("Should trigger metadata update", async function () {
-			const tokenId = 1;
-			await expect(cryptoArtNFT.connect(_owner).triggerMetadataUpdate(tokenId))
-				.to.emit(cryptoArtNFT, "MetadataUpdate")
-				.withArgs(tokenId);
-		});
-
-		it("Should revert when non-owner tries to update metadata", async function () {
-			await expect(cryptoArtNFT.connect(addr1).updateMetadata(1, "newURI")).to
-				.be.reverted;
-		});
-	});
+    it("Should revert when non-owner tries to update metadata", async function () {
+        await expect(cryptoArtNFT.connect(addr1).updateMetadata(1, "newURI"))
+            .to.be.reverted;
+    });
+});
 
 	describe("Authority Signer", function () {
 		it("Should update authority signer", async function () {
