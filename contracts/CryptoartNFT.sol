@@ -281,20 +281,20 @@ contract CryptoartNFT is
     }
 
     function batchBurn(uint256[] memory tokenIds) public virtual {
-        require(tokenIds.length > 0, "Token arrays cannot be empty");
+        uint256 tokensArrayLength = tokenIds.length;
+        require(tokensArrayLength > 0, "Token arrays cannot be empty");
         require(
             tokenIds.length <= MAX_BATCH_SIZE,
             "Batch size exceeds maximum"
         );
 
         // Check for duplicates
-        for (uint i; i < tokenIds.length - 1; i++) {
-            for (uint j = i + 1; j < tokenIds.length; j++) {
+        for (uint i; i < tokensArrayLength - 1; i++) {
+            for (uint j = i + 1; j < tokensArrayLength; j++) {
                 require(tokenIds[i] != tokenIds[j], "Duplicate token IDs");
             }
         }
 
-        uint256 tokensArrayLength = tokenIds.length;
         for (uint256 i; i < tokensArrayLength; ) {
             burn(tokenIds[i]);
             unchecked {
