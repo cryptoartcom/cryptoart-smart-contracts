@@ -126,7 +126,12 @@ contract CryptoartNFT is
     // Metadata
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
-        require(_isValidURI(newBaseURI), "Invalid URI format");
+        require(
+            keccak256(abi.encodePacked(newBaseURI)) !=
+                keccak256(abi.encodePacked(baseURI)),
+            "BaseURI is the same"
+        );
+
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
@@ -621,22 +626,5 @@ contract CryptoartNFT is
     //////////////////////////////////////////////////////////////////////////*/
     function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
         return _ownerOf(_tokenId) == address(0);
-    }
-
-    function _isValidURI(string memory uri) internal pure returns (bool) {
-        bytes memory uriBytes = bytes(uri);
-        if (uriBytes.length == 0) return false;
-
-        // Basic URI format validation
-        // Should start with http://, https://, ipfs://, or ar://
-        bytes4 protocol;
-        assembly {
-            protocol := mload(add(uri, 32))
-        }
-
-        return (protocol == 0x68747470 || // "http"
-            protocol == 0x68747470 || // "http"
-            protocol == 0x69706673 || // "ipfs"
-            protocol == 0x61722f2f); // "ar://"
     }
 }
