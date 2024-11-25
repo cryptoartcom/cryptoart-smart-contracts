@@ -9,20 +9,19 @@
     "verify:sepolia": "npx hardhat verify --network base-sepolia 0x55050A8408550a995968a6e72048076FE35dA950"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-foundry": "^1.1.2",
-    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "@openzeppelin/hardhat-upgrades": "^3.0.2",
+    "@nomicfoundation/hardhat-foundry": "^1.1.3",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.5.0",
     "@types/crypto-js": "^4.2.2",
-    "ether": "^0.0.9",
-    "hardhat": "^2.19.4",
-    "merkletreejs": "^0.3.11"
+    "hardhat": "^2.22.16",
+    "merkletreejs": "^0.4.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.1",
-    "@openzeppelin/contracts-upgradeable": "^5.0.1",
-    "@openzeppelin/merkle-tree": "^1.0.6",
-    "dotenv": "^16.4.1",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@openzeppelin/contracts-upgradeable": "^5.1.0",
+    "@openzeppelin/merkle-tree": "^1.0.7",
+    "dotenv": "^16.4.5",
     "ethereumjs-util": "^7.1.5",
-    "ethers": "^6.10.0"
+    "ethers": "^6.13.4"
   }
 }
