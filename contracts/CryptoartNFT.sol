@@ -233,7 +233,7 @@ contract CryptoartNFT is
 
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
-        for (uint256 i = 0; i < tradedTokensArrayLength; i++) {
+        for (uint256 i; i < tradedTokensArrayLength; ) {
             unchecked {
                 uint256 tokenId = tradedTokenIds[i];
                 require(
@@ -241,6 +241,7 @@ contract CryptoartNFT is
                     "Sender must own the tokens to trade"
                 );
                 _transfer(msg.sender, _nftReceiver, tokenId);
+                ++i;
             }
         }
 
