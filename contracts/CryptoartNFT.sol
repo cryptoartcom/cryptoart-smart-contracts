@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -23,6 +24,7 @@ contract CryptoartNFT is
     ERC721URIStorageUpgradeable,
     ERC721RoyaltyUpgradeable,
     OwnableUpgradeable,
+    PausableUpgradeable,
     NoncesUpgradeable,
     IStory
 {
@@ -85,6 +87,7 @@ contract CryptoartNFT is
         __ERC721URIStorage_init();
         __ERC721Royalty_init();
         __Ownable_init(contractOwner);
+        __Pausable_init();
         __Nonces_init();
 
         baseURI = "";
@@ -94,6 +97,16 @@ contract CryptoartNFT is
         _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7;
         _authoritySigner = contractAuthoritySigner;
         emit Initialized(contractOwner, contractAuthoritySigner);
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+        emit Paused(msg.sender);
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+        emit Unpaused(msg.sender);
     }
 
     /// @dev See {IERC165-supportsInterface}.
@@ -162,7 +175,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) external payable {
+    ) external payable whenNotPaused {
         require(_tokenNotExists(_tokenId), "Token already minted.");
         _handlePaymentAndRefund(tokenPrice);
 
@@ -196,7 +209,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) external payable {
+    ) external payable whenNotPaused {
         require(_tokenNotExists(_tokenId), "Token already minted or claimed.");
         _handlePaymentAndRefund(tokenPrice);
 
@@ -232,7 +245,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) external payable {
+    ) external payable whenNotPaused {
         require(_tokenNotExists(_mintedTokenId), "Token already minted.");
         require(tradedTokenIds.length > 0, "No tokens provided for trade");
 
@@ -274,7 +287,7 @@ contract CryptoartNFT is
     }
 
     // Burn
-    function burn(uint256 tokenId) public virtual {
+    function burn(uint256 tokenId) public virtual whenNotPaused {
         // Only allow the owner to burn their token
         require(
             ownerOf(tokenId) == msg.sender,
@@ -285,7 +298,7 @@ contract CryptoartNFT is
         emit Burned(tokenId);
     }
 
-    function batchBurn(uint256[] memory tokenIds) public virtual {
+    function batchBurn(uint256[] memory tokenIds) public virtual whenNotPaused {
         uint256 tokensArrayLength = tokenIds.length;
         require(tokensArrayLength > 0, "Token arrays cannot be empty");
         require(
@@ -319,7 +332,7 @@ contract CryptoartNFT is
         string memory redeemableFalseURI,
         uint256 redeemableDefaultIndex,
         bytes memory signature
-    ) external payable {
+    ) external payable whenNotPaused {
         require(_tokenNotExists(_tokenId), "Token already minted.");
         require(tokenIds.length == burnsToUse, "Not enough tokens to burn.");
 
