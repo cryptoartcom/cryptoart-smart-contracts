@@ -902,14 +902,6 @@ describe("CryptoartNFT", function () {
       ).to.be.revertedWith("Empty baseURI not allowed");
     });
 
-    it("Should revert if URI is the same as the current baseURI", async function () {
-      const newBaseURI = "https://ipfs.io/ipfs/";
-      await cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI);
-
-      await expect(cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)).to.be
-        .reverted;
-    });
-
     it("Should emit BaseURISet event", async function () {
       const newBaseURI = "https://ipfs.io/ipfs/";
       await expect(cryptoArtNFT.connect(_owner).setBaseURI(newBaseURI)).to.emit(

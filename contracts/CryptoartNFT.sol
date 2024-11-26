@@ -34,12 +34,16 @@ contract CryptoartNFT is
     /// @dev String representation for address
     using Strings for address;
 
+    // Constants
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     uint96 public constant defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
+    uint256 private constant MAX_BATCH_SIZE = 50;
+
+    uint256 public royaltyPercentage_unused;
+    address payable public royaltyReceiver_unused;
+
     // metadata
     string public baseURI;
-
-    uint256 private constant MAX_BATCH_SIZE = 50;
 
     // Gaps
     mapping(address => uint256) public burnCount; // Gap to maintain storage layout
@@ -139,12 +143,6 @@ contract CryptoartNFT is
     // Metadata
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
-        require(
-            keccak256(abi.encodePacked(newBaseURI)) !=
-                keccak256(abi.encodePacked(baseURI)),
-            "BaseURI is the same"
-        );
-
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
@@ -302,7 +300,7 @@ contract CryptoartNFT is
         uint256 tokensArrayLength = tokenIds.length;
         require(tokensArrayLength > 0, "Token arrays cannot be empty");
         require(
-            tokenIds.length <= MAX_BATCH_SIZE,
+            tokensArrayLength <= MAX_BATCH_SIZE,
             "Batch size exceeds maximum"
         );
 
