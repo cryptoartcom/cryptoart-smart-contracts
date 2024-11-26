@@ -293,7 +293,7 @@ contract CryptoartNFT is
         uint256 tokensArrayLength = tokenIds.length;
         require(tokensArrayLength > 0, "Token arrays cannot be empty");
         require(
-            tokenIds.length <= MAX_BATCH_SIZE,
+            tokensArrayLength <= MAX_BATCH_SIZE,
             "Batch size exceeds maximum"
         );
 
