@@ -130,12 +130,6 @@ contract CryptoartNFT is
     // Metadata
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
-        require(
-            keccak256(abi.encodePacked(newBaseURI)) !=
-                keccak256(abi.encodePacked(baseURI)),
-            "BaseURI is the same"
-        );
-
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
