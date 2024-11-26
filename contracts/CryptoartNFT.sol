@@ -32,12 +32,16 @@ contract CryptoartNFT is
     /// @dev String representation for address
     using Strings for address;
 
+    // Constants
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     uint96 public constant defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
+    uint256 private constant MAX_BATCH_SIZE = 50;
+
+    uint256 public royaltyPercentage_unused;
+    address payable public royaltyReceiver_unused;
+
     // metadata
     string public baseURI;
-
-    uint256 private constant MAX_BATCH_SIZE = 50;
 
     // Gaps
     mapping(address => uint256) public burnCount; // Gap to maintain storage layout
