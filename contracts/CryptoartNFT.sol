@@ -39,8 +39,10 @@ contract CryptoartNFT is
     uint96 public constant defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
     uint256 private constant MAX_BATCH_SIZE = 50;
 
-    uint256 public royaltyPercentage_unused;
-    address payable public royaltyReceiver_unused;
+    /// @custom:oz-renamed-from royaltyPercentage
+    uint256 public unused_royaltyPercentage;
+    /// @custom:oz-renamed-from royaltyReceiver
+    address payable public unused_royaltyReceiver;
 
     // metadata
     string public baseURI;
