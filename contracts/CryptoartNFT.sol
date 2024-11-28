@@ -32,12 +32,19 @@ contract CryptoartNFT is
     /// @dev String representation for address
     using Strings for address;
 
+    // Constants
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
-    uint256 public royaltyPercentage;
-    address payable public royaltyReceiver; // the account to receive all royalties
+    uint96 public constant defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
+    uint256 private constant MAX_BATCH_SIZE = 50;
+
+    /// @custom:oz-renamed-from royaltyPercentage
+    uint256 public unused_royaltyPercentage;
+    /// @custom:oz-renamed-from royaltyReceiver
+    address payable public unused_royaltyReceiver;
+
     // metadata
     string public baseURI;
-    
+
     // Gaps
     mapping(address => uint256) public burnCount; // Gap to maintain storage layout
     address private _owner; // Gap to maintain storage layout
@@ -62,7 +69,7 @@ contract CryptoartNFT is
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     event AuthoritySignerUpdated(address newAuthoritySigner);
     event NftReceiverUpdated(address newNftReceiver);
-    
+
     // Define events for NFT lifecycle
     event Minted(uint256 tokenId);
     event MintedByBurning(uint256 tokenId, uint256[] burnedTokenIds);
@@ -88,9 +95,7 @@ contract CryptoartNFT is
 
         baseURI = "";
 
-        royaltyReceiver = payable(contractOwner); // default to the contract creator
-        royaltyPercentage = 250; // default to 2.5% royalty
-        _setDefaultRoyalty(royaltyReceiver, royaltyPercentage.toUint96());
+        _setDefaultRoyalty(payable(contractOwner), defaultRoyaltyPercentage);
 
         _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7;
         _authoritySigner = contractAuthoritySigner;
@@ -115,19 +120,18 @@ contract CryptoartNFT is
 
     function updateRoyalties(
         address payable newReceiver,
-        uint256 newPercentage
+        uint96 newPercentage
     ) external onlyOwner {
         require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
-        royaltyReceiver = newReceiver;
-        royaltyPercentage = newPercentage;
 
-        _setDefaultRoyalty(newReceiver, newPercentage.toUint96());
+        _setDefaultRoyalty(newReceiver, newPercentage);
 
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
 
     // Metadata
     function setBaseURI(string memory newBaseURI) external onlyOwner {
+        require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
@@ -136,6 +140,7 @@ contract CryptoartNFT is
         uint256 _tokenId,
         string memory _newMetadataURI
     ) external onlyOwner {
+        require(!_tokenNotExists(_tokenId), "Token does not exist");
         _setTokenURI(_tokenId, _newMetadataURI);
         triggerMetadataUpdate(_tokenId);
     }
@@ -174,7 +179,12 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _tokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit Minted(_tokenId);
     }
@@ -203,7 +213,12 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _tokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit Claimed(_tokenId);
     }
@@ -223,7 +238,7 @@ contract CryptoartNFT is
 
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
-        for (uint256 i = 0; i < tradedTokensArrayLength; i++) {
+        for (uint256 i; i < tradedTokensArrayLength; ) {
             unchecked {
                 uint256 tokenId = tradedTokenIds[i];
                 require(
@@ -231,6 +246,7 @@ contract CryptoartNFT is
                     "Sender must own the tokens to trade"
                 );
                 _transfer(msg.sender, _nftReceiver, tokenId);
+                ++i;
             }
         }
 
@@ -247,13 +263,14 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _mintedTokenId);
-        setUri(_mintedTokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _mintedTokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit MintedByTrading(_mintedTokenId, tradedTokenIds);
-    }
-
-    function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
-        return _ownerOf(_tokenId) == address(0);
     }
 
     // Burn
@@ -270,8 +287,24 @@ contract CryptoartNFT is
 
     function batchBurn(uint256[] memory tokenIds) public virtual {
         uint256 tokensArrayLength = tokenIds.length;
-        for (uint256 i = 0; i < tokensArrayLength; i++) {
-          burn(tokenIds[i]);
+        require(tokensArrayLength > 0, "Token arrays cannot be empty");
+        require(
+            tokensArrayLength <= MAX_BATCH_SIZE,
+            "Batch size exceeds maximum"
+        );
+
+        // Check for duplicates
+        for (uint i; i < tokensArrayLength - 1; i++) {
+            for (uint j = i + 1; j < tokensArrayLength; j++) {
+                require(tokenIds[i] != tokenIds[j], "Duplicate token IDs");
+            }
+        }
+
+        for (uint256 i; i < tokensArrayLength; ) {
+            burn(tokenIds[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -288,10 +321,7 @@ contract CryptoartNFT is
         bytes memory signature
     ) external payable {
         require(_tokenNotExists(_tokenId), "Token already minted.");
-        require(
-          tokenIds.length == burnsToUse,
-          "Not enough tokens to burn."
-        );
+        require(tokenIds.length == burnsToUse, "Not enough tokens to burn.");
 
         batchBurn(tokenIds);
 
@@ -308,7 +338,12 @@ contract CryptoartNFT is
         );
 
         _mint(msg.sender, _tokenId);
-        setUri(_tokenId, redeemableTrueURI, redeemableFalseURI, redeemableDefaultIndex);
+        setUri(
+            _tokenId,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            redeemableDefaultIndex
+        );
 
         emit MintedByBurning(_tokenId, tokenIds);
     }
@@ -370,9 +405,7 @@ contract CryptoartNFT is
         emit AuthoritySignerUpdated(newAuthoritySigner);
     }
 
-    function updateNftReceiver(
-        address newNftReceiver
-    ) external onlyOwner {
+    function updateNftReceiver(address newNftReceiver) external onlyOwner {
         _nftReceiver = newNftReceiver;
         emit NftReceiverUpdated(newNftReceiver);
     }
@@ -402,12 +435,14 @@ contract CryptoartNFT is
 
     // @notice Implementation of ERC721.tokenURI for backwards compatibility.
     // @inheritdoc ERC721.tokenURI
-    function tokenURI(uint256 tokenId)
-        public 
+    function tokenURI(
+        uint256 tokenId
+    )
+        public
         view
-        virtual 
+        virtual
         override(ERC721URIStorageUpgradeable, ERC721Upgradeable)
-        returns (string memory) 
+        returns (string memory)
     {
         require(
             !_tokenNotExists(tokenId),
@@ -574,7 +609,7 @@ contract CryptoartNFT is
     /*//////////////////////////////////////////////////////////////////////////
                                 Supply
     //////////////////////////////////////////////////////////////////////////*/
-    
+
     // Getter for total supply
     function totalSupply() external view returns (uint256) {
         return _totalSupply;
@@ -584,5 +619,12 @@ contract CryptoartNFT is
     function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
         _totalSupply = newTotalSupply;
         emit TotalSupplySet(newTotalSupply);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                Helper functions
+    //////////////////////////////////////////////////////////////////////////*/
+    function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
+        return _ownerOf(_tokenId) == address(0);
     }
 }
