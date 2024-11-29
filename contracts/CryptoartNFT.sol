@@ -107,12 +107,10 @@ contract CryptoartNFT is
 
     function pause() public onlyOwner {
         _pause();
-        emit Paused(msg.sender);
     }
 
     function unpause() public onlyOwner {
         _unpause();
-        emit Unpaused(msg.sender);
     }
 
     /// @dev See {IERC165-supportsInterface}.
