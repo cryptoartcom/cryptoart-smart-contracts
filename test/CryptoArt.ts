@@ -3449,4 +3449,336 @@ describe("CryptoartNFT", function () {
       expect(await cryptoArtNFT.ownerOf(newTokenId)).to.equal(addr1.address);
     });
   });
+
+  describe("Pausable", function () {
+    it("Should allow owner to pause and unpause", async function () {
+      // Initial state should be unpaused
+      expect(await cryptoArtNFT.paused()).to.be.false;
+
+      // Pause
+      await expect(cryptoArtNFT.connect(_owner).pause())
+        .to.emit(cryptoArtNFT, "Paused")
+        .withArgs(_owner.address);
+      expect(await cryptoArtNFT.paused()).to.be.true;
+
+      // Unpause
+      await expect(cryptoArtNFT.connect(_owner).unpause())
+        .to.emit(cryptoArtNFT, "Unpaused")
+        .withArgs(_owner.address);
+      expect(await cryptoArtNFT.paused()).to.be.false;
+    });
+
+    it("Should not allow non-owner to pause", async function () {
+      await expect(cryptoArtNFT.connect(addr1).pause()).to.be.reverted;
+    });
+
+    it("Should not allow non-owner to unpause", async function () {
+      // First pause as owner
+      await cryptoArtNFT.connect(_owner).pause();
+
+      // Try to unpause as non-owner
+      await expect(cryptoArtNFT.connect(addr1).unpause()).to.be.reverted;
+    });
+
+    describe("Paused State Restrictions", function () {
+      beforeEach(async function () {
+        // Pause the contract
+        await cryptoArtNFT.connect(_owner).pause();
+      });
+
+      it("Should not allow minting when paused", async function () {
+        const { id, signature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId1,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+        );
+
+        await expect(
+          cryptoArtNFT
+            .connect(addr1)
+            .mint(
+              id,
+              MintTypesEnum.OpenMint,
+              _priceInWei,
+              redeemableTrueURI,
+              redeemableFalseURI,
+              0,
+              signature,
+              { value: _priceInWei },
+            ),
+        ).to.be.revertedWithCustomError(cryptoArtNFT, "EnforcedPause");
+      });
+
+      it("Should not allow burning when paused", async function () {
+        // First unpause to mint
+        await cryptoArtNFT.connect(_owner).unpause();
+
+        const { id, signature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId1,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+        );
+
+        await cryptoArtNFT
+          .connect(addr1)
+          .mint(
+            id,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            0,
+            signature,
+            { value: _priceInWei },
+          );
+
+        // Pause again
+        await cryptoArtNFT.connect(_owner).pause();
+
+        // Try to burn
+        await expect(
+          cryptoArtNFT.connect(addr1).burn(_tokenId1),
+        ).to.be.revertedWithCustomError(cryptoArtNFT, "EnforcedPause");
+      });
+
+      it("Should not allow claiming when paused", async function () {
+        const { id, signature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId1,
+          MintTypesEnum.Claimable,
+          _priceInWei,
+        );
+
+        await expect(
+          cryptoArtNFT
+            .connect(addr1)
+            .claimable(
+              id,
+              _priceInWei,
+              redeemableTrueURI,
+              redeemableFalseURI,
+              0,
+              signature,
+              { value: _priceInWei },
+            ),
+        ).to.be.revertedWithCustomError(cryptoArtNFT, "EnforcedPause");
+      });
+
+      it("Should not allow batch burning when paused", async function () {
+        // First unpause to mint some tokens
+        await cryptoArtNFT.connect(_owner).unpause();
+
+        const tokenIds = [_tokenId1, _tokenId2];
+        for (const tokenId of tokenIds) {
+          const { id, signature } = await getSignatureForMint(
+            cryptoArtNFT,
+            addr1.address,
+            tokenId,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+          );
+
+          await cryptoArtNFT
+            .connect(addr1)
+            .mint(
+              id,
+              MintTypesEnum.OpenMint,
+              _priceInWei,
+              redeemableTrueURI,
+              redeemableFalseURI,
+              0,
+              signature,
+              { value: _priceInWei },
+            );
+        }
+
+        // Pause again
+        await cryptoArtNFT.connect(_owner).pause();
+
+        // Try to batch burn
+        await expect(
+          cryptoArtNFT.connect(addr1).batchBurn(tokenIds),
+        ).to.be.revertedWithCustomError(cryptoArtNFT, "EnforcedPause");
+      });
+
+      it("Should still allow view functions when paused", async function () {
+        // View functions should work regardless of pause state
+        // Call the view functions and expect them to return values
+        const isPaused = await cryptoArtNFT.paused();
+        expect(isPaused).to.be.true;
+
+        const ownerAddress = await cryptoArtNFT.owner();
+        expect(ownerAddress).to.equal(_owner.address);
+
+        const supply = await cryptoArtNFT.totalSupply();
+        expect(typeof supply).to.equal("bigint"); // Check that we got a valid bigint return value
+      });
+
+      it("Should not allow mint with trade when paused", async function () {
+        // First unpause to mint initial tokens
+        await cryptoArtNFT.connect(_owner).unpause();
+
+        // Mint two tokens to trade
+        const { id: id1, signature: sig1 } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId1,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+        );
+        await cryptoArtNFT
+          .connect(addr1)
+          .mint(
+            id1,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            0,
+            sig1,
+            { value: _priceInWei },
+          );
+
+        const { id: id2, signature: sig2 } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId2,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+        );
+        await cryptoArtNFT
+          .connect(addr1)
+          .mint(
+            id2,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            0,
+            sig2,
+            { value: _priceInWei },
+          );
+
+        // Pause the contract
+        await cryptoArtNFT.connect(_owner).pause();
+
+        // Try to mint with trade
+        const newTokenId = 3;
+        const { signature: tradeSignature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          newTokenId,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+          2,
+        );
+
+        await expect(
+          cryptoArtNFT
+            .connect(addr1)
+            .mintWithTrade(
+              newTokenId,
+              [_tokenId1, _tokenId2],
+              MintTypesEnum.OpenMint,
+              _priceInWei,
+              redeemableTrueURI,
+              redeemableFalseURI,
+              0,
+              tradeSignature,
+              { value: _priceInWei },
+            ),
+        ).to.be.revertedWithCustomError(cryptoArtNFT, "EnforcedPause");
+      });
+
+      it("Should not allow burn and mint when paused", async function () {
+        // First unpause to mint initial token
+        await cryptoArtNFT.connect(_owner).unpause();
+
+        const { id, signature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId1,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+        );
+        await cryptoArtNFT
+          .connect(addr1)
+          .mint(
+            id,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            0,
+            signature,
+            { value: _priceInWei },
+          );
+
+        // Pause the contract
+        await cryptoArtNFT.connect(_owner).pause();
+
+        // Try to burn and mint
+        const newTokenId = _tokenId2;
+        const { signature: burnSignature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          newTokenId,
+          MintTypesEnum.Burn,
+          _priceInWei,
+          1,
+        );
+
+        await expect(
+          cryptoArtNFT
+            .connect(addr1)
+            .burnAndMint(
+              [_tokenId1],
+              newTokenId,
+              MintTypesEnum.Burn,
+              _priceInWei,
+              1,
+              redeemableTrueURI,
+              redeemableFalseURI,
+              0,
+              burnSignature,
+              { value: _priceInWei },
+            ),
+        ).to.be.revertedWithCustomError(cryptoArtNFT, "EnforcedPause");
+      });
+
+      it("Should resume functionality after unpausing", async function () {
+        // Unpause
+        await cryptoArtNFT.connect(_owner).unpause();
+
+        // Try minting
+        const { id, signature } = await getSignatureForMint(
+          cryptoArtNFT,
+          addr1.address,
+          _tokenId1,
+          MintTypesEnum.OpenMint,
+          _priceInWei,
+        );
+
+        await expect(
+          cryptoArtNFT
+            .connect(addr1)
+            .mint(
+              id,
+              MintTypesEnum.OpenMint,
+              _priceInWei,
+              redeemableTrueURI,
+              redeemableFalseURI,
+              0,
+              signature,
+              { value: _priceInWei },
+            ),
+        ).to.not.be.reverted;
+      });
+    });
+  });
 });
