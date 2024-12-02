@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "./CryptoartNFT.sol";
 
+// This contract is used to test reentrancy attacks on the CryptoartNFT contract
 contract MaliciousReceiver is IERC721Receiver {
     CryptoartNFT public nftContract;
     bytes public mintSignature;
