@@ -2956,6 +2956,54 @@ describe("CryptoartNFT", function () {
           ),
       ).to.be.revertedWith("Not authorized to mint");
     });
+
+    it("Should prevent using identical signature and parameters twice", async function () {
+      // Get signature for minting
+      const { id, signature } = await getSignatureForMint(
+        cryptoArtNFT,
+        addr1.address,
+        _tokenId1,
+        MintTypesEnum.OpenMint,
+        _priceInWei,
+        0,
+      );
+
+      // First mint succeeds
+      await expect(
+        cryptoArtNFT
+          .connect(addr1)
+          .mint(
+            id,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            0,
+            signature,
+            { value: _priceInWei },
+          ),
+      ).to.not.be.reverted;
+
+      // Trying to mint again with exactly the same parameters
+      await expect(
+        cryptoArtNFT
+          .connect(addr1)
+          .mint(
+            id,
+            MintTypesEnum.OpenMint,
+            _priceInWei,
+            redeemableTrueURI,
+            redeemableFalseURI,
+            0,
+            signature,
+            { value: _priceInWei },
+          ),
+      ).to.be.revertedWith("Token already minted.");
+
+      // Verify state
+      expect(await cryptoArtNFT.balanceOf(addr1.address)).to.equal(1);
+      expect(await cryptoArtNFT.ownerOf(id)).to.equal(addr1.address);
+    });
   });
 
   describe("Collection Story", function () {
