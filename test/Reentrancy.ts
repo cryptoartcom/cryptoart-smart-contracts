@@ -68,7 +68,7 @@ const getSignatureForMint = async (
   };
 };
 
-describe.only("Reentrancy Protection Tests", function () {
+describe("Reentrancy Protection Tests", function () {
   let cryptoArtNFT: CryptoartNFT;
   let maliciousReceiver: MaliciousReceiver;
   let owner: HardhatEthersSigner;
