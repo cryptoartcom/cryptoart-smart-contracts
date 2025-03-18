@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin-contracts-upgradeable-5.0.2/access/OwnableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/utils/NoncesUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/utils/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
-import "@openzeppelin-contracts-5.0.2/token/ERC721/IERC721.sol";
-import "@openzeppelin-contracts-5.0.2/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
 import "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin-contracts-5.0.2/utils/math/SafeCast.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/access/OwnableUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/utils/PausableUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/utils/NoncesUpgradeable.sol";
 import {IERC7160} from "./interfaces/IERC7160.sol";
 import {IStory} from "./interfaces/IStory.sol";
-
-/* solium-disable-next-line */
-using Strings for uint256;
+import "@openzeppelin-contracts-upgradeable-5.0.2/utils/ReentrancyGuardUpgradeable.sol";
+import {Error} from "./libraries/Error.sol";
 
 contract CryptoartNFT is
     IERC7160,
@@ -26,44 +23,56 @@ contract CryptoartNFT is
     OwnableUpgradeable,
     PausableUpgradeable,
     NoncesUpgradeable,
-    IStory
+    IStory,
+    ReentrancyGuardUpgradeable
 {
-    using ECDSA for bytes32;
     using SafeCast for uint256;
-
-    /// @dev String representation for address
+    using Strings for uint256;
     using Strings for address;
 
+    // ==========================================================================
     // Constants
+    // ==========================================================================
+
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
-    uint96 public constant defaultRoyaltyPercentage = 250; // default royalty percentage 2.5%
+    uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250; // default royalty percentage 2.5%
     uint256 private constant MAX_BATCH_SIZE = 50;
 
-    /// @custom:oz-renamed-from royaltyPercentage
-    uint256 public unused_royaltyPercentage;
-    /// @custom:oz-renamed-from royaltyReceiver
-    address payable public unused_royaltyReceiver;
+    // ==========================================================================
+    // State Variables
+    // ==========================================================================
 
-    // metadata
     string public baseURI;
+    address public authoritySigner;
+    uint256 public totalSupply;
 
-    // Gaps
-    mapping(address => uint256) public burnCount; // Gap to maintain storage layout
-    address private _owner; // Gap to maintain storage layout
-
-    address public _authoritySigner;
+    // Wallet in charge of receiving all tokens transfered for minting
+    address public _nftReceiver;
 
     // IERC7160
     mapping(uint256 => string[]) private _tokenURIs;
     mapping(uint256 => uint256) private _pinnedURIIndices;
     mapping(uint256 => bool) private _hasPinnedTokenURI;
 
-    // State variable to keep track of total supply
-    uint256 private _totalSupply;
+    // ==========================================================================
+    // Structs
+    // ==========================================================================
 
-    // Trading
-    // Wallet in charge of receiving all tokens transfered for minting
-    address public _nftReceiver;
+    struct MintParams {
+        uint256 tokenId;
+        string mintType;
+        uint256 tokenPrice;
+    }
+
+    struct TokenURISet {
+        string uriWhenRedeemable;
+        string uriWhenNotRedeemable;
+        uint256 defaultIndex;
+    }
+
+    // ==========================================================================
+    // Events
+    // ==========================================================================
 
     event Initialized(address contractOwner, address contractAuthoritySigner);
     event BaseURISet(string newBaseURI);
@@ -71,24 +80,20 @@ contract CryptoartNFT is
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     event AuthoritySignerUpdated(address newAuthoritySigner);
     event NftReceiverUpdated(address newNftReceiver);
+    event ToggleStoryVisibility(uint256 tokenId, string storyId, bool visible);
 
-    // Define events for NFT lifecycle
+    // NFT lifecycle events
     event Minted(uint256 tokenId);
     event MintedByBurning(uint256 tokenId, uint256[] burnedTokenIds);
     event Claimed(uint256 tokenId);
     event Burned(uint256 tokenId);
     event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 
-    // Story
-    /// @param tokenId The token id to which the story is attached
-    /// @param storyId The transaction id of the story
-    /// @param visible The visibility of the story
-    event ToggleStoryVisibility(uint256 tokenId, string storyId, bool visible);
+    // ==========================================================================
+    // Initialization
+    // ==========================================================================
 
-    function initialize(
-        address contractOwner,
-        address contractAuthoritySigner
-    ) external initializer {
+    function initialize(address contractOwner, address contractAuthoritySigner) external initializer {
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __ERC721Royalty_init();
@@ -97,157 +102,101 @@ contract CryptoartNFT is
         __Nonces_init();
 
         baseURI = "";
+        _setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
 
-        _setDefaultRoyalty(payable(contractOwner), defaultRoyaltyPercentage);
+        _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7; // TODO: don't hard code this
+        authoritySigner = contractAuthoritySigner;
 
-        _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7;
-        _authoritySigner = contractAuthoritySigner;
         emit Initialized(contractOwner, contractAuthoritySigner);
     }
 
-    /// @dev See {IERC165-supportsInterface}.
-    function supportsInterface(
-        bytes4 interfaceId
-    )
-        public
-        view
-        virtual
-        override(IERC165, ERC721URIStorageUpgradeable, ERC721RoyaltyUpgradeable)
-        returns (bool)
+    // ==========================================================================
+    // Minting Operations
+    // ==========================================================================
+
+    function mint(MintParams calldata mintParams, TokenURISet calldata tokenUriSet, bytes calldata signature)
+        external
+        payable
+        whenNotPaused
+        nonReentrant
     {
-        return
-            interfaceId == type(IERC7160).interfaceId ||
-            interfaceId == type(IERC4906).interfaceId ||
-            super.supportsInterface(interfaceId);
-    }
-
-    function updateRoyalties(
-        address payable newReceiver,
-        uint96 newPercentage
-    ) external onlyOwner {
-        require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
-
-        _setDefaultRoyalty(newReceiver, newPercentage);
-
-        emit RoyaltiesUpdated(newReceiver, newPercentage);
-    }
-
-    // Metadata
-    function setBaseURI(string memory newBaseURI) external onlyOwner {
-        require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
-        baseURI = newBaseURI;
-        emit BaseURISet(newBaseURI);
-    }
-
-    function updateMetadata(
-        uint256 _tokenId,
-        string memory _newMetadataURI
-    ) external onlyOwner {
-        require(!_tokenNotExists(_tokenId), "Token does not exist");
-        _setTokenURI(_tokenId, _newMetadataURI);
-        triggerMetadataUpdate(_tokenId);
-    }
-
-    function triggerMetadataUpdate(uint256 _tokenId) public onlyOwner {
-        emit MetadataUpdate(_tokenId);
-    }
-
-    function _baseURI() internal view virtual override returns (string memory) {
-        return baseURI;
-    }
-
-    // Mint
-    function mint(
-        uint256 _tokenId,
-        string memory mintType,
-        uint256 tokenPrice,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
-        uint256 redeemableDefaultIndex,
-        bytes memory signature
-    ) external payable whenNotPaused {
-        require(_tokenNotExists(_tokenId), "Token already minted.");
-        _handlePaymentAndRefund(tokenPrice);
+        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
+        if (totalSupply > 0 && mintParams.tokenId >= totalSupply) revert Error.ExceedsTotalSupply();
 
         _validateAuthorizedMint(
             msg.sender,
-            _tokenId,
-            mintType,
-            tokenPrice,
+            mintParams.tokenId,
+            mintParams.mintType,
+            mintParams.tokenPrice,
             0,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex,
             signature
         );
 
-        _mint(msg.sender, _tokenId);
-        setUri(
-            _tokenId,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex
+        _mint(msg.sender, mintParams.tokenId);
+        _setUri(
+            mintParams.tokenId,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex
         );
 
-        emit Minted(_tokenId);
+        _refundExcessPayment(mintParams.tokenPrice);
+
+        emit Minted(mintParams.tokenId);
     }
 
-    function claimable(
-        uint256 _tokenId,
-        uint256 tokenPrice,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
-        uint256 redeemableDefaultIndex,
-        bytes memory signature
-    ) external payable whenNotPaused {
-        require(_tokenNotExists(_tokenId), "Token already minted or claimed.");
-        _handlePaymentAndRefund(tokenPrice);
+    function claimable(MintParams calldata mintParams, TokenURISet calldata tokenUriSet, bytes memory signature)
+        external
+        payable
+        whenNotPaused
+        nonReentrant
+    {
+        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyClaimed();
 
         _validateAuthorizedMint(
             msg.sender,
-            _tokenId,
+            mintParams.tokenId,
             "claimable",
-            tokenPrice,
+            mintParams.tokenPrice,
             0,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex,
             signature
         );
 
-        _mint(msg.sender, _tokenId);
-        setUri(
-            _tokenId,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex
+        _mint(msg.sender, mintParams.tokenId);
+        _setUri(
+            mintParams.tokenId,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex
         );
 
-        emit Claimed(_tokenId);
+        _refundExcessPayment(mintParams.tokenPrice);
+
+        emit Claimed(mintParams.tokenId);
     }
 
     function mintWithTrade(
-        uint256 _mintedTokenId,
-        uint256[] memory tradedTokenIds,
-        string memory mintType,
-        uint256 tokenPrice,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
-        uint256 redeemableDefaultIndex,
+        uint256[] calldata tradedTokenIds,
+        MintParams calldata mintParams,
+        TokenURISet calldata tokenUriSet,
         bytes memory signature
-    ) external payable whenNotPaused {
-        require(_tokenNotExists(_mintedTokenId), "Token already minted.");
-        require(tradedTokenIds.length > 0, "No tokens provided for trade");
+    ) external payable whenNotPaused nonReentrant {
+        // TODO: question: Verify this check is correct. I'm a bit confused why it says "mintedTokenId" but then checks that the token should not exist
+        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
+        if (tradedTokenIds.length == 0) revert Error.TokenIdArrayCannotBeEmpty();
 
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
-        for (uint256 i; i < tradedTokensArrayLength; ) {
+        for (uint256 i; i < tradedTokensArrayLength;) {
             unchecked {
                 uint256 tokenId = tradedTokenIds[i];
-                require(
-                    ownerOf(tokenId) == msg.sender,
-                    "Sender must own the tokens to trade"
-                );
+                if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
                 _transfer(msg.sender, _nftReceiver, tokenId);
                 ++i;
             }
@@ -255,55 +204,87 @@ contract CryptoartNFT is
 
         _validateAuthorizedMint(
             msg.sender,
-            _mintedTokenId,
-            mintType,
-            tokenPrice,
+            mintParams.tokenId,
+            mintParams.mintType,
+            mintParams.tokenPrice,
             tradedTokenIds.length,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex,
             signature
         );
 
-        _mint(msg.sender, _mintedTokenId);
-        setUri(
-            _mintedTokenId,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex
+        _mint(msg.sender, mintParams.tokenId);
+        _setUri(
+            mintParams.tokenId,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex
         );
 
-        emit MintedByTrading(_mintedTokenId, tradedTokenIds);
+        emit MintedByTrading(mintParams.tokenId, tradedTokenIds);
     }
 
-    // Burn
-    function burn(uint256 tokenId) public virtual whenNotPaused {
-        // Only allow the owner to burn their token
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "Caller is not owner of the token"
+    function burnAndMint(
+        uint256[] calldata tokenIds,
+        uint256 requiredBurnCount,
+        MintParams calldata mintParams,
+        TokenURISet calldata tokenUriSet,
+        bytes memory signature
+    ) external payable whenNotPaused nonReentrant {
+        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
+        if (tokenIds.length != requiredBurnCount) revert Error.NotEnoughTokensToBurn();
+
+        _validateAuthorizedMint(
+            msg.sender,
+            mintParams.tokenId,
+            mintParams.mintType,
+            mintParams.tokenPrice,
+            requiredBurnCount,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex,
+            signature
         );
+
+        batchBurn(tokenIds);
+        _mint(msg.sender, mintParams.tokenId);
+        _setUri(
+            mintParams.tokenId,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.defaultIndex
+        );
+
+        emit MintedByBurning(mintParams.tokenId, tokenIds);
+    }
+
+    // ==========================================================================
+    // Burn Operations
+    // ==========================================================================
+
+    // TODO: Gotta check this virtual stuff.  Why are these functions marked as virtual?
+
+    function burn(uint256 tokenId) public virtual whenNotPaused {
+        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
         _burn(tokenId);
         _resetTokenRoyalty(tokenId);
         emit Burned(tokenId);
     }
 
-    function batchBurn(uint256[] memory tokenIds) public virtual whenNotPaused {
-        uint256 tokensArrayLength = tokenIds.length;
-        require(tokensArrayLength > 0, "Token arrays cannot be empty");
-        require(
-            tokensArrayLength <= MAX_BATCH_SIZE,
-            "Batch size exceeds maximum"
-        );
+    function batchBurn(uint256[] calldata tokenIds) public virtual whenNotPaused {
+        uint256 tokenIdArrayLength = tokenIds.length;
+        if (tokenIdArrayLength == 0) revert Error.TokenIdArrayCannotBeEmpty();
+        if (tokenIdArrayLength >= MAX_BATCH_SIZE) revert Error.MaxBatchSizeExceeded();
 
         // Check for duplicates
-        for (uint i; i < tokensArrayLength - 1; i++) {
-            for (uint j = i + 1; j < tokensArrayLength; j++) {
-                require(tokenIds[i] != tokenIds[j], "Duplicate token IDs");
+        for (uint256 i; i < tokenIdArrayLength - 1; i++) {
+            for (uint256 j = i + 1; j < tokenIdArrayLength; j++) {
+                if (tokenIds[i] == tokenIds[j]) revert Error.DuplicateTokenIds();
             }
         }
 
-        for (uint256 i; i < tokensArrayLength; ) {
+        for (uint256 i; i < tokenIdArrayLength;) {
             burn(tokenIds[i]);
             unchecked {
                 ++i;
@@ -311,56 +292,162 @@ contract CryptoartNFT is
         }
     }
 
-    // Connect wallet and mint tokens by burning others first
-    function burnAndMint(
-        uint256[] memory tokenIds,
-        uint256 _tokenId,
-        string memory mintType,
-        uint256 tokenPrice,
-        uint256 burnsToUse,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
-        uint256 redeemableDefaultIndex,
-        bytes memory signature
-    ) external payable whenNotPaused {
-        require(_tokenNotExists(_tokenId), "Token already minted.");
-        require(tokenIds.length == burnsToUse, "Not enough tokens to burn.");
+    // ==========================================================================
+    // Metadata Management
+    // ==========================================================================
 
-        batchBurn(tokenIds);
-
-        _validateAuthorizedMint(
-            msg.sender,
-            _tokenId,
-            mintType,
-            tokenPrice,
-            burnsToUse,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex,
-            signature
-        );
-
-        _mint(msg.sender, _tokenId);
-        setUri(
-            _tokenId,
-            redeemableTrueURI,
-            redeemableFalseURI,
-            redeemableDefaultIndex
-        );
-
-        emit MintedByBurning(_tokenId, tokenIds);
+    // @inheritdoc IERC721MultiMetadata.tokenURIs
+    function tokenURIs(uint256 tokenId) external view returns (uint256 index, string[] memory uris, bool pinned) {
+        if (!_tokenExists(tokenId)) revert Error.ERC721UriQueryForNonexistentToken();
+        return (_getTokenURIIndex(tokenId), _tokenURIs[tokenId], _hasPinnedTokenURI[tokenId]);
     }
 
-    function _handlePaymentAndRefund(uint256 tokenPrice) private {
-        require(msg.value >= tokenPrice, "Not enough Ether to mint NFT.");
-        uint256 excess = msg.value - tokenPrice;
-        if (excess > 0) {
-            (bool success, ) = payable(msg.sender).call{value: excess}("");
-            require(success, "Failed to refund excess payment");
-        }
+    // @inheritdoc IERC721MultiMetadata.pinTokenURI
+    // pin the index-0 URI of the token, which has redeemable attribute on true
+    // pin the index-1 URI of the token, which has redeemable attribute on false
+    function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner {
+        if (index >= _tokenURIs[tokenId].length) revert Error.IndexOutOfBounds();
+
+        _pinnedURIIndices[tokenId] = index;
+        _hasPinnedTokenURI[tokenId] = true;
+
+        emit TokenUriPinned(tokenId, index);
+        emit MetadataUpdate(tokenId);
     }
 
-    function _validateAuthorizedMint(
+    // holder unpairs the token in order to redeem physically again
+    // pin the first URI of the token, which has redeemable attribute on true
+    function markAsRedeemable(uint256 tokenId, bytes memory signature) external {
+        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+
+        _pinnedURIIndices[tokenId] = 0;
+        _hasPinnedTokenURI[tokenId] = true;
+
+        _validateAuthorizedUnpair(msg.sender, tokenId, signature);
+
+        emit TokenUriPinned(tokenId, 0);
+        emit MetadataUpdate(tokenId);
+    }
+
+    // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
+    function hasPinnedTokenURI(uint256 tokenId) external view returns (bool pinned) {
+        return _hasPinnedTokenURI[tokenId];
+    }
+    
+    // @inheritdoc IERC721MultiMetadata.unpinTokenURI
+    function unpinTokenURI(uint256) external pure {
+        // TODO: implement
+        return;
+    }
+
+    // ==========================================================================
+    // Story Features
+    // ==========================================================================
+
+    // TODO: Appropriately add the implementations to the story functions
+
+    /// @inheritdoc IStory
+    function addCreatorStory(
+        uint256 tokenId,
+        string calldata,
+        /*creatorName*/
+        string calldata story
+    ) external {
+        if (!_tokenExists(tokenId)) revert Error.TokenDoesNotExist();
+        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+
+        emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
+    }
+
+    /// @inheritdoc IStory
+    function addStory(
+        uint256 tokenId,
+        string calldata,
+        /*collectorName*/
+        string calldata story
+    ) external {
+        if (!_tokenExists(tokenId)) revert Error.TokenDoesNotExist();
+        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+
+        emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
+    }
+
+    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external {
+        if (!_tokenExists(tokenId)) revert Error.TokenDoesNotExist();
+        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+
+        emit ToggleStoryVisibility(tokenId, storyId, visible);
+    }
+
+    function addCollectionStory(string calldata creatorName, string calldata story) external override {}
+
+    // ==========================================================================
+    // Admin Controls
+    // ==========================================================================
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    function updateRoyalties(address payable newReceiver, uint96 newPercentage) external onlyOwner {
+        require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
+
+       ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
+
+        emit RoyaltiesUpdated(newReceiver, newPercentage);
+    }
+
+    function setBaseURI(string calldata newBaseURI) external onlyOwner {
+        require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
+        baseURI = newBaseURI;
+        emit BaseURISet(newBaseURI);
+    }
+
+    function updateMetadata(uint256 _tokenId, string memory _newMetadataURI) external onlyOwner {
+        if (!_tokenExists(_tokenId)) revert Error.TokenDoesNotExist();
+        ERC721URIStorageUpgradeable._setTokenURI(_tokenId, _newMetadataURI);
+        triggerMetadataUpdate(_tokenId);
+    }
+
+    function triggerMetadataUpdate(uint256 _tokenId) public onlyOwner {
+        // TODO: question: evaluate this; don't know why this would be here
+        emit MetadataUpdate(_tokenId);
+    }
+
+    function updateAuthoritySigner(address newAuthoritySigner) external onlyOwner {
+        authoritySigner = newAuthoritySigner;
+        emit AuthoritySignerUpdated(newAuthoritySigner);
+    }
+
+    function updateNftReceiver(address newNftReceiver) external onlyOwner {
+        _nftReceiver = newNftReceiver;
+        emit NftReceiverUpdated(newNftReceiver);
+    }
+
+    function withdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+
+        // Always check if the balance is greater than zero to prevent failure in case of a zero balance withdrawal
+        require(balance > 0, "No funds available for withdrawal");
+
+        (bool success,) = payable(msg.sender).call{value: balance}("");
+        require(success, "Transfer failed.");
+    }
+
+    function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
+        totalSupply = newTotalSupply;
+        emit TotalSupplySet(newTotalSupply);
+    }
+
+    // ==========================================================================
+    // Internal Functions
+    // ==========================================================================
+    
+    function _validateAuthorizedMint( 
         address minter,
         uint256 tokenId,
         string memory mintType,
@@ -386,256 +473,96 @@ contract CryptoartNFT is
                 address(this)
             )
         );
-        address signer = _signatureWallet(contentHash, signature);
-        require(signer == _authoritySigner, "Not authorized to mint");
+        address signer = _verifySignature(contentHash, signature);
+        if (signer != authoritySigner) revert Error.UnauthorizedSigner();
     }
-
-    function _signatureWallet(
-        bytes32 contentHash,
-        bytes memory signature
-    ) private pure returns (address) {
-        return
-            ECDSA.recover(
-                MessageHashUtils.toEthSignedMessageHash(contentHash),
-                signature
-            );
+    
+    function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes memory signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
+        address signer = _verifySignature(contentHash, signature);
+        if (signer != authoritySigner) revert Error.UnauthorizedSigner();
     }
-
-    function updateAuthoritySigner(
-        address newAuthoritySigner
-    ) external onlyOwner {
-        _authoritySigner = newAuthoritySigner;
-        emit AuthoritySignerUpdated(newAuthoritySigner);
-    }
-
-    function updateNftReceiver(address newNftReceiver) external onlyOwner {
-        _nftReceiver = newNftReceiver;
-        emit NftReceiverUpdated(newNftReceiver);
-    }
-
-    function withdraw() external onlyOwner {
-        uint256 balance = address(this).balance;
-
-        // Always check if the balance is greater than zero to prevent failure in case of a zero balance withdrawal
-        require(balance > 0, "No funds available for withdrawal");
-
-        (bool success, ) = payable(msg.sender).call{value: balance}("");
-        require(success, "Transfer failed.");
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                IERC7160
-    //////////////////////////////////////////////////////////////////////////*/
+    
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
-    function _getTokenURIIndex(
-        uint256 tokenId
-    ) internal view returns (uint256) {
-        return
-            _hasPinnedTokenURI[tokenId]
-                ? _pinnedURIIndices[tokenId]
-                : _tokenURIs[tokenId].length - 1;
+    function _getTokenURIIndex(uint256 tokenId) internal view returns (uint256) {
+        return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
     }
-
-    // @notice Implementation of ERC721.tokenURI for backwards compatibility.
-    // @inheritdoc ERC721.tokenURI
-    function tokenURI(
-        uint256 tokenId
-    )
-        public
-        view
-        virtual
-        override(ERC721URIStorageUpgradeable, ERC721Upgradeable)
-        returns (string memory)
-    {
-        require(
-            !_tokenNotExists(tokenId),
-            "ERC721: URI query for nonexistent token"
-        );
-
-        uint256 index = _getTokenURIIndex(tokenId);
-        string[] memory uris = _tokenURIs[tokenId];
-        string memory uri = uris[index];
-
-        // Revert if no URI is found for the token.
-        require(bytes(uri).length > 0, "ERC721: no URI found");
-        return string(abi.encodePacked(_baseURI(), uri));
+    
+    function _isOwnerOf(uint256 tokenId, address msgSender) private view returns (bool) {
+        return ownerOf(tokenId) == msgSender;
     }
-
-    // @inheritdoc IERC721MultiMetadata.tokenURIs
-    function tokenURIs(
-        uint256 tokenId
-    ) external view returns (uint256 index, string[] memory uris, bool pinned) {
-        require(
-            !_tokenNotExists(tokenId),
-            "ERC721: URI query for nonexistent token"
-        );
-        return (
-            _getTokenURIIndex(tokenId),
-            _tokenURIs[tokenId],
-            _hasPinnedTokenURI[tokenId]
-        );
+    
+    function _refundExcessPayment(uint256 tokenPrice) private {
+        if (msg.value < tokenPrice) revert Error.NotEnoughEthToMintNFT();
+        uint256 excess = msg.value - tokenPrice;
+        if (excess > 0) {
+            (bool success,) = payable(msg.sender).call{value: excess}("");
+            if (!success) revert Error.FailedToRefundExcessPayment();
+        }
     }
-
-    // @inheritdoc IERC721MultiMetadata.pinTokenURI
-    // pin the index-0 URI of the token, which has redeemable attribute on true
-    // pin the index-1 URI of the token, which has redeemable attribute on false
-    function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner {
-        require(
-            index < _tokenURIs[tokenId].length,
-            "Index out of bounds for token URI"
-        );
-
-        _pinnedURIIndices[tokenId] = index;
-        _hasPinnedTokenURI[tokenId] = true;
-        emit TokenUriPinned(tokenId, index);
-        emit MetadataUpdate(tokenId);
+    
+    function _verifySignature(bytes32 contentHash, bytes memory signature) private pure returns (address) {
+        return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
     }
-
-    // holder unpairs the token in order to redeem physically again
-    // pin the first URI of the token, which has redeemable attribute on true
-    function pinRedeemableTrueTokenUri( // note: changing the name to `markAsRedeemable` would be easier to 
-        uint256 tokenId,
-        bytes memory signature
-    ) external {
-        require(msg.sender == ownerOf(tokenId), "Unauthorized");
-
-        _validateAuthorizedUnpair(msg.sender, tokenId, signature);
-
-        _pinnedURIIndices[tokenId] = 0;
-        _hasPinnedTokenURI[tokenId] = true;
-        emit TokenUriPinned(tokenId, 0);
-        emit MetadataUpdate(tokenId);
-    }
-
-    // @inheritdoc IERC721MultiMetadata.unpinTokenURI
-    function unpinTokenURI(uint256) external pure {
-        return;
-    }
-
-    // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
-    function hasPinnedTokenURI(
-        uint256 tokenId
-    ) external view returns (bool pinned) {
-        return _hasPinnedTokenURI[tokenId];
+    
+    function _tokenExists(uint256 _tokenId) internal view returns (bool) {
+        return _ownerOf(_tokenId) != address(0);
     }
 
     /// @notice Sets base metadata for the token
     // contract can only set first and second URIs for metadata redeemable on true and false
-    function setUri(
+    function _setUri(
         uint256 tokenId,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
+        string calldata uriWhenRedeemable,
+        string calldata uriWhenNotRedeemable,
         uint256 redeemableDefaultIndex
     ) private {
-        require(_tokenURIs[tokenId].length == 0, "URI already set for token");
+        if (_tokenURIs[tokenId].length != 0) revert Error.TokenUriAlreadySet();
 
-        _tokenURIs[tokenId].push(redeemableTrueURI);
-        _tokenURIs[tokenId].push(redeemableFalseURI);
+        _tokenURIs[tokenId].push(uriWhenRedeemable);
+        _tokenURIs[tokenId].push(uriWhenNotRedeemable);
         _pinnedURIIndices[tokenId] = redeemableDefaultIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
         emit TokenUriPinned(tokenId, redeemableDefaultIndex);
         emit MetadataUpdate(tokenId);
     }
+    
+    // ==========================================================================
+    // Overrides 
+    // ==========================================================================
 
-    function _validateAuthorizedUnpair(
-        address minter,
-        uint256 tokenId,
-        bytes memory signature
-    ) internal {
-        bytes32 contentHash = keccak256(
-            abi.encode(
-                minter,
-                tokenId,
-                _useNonce(minter),
-                block.chainid,
-                address(this)
-            )
-        );
-        address signer = _signatureWallet(contentHash, signature);
-        require(signer == _authoritySigner, "Not authorized to unpair");
+    /// @dev See {IERC165-supportsInterface}.
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(IERC165, ERC721URIStorageUpgradeable, ERC721RoyaltyUpgradeable)
+        returns (bool)
+    {
+        return interfaceId == type(IERC7160).interfaceId || interfaceId == type(IERC4906).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                                Story Inscriptions
-    //////////////////////////////////////////////////////////////////////////*/
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override(ERC721URIStorageUpgradeable, ERC721Upgradeable)
+        returns (string memory)
+    {
+        if (!_tokenExists(tokenId)) revert Error.ERC721UriQueryForNonexistentToken();
 
-    /// @inheritdoc IStory
-    function addCreatorStory(
-        uint256 tokenId,
-        string calldata,
-        /*creatorName*/ string calldata story
-    ) external {
-        require(!_tokenNotExists(tokenId), "Token does not exist");
-        require(
-            msg.sender == ownerOf(tokenId) || msg.sender == owner(),
-            "Caller is not the owner of the token"
-        );
+        uint256 index = _getTokenURIIndex(tokenId);
+        string[] memory uris = _tokenURIs[tokenId];
+        string memory uri = uris[index];
 
-        emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
-    }
+        if (bytes(uri).length == 0) revert Error.ERC721NoTokenUriFound();
 
-    /// @inheritdoc IStory
-    function addStory(
-        uint256 tokenId,
-        string calldata,
-        /*collectorName*/ string calldata story
-    ) external {
-        require(!_tokenNotExists(tokenId), "Token does not exist");
-        require(
-            msg.sender == ownerOf(tokenId),
-            "Caller is not the owner of the token"
-        );
-
-        emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
-    }
-
-    function toggleStoryVisibility(
-        uint256 tokenId,
-        string calldata storyId,
-        bool visible
-    ) external {
-        require(!_tokenNotExists(tokenId), "Token does not exist");
-        require(
-            msg.sender == ownerOf(tokenId) || msg.sender == owner(),
-            "Caller is not the owner of the token"
-        );
-
-        emit ToggleStoryVisibility(tokenId, storyId, visible);
-    }
-
-    function addCollectionStory(
-        string calldata creatorName,
-        string calldata story
-    ) external override {}
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                Supply
-    //////////////////////////////////////////////////////////////////////////*/
-
-    // Getter for total supply
-    function totalSupply() external view returns (uint256) {
-        return _totalSupply;
-    }
-
-    // Function to set the total supply (onlyOwner)
-    function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
-        _totalSupply = newTotalSupply;
-        emit TotalSupplySet(newTotalSupply);
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                Helper functions
-    //////////////////////////////////////////////////////////////////////////*/
-    function _tokenNotExists(uint256 _tokenId) internal view returns (bool) {
-        return _ownerOf(_tokenId) == address(0);
+        return string(abi.encodePacked(_baseURI(), uri));
     }
     
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseURI;
     }
 }
