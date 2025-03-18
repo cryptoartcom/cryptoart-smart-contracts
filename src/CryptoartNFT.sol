@@ -6,13 +6,13 @@ import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/NoncesUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/PausableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
 import "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
 import "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin-contracts-5.0.2/utils/math/SafeCast.sol";
 import {IERC7160} from "./interfaces/IERC7160.sol";
 import {IStory} from "./interfaces/IStory.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/utils/ReentrancyGuardUpgradeable.sol";
 import {Error} from "./libraries/Error.sol";
 
 contract CryptoartNFT is
@@ -333,7 +333,7 @@ contract CryptoartNFT is
     function hasPinnedTokenURI(uint256 tokenId) external view returns (bool pinned) {
         return _hasPinnedTokenURI[tokenId];
     }
-    
+
     // @inheritdoc IERC721MultiMetadata.unpinTokenURI
     function unpinTokenURI(uint256) external pure {
         // TODO: implement
@@ -443,8 +443,8 @@ contract CryptoartNFT is
     // ==========================================================================
     // Internal Functions
     // ==========================================================================
-    
-    function _validateAuthorizedMint( 
+
+    function _validateAuthorizedMint(
         address minter,
         uint256 tokenId,
         string memory mintType,
@@ -473,22 +473,22 @@ contract CryptoartNFT is
         address signer = _verifySignature(contentHash, signature);
         if (signer != authoritySigner) revert Error.UnauthorizedSigner();
     }
-    
+
     function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes calldata signature) internal {
         bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
         address signer = _verifySignature(contentHash, signature);
         if (signer != authoritySigner) revert Error.UnauthorizedSigner();
     }
-    
+
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
     function _getTokenURIIndex(uint256 tokenId) internal view returns (uint256) {
         return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
     }
-    
+
     function _isOwnerOf(uint256 tokenId, address msgSender) private view returns (bool) {
         return ownerOf(tokenId) == msgSender;
     }
-    
+
     function _refundExcessPayment(uint256 tokenPrice) private {
         if (msg.value < tokenPrice) revert Error.NotEnoughEthToMintNFT();
         uint256 excess = msg.value - tokenPrice;
@@ -497,11 +497,11 @@ contract CryptoartNFT is
             if (!success) revert Error.FailedToRefundExcessPayment();
         }
     }
-    
+
     function _verifySignature(bytes32 contentHash, bytes calldata signature) private pure returns (address) {
         return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
     }
-    
+
     function _tokenExists(uint256 _tokenId) internal view returns (bool) {
         return _ownerOf(_tokenId) != address(0);
     }
@@ -524,9 +524,9 @@ contract CryptoartNFT is
         emit TokenUriPinned(tokenId, redeemableDefaultIndex);
         emit MetadataUpdate(tokenId);
     }
-    
+
     // ==========================================================================
-    // Overrides 
+    // Overrides
     // ==========================================================================
 
     /// @dev See {IERC165-supportsInterface}.
@@ -558,7 +558,7 @@ contract CryptoartNFT is
 
         return string(abi.encodePacked(_baseURI(), uri));
     }
-    
+
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
     }
