@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 // note: should likely add these two lines
 
 /// @title EIP-721 Multi-Metdata Extension
