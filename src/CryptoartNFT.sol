@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin-contracts-upgradeable-5.0.2/access/OwnableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
@@ -55,12 +55,19 @@ contract CryptoartNFT is
     mapping(uint256 => bool) private _hasPinnedTokenURI;
 
     // ==========================================================================
-    // Structs
+    // Structs & Enums
     // ==========================================================================
 
+    enum MintType {
+        OpenMint,
+        Whitelist,
+        Claimable,
+        Burn
+    }
+    
     struct MintParams {
         uint256 tokenId;
-        string mintType;
+        MintType mintType;
         uint256 tokenPrice;
     }
 
@@ -102,7 +109,7 @@ contract CryptoartNFT is
         __Nonces_init();
 
         baseURI = "";
-        _setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
+        ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
 
         _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7; // TODO: don't hard code this
         authoritySigner = contractAuthoritySigner;
@@ -135,7 +142,7 @@ contract CryptoartNFT is
             signature
         );
 
-        _mint(msg.sender, mintParams.tokenId);
+        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
         _setUri(
             mintParams.tokenId,
             tokenUriSet.uriWhenRedeemable,
@@ -159,7 +166,7 @@ contract CryptoartNFT is
         _validateAuthorizedMint(
             msg.sender,
             mintParams.tokenId,
-            "claimable",
+            MintType.Claimable,
             mintParams.tokenPrice,
             0,
             tokenUriSet.uriWhenRedeemable,
@@ -168,7 +175,7 @@ contract CryptoartNFT is
             signature
         );
 
-        _mint(msg.sender, mintParams.tokenId);
+        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
         _setUri(
             mintParams.tokenId,
             tokenUriSet.uriWhenRedeemable,
@@ -214,7 +221,7 @@ contract CryptoartNFT is
             signature
         );
 
-        _mint(msg.sender, mintParams.tokenId);
+        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
         _setUri(
             mintParams.tokenId,
             tokenUriSet.uriWhenRedeemable,
@@ -248,7 +255,7 @@ contract CryptoartNFT is
         );
 
         batchBurn(tokenIds);
-        _mint(msg.sender, mintParams.tokenId);
+        ERC721Upgradeable._mint(msg.sender, mintParams.tokenId);
         _setUri(
             mintParams.tokenId,
             tokenUriSet.uriWhenRedeemable,
@@ -267,8 +274,8 @@ contract CryptoartNFT is
 
     function burn(uint256 tokenId) public virtual whenNotPaused {
         if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
-        _burn(tokenId);
-        _resetTokenRoyalty(tokenId);
+        ERC721Upgradeable._burn(tokenId);
+        ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         emit Burned(tokenId);
     }
 
@@ -447,7 +454,7 @@ contract CryptoartNFT is
     function _validateAuthorizedMint(
         address minter,
         uint256 tokenId,
-        string memory mintType,
+        MintType mintType,
         uint256 tokenPrice,
         uint256 tokenList,
         string calldata uriWhenRedeemable,
