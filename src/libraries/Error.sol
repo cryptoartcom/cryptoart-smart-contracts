@@ -18,4 +18,8 @@ library Error {
     error FailedToRefundExcessPayment();
     error UnauthorizedSigner();
     error ExceedsTotalSupply();
+    error RoyaltyPercentageTooHigh();
+    error EmptyBaseUriNotAllowed();
+    error NoWithdrawalFundsAvailable();
+    error WithdrawalFailed();
 }

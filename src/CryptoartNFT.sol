@@ -394,15 +394,15 @@ contract CryptoartNFT is
     }
 
     function updateRoyalties(address payable newReceiver, uint96 newPercentage) external onlyOwner {
-        require(newPercentage <= ROYALTY_BASE, "Royalty percentage too high");
+        if (newPercentage > ROYALTY_BASE) revert Error.RoyaltyPercentageTooHigh();
 
-       ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
+        ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
 
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
 
     function setBaseURI(string calldata newBaseURI) external onlyOwner {
-        require(bytes(newBaseURI).length > 0, "Empty baseURI not allowed");
+        if (bytes(newBaseURI).length == 0) revert Error.EmptyBaseUriNotAllowed();
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
@@ -430,12 +430,9 @@ contract CryptoartNFT is
 
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
-
-        // Always check if the balance is greater than zero to prevent failure in case of a zero balance withdrawal
-        require(balance > 0, "No funds available for withdrawal");
-
+        if (balance == 0) revert Error.NoWithdrawalFundsAvailable();
         (bool success,) = payable(msg.sender).call{value: balance}("");
-        require(success, "Transfer failed.");
+        if (!success) revert Error.WithdrawalFailed();
     }
 
     function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
