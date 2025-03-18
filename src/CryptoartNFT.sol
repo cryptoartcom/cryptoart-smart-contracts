@@ -148,7 +148,7 @@ contract CryptoartNFT is
         emit Minted(mintParams.tokenId);
     }
 
-    function claimable(MintParams calldata mintParams, TokenURISet calldata tokenUriSet, bytes memory signature)
+    function claimable(MintParams calldata mintParams, TokenURISet calldata tokenUriSet, bytes calldata signature)
         external
         payable
         whenNotPaused
@@ -185,7 +185,7 @@ contract CryptoartNFT is
         uint256[] calldata tradedTokenIds,
         MintParams calldata mintParams,
         TokenURISet calldata tokenUriSet,
-        bytes memory signature
+        bytes calldata signature
     ) external payable whenNotPaused nonReentrant {
         // TODO: question: Verify this check is correct. I'm a bit confused why it says "mintedTokenId" but then checks that the token should not exist
         if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
@@ -230,7 +230,7 @@ contract CryptoartNFT is
         uint256 requiredBurnCount,
         MintParams calldata mintParams,
         TokenURISet calldata tokenUriSet,
-        bytes memory signature
+        bytes calldata signature
     ) external payable whenNotPaused nonReentrant {
         if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
         if (tokenIds.length != requiredBurnCount) revert Error.NotEnoughTokensToBurn();
@@ -317,7 +317,7 @@ contract CryptoartNFT is
 
     // holder unpairs the token in order to redeem physically again
     // pin the first URI of the token, which has redeemable attribute on true
-    function markAsRedeemable(uint256 tokenId, bytes memory signature) external {
+    function markAsRedeemable(uint256 tokenId, bytes calldata signature) external {
         if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
 
         _pinnedURIIndices[tokenId] = 0;
@@ -407,7 +407,7 @@ contract CryptoartNFT is
         emit BaseURISet(newBaseURI);
     }
 
-    function updateMetadata(uint256 _tokenId, string memory _newMetadataURI) external onlyOwner {
+    function updateMetadata(uint256 _tokenId, string calldata _newMetadataURI) external onlyOwner {
         if (!_tokenExists(_tokenId)) revert Error.TokenDoesNotExist();
         ERC721URIStorageUpgradeable._setTokenURI(_tokenId, _newMetadataURI);
         triggerMetadataUpdate(_tokenId);
@@ -450,10 +450,10 @@ contract CryptoartNFT is
         string memory mintType,
         uint256 tokenPrice,
         uint256 tokenList,
-        string memory redeemableTrueURI,
-        string memory redeemableFalseURI,
+        string calldata uriWhenRedeemable,
+        string calldata uriWhenNotRedeemable,
         uint256 redeemableDefaultIndex,
-        bytes memory signature
+        bytes calldata signature
     ) internal {
         bytes32 contentHash = keccak256(
             abi.encode(
@@ -462,8 +462,8 @@ contract CryptoartNFT is
                 mintType,
                 tokenPrice,
                 tokenList,
-                redeemableTrueURI,
-                redeemableFalseURI,
+                uriWhenRedeemable,
+                uriWhenNotRedeemable,
                 redeemableDefaultIndex,
                 _useNonce(minter),
                 block.chainid,
@@ -474,7 +474,7 @@ contract CryptoartNFT is
         if (signer != authoritySigner) revert Error.UnauthorizedSigner();
     }
     
-    function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes memory signature) internal {
+    function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes calldata signature) internal {
         bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
         address signer = _verifySignature(contentHash, signature);
         if (signer != authoritySigner) revert Error.UnauthorizedSigner();
@@ -498,7 +498,7 @@ contract CryptoartNFT is
         }
     }
     
-    function _verifySignature(bytes32 contentHash, bytes memory signature) private pure returns (address) {
+    function _verifySignature(bytes32 contentHash, bytes calldata signature) private pure returns (address) {
         return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
     }
     
