@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 library Error {
     // Token errors
     error Token_AlreadyMinted(uint256 tokenId);
-    error Token_AlreadyClaimed(uint256 tokenId);
     error Token_DoesNotExist(uint256 tokenId);
     error Token_NotOwned(uint256 tokenId, address caller);
     error Token_URIAlreadySet(uint256 tokenId);
@@ -21,11 +20,9 @@ library Error {
     error Mint_InsufficientPayment(uint256 required, uint256 provided);
     error Mint_RefundFailed(address recipient, uint256 amount);
     error Mint_ExceedsTotalSupply(uint256 tokenId, uint256 maxSupply);
-    error Mint_InvalidType(uint8 providedType);
 
     // Auth errors
-    error Auth_UnauthorizedSigner(address actual, address expected);
-    error Auth_InvalidSignature(bytes32 messageHash);
+    error Auth_UnauthorizedSigner();
 
     // Admin errors
     error Admin_RoyaltyTooHigh(uint256 percentage, uint256 maxPercentage);

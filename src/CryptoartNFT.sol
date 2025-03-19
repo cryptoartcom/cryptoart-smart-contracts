@@ -18,7 +18,7 @@ import {Error} from "./libraries/Error.sol";
 
 contract CryptoartNFT is
     IERC7160,
-    IERC4906, // TODO: Should check why this is being used, possible question to other dev
+    IERC4906, // TODO: Should check why this is being used, possible question to other dev, I don't know what its being used for or how it is being inherited exactly
     ERC721URIStorageUpgradeable,
     ERC721RoyaltyUpgradeable,
     ERC721EnumerableUpgradeable,
@@ -64,20 +64,23 @@ contract CryptoartNFT is
     enum MintType {
         OpenMint,
         Whitelist,
-        Claimable,
+        Claim,
         Burn
     }
 
-    struct MintParams {
+    struct MintValidationData {
+        address recipient;
         uint256 tokenId;
-        MintType mintType;
         uint256 tokenPrice;
+        MintType mintType;
+        uint256 tokenCount;
+        bytes signature;
     }
 
     struct TokenURISet {
         string uriWhenRedeemable;
         string uriWhenNotRedeemable;
-        uint256 defaultIndex;
+        uint256 redeemableDefaultIndex;
     }
 
     // ==========================================================================
@@ -103,7 +106,10 @@ contract CryptoartNFT is
     // Initialization
     // ==========================================================================
 
-    function initialize(address contractOwner, address contractAuthoritySigner, uint128 _maxSupply) external initializer {
+    function initialize(address contractOwner, address contractAuthoritySigner, uint128 _maxSupply)
+        external
+        initializer
+    {
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __ERC721Royalty_init();
@@ -125,86 +131,33 @@ contract CryptoartNFT is
     // ==========================================================================
     // Minting Operations
     // ==========================================================================
-
-    function mint(MintParams calldata mintParams, TokenURISet calldata tokenUriSet, bytes calldata signature)
+    // TODO: question: what was the intention with MintType? When was each mint type suppose to be used? For example, "claimable" is only for claimable function? OpenMint and whitelist is for the mint function?
+    function mint(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
         external
         payable
         whenNotPaused
         nonReentrant
     {
-        if (_tokenExists(mintParams.tokenId)) {
-            revert Error.Token_AlreadyMinted(mintParams.tokenId);
-        }
-        if (ERC721EnumerableUpgradeable.totalSupply() > maxSupply) {
-            revert Error.Mint_ExceedsTotalSupply(mintParams.tokenId, totalSupply());
-        }
-
-        _validateAuthorizedMint(
-            msg.sender,
-            mintParams.tokenId,
-            mintParams.mintType,
-            mintParams.tokenPrice,
-            0,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex,
-            signature
-        );
-
-        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
-        _setUri(
-            mintParams.tokenId,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex
-        );
-
-        _refundExcessPayment(mintParams.tokenPrice);
-
-        emit Minted(mintParams.tokenId);
+        _coreMint(data, tokenUriSet);
+        emit Minted(data.tokenId);
     }
 
-    function claimable(MintParams calldata mintParams, TokenURISet calldata tokenUriSet, bytes calldata signature)
+    function claim(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
         external
         payable
         whenNotPaused
         nonReentrant
     {
-        _validateAuthorizedMint(
-            msg.sender,
-            mintParams.tokenId,
-            MintType.Claimable,
-            mintParams.tokenPrice,
-            0,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex,
-            signature
-        );
-
-        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
-        _setUri(
-            mintParams.tokenId,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex
-        );
-
-        _refundExcessPayment(mintParams.tokenPrice);
-
-        emit Claimed(mintParams.tokenId);
+        _coreMint(data, tokenUriSet);
+        emit Claimed(data.tokenId);
     }
 
     function mintWithTrade(
         uint256[] calldata tradedTokenIds,
-        MintParams calldata mintParams,
-        TokenURISet calldata tokenUriSet,
-        bytes calldata signature
+        MintValidationData calldata data,
+        TokenURISet calldata tokenUriSet
     ) external payable whenNotPaused nonReentrant {
         // TODO: question: Verify this check is correct. I'm a bit confused why it says "mintedTokenId" but then checks that the token should not exist
-        if (_tokenExists(mintParams.tokenId)) {
-            revert Error.Token_AlreadyMinted(mintParams.tokenId);
-        }
         if (tradedTokenIds.length == 0) {
             revert Error.Batch_EmptyArray();
         }
@@ -212,73 +165,33 @@ contract CryptoartNFT is
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
         for (uint256 i; i < tradedTokensArrayLength;) {
+            uint256 tokenId = tradedTokenIds[i];
+            if (!_isOwnerOf(tokenId, msg.sender)) {
+                revert Error.Token_NotOwned(tokenId, msg.sender);
+            }
+            _transfer(msg.sender, _nftReceiver, tokenId);
             unchecked {
-                uint256 tokenId = tradedTokenIds[i];
-                if (!_isOwnerOf(tokenId, msg.sender)) revert Error.Token_NotOwned(tokenId, msg.sender);
-                _transfer(msg.sender, _nftReceiver, tokenId);
                 ++i;
             }
         }
 
-        _validateAuthorizedMint(
-            msg.sender,
-            mintParams.tokenId,
-            mintParams.mintType,
-            mintParams.tokenPrice,
-            tradedTokenIds.length,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex,
-            signature
-        );
-
-        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
-        _setUri(
-            mintParams.tokenId,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex
-        );
-
-        emit MintedByTrading(mintParams.tokenId, tradedTokenIds);
+        _coreMint(data, tokenUriSet);
+        emit MintedByTrading(data.tokenId, tradedTokenIds);
     }
 
     function burnAndMint(
         uint256[] calldata tokenIds,
         uint256 requiredBurnCount,
-        MintParams calldata mintParams,
-        TokenURISet calldata tokenUriSet,
-        bytes calldata signature
+        MintValidationData calldata data,
+        TokenURISet calldata tokenUriSet
     ) external payable whenNotPaused nonReentrant {
-        if (_tokenExists(mintParams.tokenId)) {
-            revert Error.Token_AlreadyMinted(mintParams.tokenId);
-        }
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
 
-        _validateAuthorizedMint(
-            msg.sender,
-            mintParams.tokenId,
-            mintParams.mintType,
-            mintParams.tokenPrice,
-            requiredBurnCount,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex,
-            signature
-        );
-
         batchBurn(tokenIds);
-        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
-        _setUri(
-            mintParams.tokenId,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.defaultIndex
-        );
-
-        emit MintedByBurning(mintParams.tokenId, tokenIds);
+        _coreMint(data, tokenUriSet);
+        emit MintedByBurning(data.tokenId, tokenIds);
     }
 
     // ==========================================================================
@@ -357,7 +270,7 @@ contract CryptoartNFT is
         _pinnedURIIndices[tokenId] = 0;
         _hasPinnedTokenURI[tokenId] = true;
 
-        _validateAuthorizedUnpair(msg.sender, tokenId, signature);
+        _validateUnpairAuthorization(msg.sender, tokenId, signature);
 
         emit TokenUriPinned(tokenId, 0);
         emit MetadataUpdate(tokenId);
@@ -369,6 +282,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.unpinTokenURI
+    // TODO: question: check this against the original contract and ask a question about if necessary
     function unpinTokenURI(uint256) external pure {
         // TODO: implement
         return;
@@ -500,90 +414,65 @@ contract CryptoartNFT is
     // Internal Functions
     // ==========================================================================
 
-    // function _coreMint(
-    //     MintValidationData calldata data,
-    //     TokenURISet calldata tokenUriSet,
-    //     bytes calldata signature
-    // ) private {
-    //     if (_tokenExists(mintParams.tokenId)) {
-    //         revert Error.Token_AlreadyClaimed(mintParams.tokenId);
-    //     }
+    function _coreMint(MintValidationData calldata data, TokenURISet calldata tokenUriSet) private {
+        if (_tokenExists(data.tokenId)) {
+            revert Error.Token_AlreadyMinted(data.tokenId);
+        }
+        if (ERC721EnumerableUpgradeable.totalSupply() > maxSupply) {
+            revert Error.Mint_ExceedsTotalSupply(data.tokenId, totalSupply());
+        }
 
-    // }
+        _validateMintAuthorization(data, tokenUriSet);
+        ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
+        _setTokenMetadata(
+            data.tokenId,
+            tokenUriSet.uriWhenRedeemable,
+            tokenUriSet.uriWhenNotRedeemable,
+            tokenUriSet.redeemableDefaultIndex
+        );
+        _refundExcessPayment(data.tokenPrice);
+    }
 
-    function _validateAuthorizedMint(
-        address minter,
-        uint256 tokenId,
-        MintType mintType,
-        uint256 tokenPrice,
-        uint256 tokenList,
-        string calldata uriWhenRedeemable,
-        string calldata uriWhenNotRedeemable,
-        uint256 redeemableDefaultIndex,
-        bytes calldata signature
-    ) internal {
+    function _validateMintAuthorization(MintValidationData calldata data, TokenURISet calldata uriParams) private {
+        _validatePayment(data.tokenPrice);
+        _validateSignature(data, uriParams);
+    }
+
+    function _validatePayment(uint256 tokenPrice) private view {
+        if (msg.value < tokenPrice) {
+            revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
+        }
+    }
+
+    function _validateSignature(MintValidationData calldata data, TokenURISet calldata uriParams) private {
         bytes32 contentHash = keccak256(
             abi.encode(
-                minter,
-                tokenId,
-                mintType,
-                tokenPrice,
-                tokenList,
-                uriWhenRedeemable,
-                uriWhenNotRedeemable,
-                redeemableDefaultIndex,
-                _useNonce(minter),
+                data.recipient,
+                data.tokenId,
+                data.mintType,
+                data.tokenPrice,
+                data.tokenCount,
+                uriParams.uriWhenRedeemable,
+                uriParams.uriWhenNotRedeemable,
+                uriParams.redeemableDefaultIndex,
+                _useNonce(data.recipient),
                 block.chainid,
                 address(this)
             )
         );
-        address signer = _verifySignature(contentHash, signature);
-        if (signer != authoritySigner) {
-            revert Error.Auth_UnauthorizedSigner(signer, authoritySigner);
+        if (!_isValidSignature(contentHash, data.signature)) {
+            revert Error.Auth_UnauthorizedSigner();
         }
     }
 
-    function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes calldata signature) internal {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
-        address signer = _verifySignature(contentHash, signature);
-        if (signer != authoritySigner) {
-            revert Error.Auth_UnauthorizedSigner(signer, authoritySigner);
-        }
-    }
-
-    // @notice Returns the pinned URI index or the last token URI index (length - 1).
-    function _getTokenURIIndex(uint256 tokenId) internal view returns (uint256) {
-        return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
-    }
-
-    function _isOwnerOf(uint256 tokenId, address msgSender) private view returns (bool) {
-        return ownerOf(tokenId) == msgSender;
-    }
-
-    function _refundExcessPayment(uint256 tokenPrice) private {
-        if (msg.value < tokenPrice) {
-            revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
-        }
-        uint256 excess = msg.value - tokenPrice;
-        if (excess > 0) {
-            (bool success,) = payable(msg.sender).call{value: excess}("");
-            if (!success) {
-                revert Error.Mint_RefundFailed(msg.sender, excess);
-            }
-        }
-    }
-
-    function _verifySignature(bytes32 contentHash, bytes calldata signature) private pure returns (address) {
-        return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
-    }
-
-    function _tokenExists(uint256 _tokenId) internal view returns (bool) {
-        return _ownerOf(_tokenId) != address(0);
+    function _isValidSignature(bytes32 contentHash, bytes calldata signature) private view returns (bool) {
+        address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
+        return signer == authoritySigner;
     }
 
     /// @notice Sets base metadata for the token
     // contract can only set first and second URIs for metadata redeemable on true and false
-    function _setUri(
+    function _setTokenMetadata(
         uint256 tokenId,
         string calldata uriWhenRedeemable,
         string calldata uriWhenNotRedeemable,
@@ -600,6 +489,36 @@ contract CryptoartNFT is
 
         emit TokenUriPinned(tokenId, redeemableDefaultIndex);
         emit MetadataUpdate(tokenId);
+    }
+
+    function _refundExcessPayment(uint256 tokenPrice) private {
+        uint256 excess = msg.value - tokenPrice;
+        if (excess > 0) {
+            (bool success,) = payable(msg.sender).call{value: excess}("");
+            if (!success) {
+                revert Error.Mint_RefundFailed(msg.sender, excess);
+            }
+        }
+    }
+
+    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) internal {
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
+        if (!_isValidSignature(contentHash, signature)) {
+            revert Error.Auth_UnauthorizedSigner();
+        }
+    }
+
+    // @notice Returns the pinned URI index or the last token URI index (length - 1).
+    function _getTokenURIIndex(uint256 tokenId) internal view returns (uint256) {
+        return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
+    }
+
+    function _isOwnerOf(uint256 tokenId, address msgSender) private view returns (bool) {
+        return ownerOf(tokenId) == msgSender;
+    }
+
+    function _tokenExists(uint256 _tokenId) internal view returns (bool) {
+        return _ownerOf(_tokenId) != address(0);
     }
 
     // ==========================================================================
@@ -636,7 +555,8 @@ contract CryptoartNFT is
         if (bytes(uri).length == 0) {
             revert Error.Token_NoURIFound(tokenId);
         }
-
+        // TODO: Examine this. Couldn't we just concatenate instead like this:
+        //       return string.concat(base, _tokenURI);
         return string(abi.encodePacked(_baseURI(), uri));
     }
 
