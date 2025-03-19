@@ -64,7 +64,7 @@ contract CryptoartNFT is
         Claimable,
         Burn
     }
-    
+
     struct MintParams {
         uint256 tokenId;
         MintType mintType;
@@ -107,7 +107,7 @@ contract CryptoartNFT is
         __Ownable_init(contractOwner);
         __Pausable_init();
         __Nonces_init();
-
+        // TODO: question: is this really what we want the base URI to be?
         baseURI = "";
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
 
@@ -127,8 +127,12 @@ contract CryptoartNFT is
         whenNotPaused
         nonReentrant
     {
-        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
-        if (totalSupply > 0 && mintParams.tokenId >= totalSupply) revert Error.ExceedsTotalSupply();
+        if (_tokenExists(mintParams.tokenId)) {
+            revert Error.Token_AlreadyMinted(mintParams.tokenId);
+        }
+        if (totalSupply > 0 && mintParams.tokenId >= totalSupply) {
+            revert Error.Mint_ExceedsTotalSupply(mintParams.tokenId, totalSupply);
+        }
 
         _validateAuthorizedMint(
             msg.sender,
@@ -161,7 +165,9 @@ contract CryptoartNFT is
         whenNotPaused
         nonReentrant
     {
-        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyClaimed();
+        if (_tokenExists(mintParams.tokenId)) {
+            revert Error.Token_AlreadyClaimed(mintParams.tokenId);
+        }
 
         _validateAuthorizedMint(
             msg.sender,
@@ -195,15 +201,19 @@ contract CryptoartNFT is
         bytes calldata signature
     ) external payable whenNotPaused nonReentrant {
         // TODO: question: Verify this check is correct. I'm a bit confused why it says "mintedTokenId" but then checks that the token should not exist
-        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
-        if (tradedTokenIds.length == 0) revert Error.TokenIdArrayCannotBeEmpty();
+        if (_tokenExists(mintParams.tokenId)) {
+            revert Error.Token_AlreadyMinted(mintParams.tokenId);
+        }
+        if (tradedTokenIds.length == 0) {
+            revert Error.Batch_EmptyArray();
+        }
 
         // Transfer ownership of the traded tokens to the owner
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
         for (uint256 i; i < tradedTokensArrayLength;) {
             unchecked {
                 uint256 tokenId = tradedTokenIds[i];
-                if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+                if (!_isOwnerOf(tokenId, msg.sender)) revert Error.Token_NotOwned(tokenId, msg.sender);
                 _transfer(msg.sender, _nftReceiver, tokenId);
                 ++i;
             }
@@ -239,8 +249,12 @@ contract CryptoartNFT is
         TokenURISet calldata tokenUriSet,
         bytes calldata signature
     ) external payable whenNotPaused nonReentrant {
-        if (_tokenExists(mintParams.tokenId)) revert Error.TokenAlreadyMinted();
-        if (tokenIds.length != requiredBurnCount) revert Error.NotEnoughTokensToBurn();
+        if (_tokenExists(mintParams.tokenId)) {
+            revert Error.Token_AlreadyMinted(mintParams.tokenId);
+        }
+        if (tokenIds.length != requiredBurnCount) {
+            revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
+        }
 
         _validateAuthorizedMint(
             msg.sender,
@@ -255,7 +269,7 @@ contract CryptoartNFT is
         );
 
         batchBurn(tokenIds);
-        ERC721Upgradeable._mint(msg.sender, mintParams.tokenId);
+        ERC721Upgradeable._safeMint(msg.sender, mintParams.tokenId);
         _setUri(
             mintParams.tokenId,
             tokenUriSet.uriWhenRedeemable,
@@ -273,7 +287,9 @@ contract CryptoartNFT is
     // TODO: Gotta check this virtual stuff.  Why are these functions marked as virtual?
 
     function burn(uint256 tokenId) public virtual whenNotPaused {
-        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+        if (!_isOwnerOf(tokenId, msg.sender)) {
+            revert Error.Token_NotOwned(tokenId, msg.sender);
+        }
         ERC721Upgradeable._burn(tokenId);
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         emit Burned(tokenId);
@@ -281,13 +297,17 @@ contract CryptoartNFT is
 
     function batchBurn(uint256[] calldata tokenIds) public virtual whenNotPaused {
         uint256 tokenIdArrayLength = tokenIds.length;
-        if (tokenIdArrayLength == 0) revert Error.TokenIdArrayCannotBeEmpty();
-        if (tokenIdArrayLength >= MAX_BATCH_SIZE) revert Error.MaxBatchSizeExceeded();
+        if (tokenIdArrayLength == 0) {
+            revert Error.Batch_EmptyArray();
+        }
+        if (tokenIdArrayLength >= MAX_BATCH_SIZE) {
+            revert Error.Batch_MaxSizeExceeded(tokenIdArrayLength, MAX_BATCH_SIZE);
+        }
 
         // Check for duplicates
         for (uint256 i; i < tokenIdArrayLength - 1; i++) {
             for (uint256 j = i + 1; j < tokenIdArrayLength; j++) {
-                if (tokenIds[i] == tokenIds[j]) revert Error.DuplicateTokenIds();
+                if (tokenIds[i] == tokenIds[j]) revert Error.Batch_DuplicateTokenIds();
             }
         }
 
@@ -305,7 +325,9 @@ contract CryptoartNFT is
 
     // @inheritdoc IERC721MultiMetadata.tokenURIs
     function tokenURIs(uint256 tokenId) external view returns (uint256 index, string[] memory uris, bool pinned) {
-        if (!_tokenExists(tokenId)) revert Error.ERC721UriQueryForNonexistentToken();
+        if (!_tokenExists(tokenId)) {
+            revert Error.Token_DoesNotExist(tokenId);
+        }
         return (_getTokenURIIndex(tokenId), _tokenURIs[tokenId], _hasPinnedTokenURI[tokenId]);
     }
 
@@ -313,7 +335,9 @@ contract CryptoartNFT is
     // pin the index-0 URI of the token, which has redeemable attribute on true
     // pin the index-1 URI of the token, which has redeemable attribute on false
     function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner {
-        if (index >= _tokenURIs[tokenId].length) revert Error.IndexOutOfBounds();
+        if (index >= _tokenURIs[tokenId].length) {
+            revert Error.Token_IndexOutOfBounds(tokenId, index, _tokenURIs[tokenId].length - 1);
+        }
 
         _pinnedURIIndices[tokenId] = index;
         _hasPinnedTokenURI[tokenId] = true;
@@ -325,7 +349,9 @@ contract CryptoartNFT is
     // holder unpairs the token in order to redeem physically again
     // pin the first URI of the token, which has redeemable attribute on true
     function markAsRedeemable(uint256 tokenId, bytes calldata signature) external {
-        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+        if (!_isOwnerOf(tokenId, msg.sender)) {
+            revert Error.Token_NotOwned(tokenId, msg.sender);
+        }
 
         _pinnedURIIndices[tokenId] = 0;
         _hasPinnedTokenURI[tokenId] = true;
@@ -360,8 +386,12 @@ contract CryptoartNFT is
         /*creatorName*/
         string calldata story
     ) external {
-        if (!_tokenExists(tokenId)) revert Error.TokenDoesNotExist();
-        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+        if (!_tokenExists(tokenId)) {
+            revert Error.Token_DoesNotExist(tokenId);
+        }
+        if (!_isOwnerOf(tokenId, msg.sender)) {
+            revert Error.Token_NotOwned(tokenId, msg.sender);
+        }
 
         emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
@@ -373,15 +403,23 @@ contract CryptoartNFT is
         /*collectorName*/
         string calldata story
     ) external {
-        if (!_tokenExists(tokenId)) revert Error.TokenDoesNotExist();
-        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+        if (!_tokenExists(tokenId)) {
+            revert Error.Token_DoesNotExist(tokenId);
+        }
+        if (!_isOwnerOf(tokenId, msg.sender)) {
+            revert Error.Token_NotOwned(tokenId, msg.sender);
+        }
 
         emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
 
     function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external {
-        if (!_tokenExists(tokenId)) revert Error.TokenDoesNotExist();
-        if (!_isOwnerOf(tokenId, msg.sender)) revert Error.CallerIsNotTokenOwner();
+        if (!_tokenExists(tokenId)) {
+            revert Error.Token_DoesNotExist(tokenId);
+        }
+        if (!_isOwnerOf(tokenId, msg.sender)) {
+            revert Error.Token_NotOwned(tokenId, msg.sender);
+        }
 
         emit ToggleStoryVisibility(tokenId, storyId, visible);
     }
@@ -401,7 +439,9 @@ contract CryptoartNFT is
     }
 
     function updateRoyalties(address payable newReceiver, uint96 newPercentage) external onlyOwner {
-        if (newPercentage > ROYALTY_BASE) revert Error.RoyaltyPercentageTooHigh();
+        if (newPercentage > ROYALTY_BASE) {
+            revert Error.Admin_RoyaltyTooHigh(newPercentage, ROYALTY_BASE);
+        }
 
         ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
 
@@ -409,13 +449,17 @@ contract CryptoartNFT is
     }
 
     function setBaseURI(string calldata newBaseURI) external onlyOwner {
-        if (bytes(newBaseURI).length == 0) revert Error.EmptyBaseUriNotAllowed();
+        if (bytes(newBaseURI).length == 0) {
+            revert Error.Admin_EmptyBaseURI();
+        }
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
 
     function updateMetadata(uint256 _tokenId, string calldata _newMetadataURI) external onlyOwner {
-        if (!_tokenExists(_tokenId)) revert Error.TokenDoesNotExist();
+        if (!_tokenExists(_tokenId)) {
+            revert Error.Token_DoesNotExist(_tokenId);
+        }
         ERC721URIStorageUpgradeable._setTokenURI(_tokenId, _newMetadataURI);
         triggerMetadataUpdate(_tokenId);
     }
@@ -437,9 +481,13 @@ contract CryptoartNFT is
 
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
-        if (balance == 0) revert Error.NoWithdrawalFundsAvailable();
+        if (balance == 0) {
+            revert Error.Admin_NoWithdrawableFunds();
+        }
         (bool success,) = payable(msg.sender).call{value: balance}("");
-        if (!success) revert Error.WithdrawalFailed();
+        if (!success) {
+            revert Error.Admin_WithdrawalFailed(msg.sender, balance);
+        }
     }
 
     function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
@@ -478,13 +526,17 @@ contract CryptoartNFT is
             )
         );
         address signer = _verifySignature(contentHash, signature);
-        if (signer != authoritySigner) revert Error.UnauthorizedSigner();
+        if (signer != authoritySigner) {
+            revert Error.Auth_UnauthorizedSigner(signer, authoritySigner);
+        }
     }
 
     function _validateAuthorizedUnpair(address minter, uint256 tokenId, bytes calldata signature) internal {
         bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
         address signer = _verifySignature(contentHash, signature);
-        if (signer != authoritySigner) revert Error.UnauthorizedSigner();
+        if (signer != authoritySigner) {
+            revert Error.Auth_UnauthorizedSigner(signer, authoritySigner);
+        }
     }
 
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
@@ -497,11 +549,15 @@ contract CryptoartNFT is
     }
 
     function _refundExcessPayment(uint256 tokenPrice) private {
-        if (msg.value < tokenPrice) revert Error.NotEnoughEthToMintNFT();
+        if (msg.value < tokenPrice) {
+            revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
+        }
         uint256 excess = msg.value - tokenPrice;
         if (excess > 0) {
             (bool success,) = payable(msg.sender).call{value: excess}("");
-            if (!success) revert Error.FailedToRefundExcessPayment();
+            if (!success) {
+                revert Error.Mint_RefundFailed(msg.sender, excess);
+            }
         }
     }
 
@@ -521,7 +577,9 @@ contract CryptoartNFT is
         string calldata uriWhenNotRedeemable,
         uint256 redeemableDefaultIndex
     ) private {
-        if (_tokenURIs[tokenId].length != 0) revert Error.TokenUriAlreadySet();
+        if (_tokenURIs[tokenId].length != 0) {
+            revert Error.Token_URIAlreadySet(tokenId);
+        }
 
         _tokenURIs[tokenId].push(uriWhenRedeemable);
         _tokenURIs[tokenId].push(uriWhenNotRedeemable);
@@ -555,13 +613,17 @@ contract CryptoartNFT is
         override(ERC721URIStorageUpgradeable, ERC721Upgradeable)
         returns (string memory)
     {
-        if (!_tokenExists(tokenId)) revert Error.ERC721UriQueryForNonexistentToken();
+        if (!_tokenExists(tokenId)) {
+            revert Error.Token_DoesNotExist(tokenId);
+        }
 
         uint256 index = _getTokenURIIndex(tokenId);
         string[] memory uris = _tokenURIs[tokenId];
         string memory uri = uris[index];
 
-        if (bytes(uri).length == 0) revert Error.ERC721NoTokenUriFound();
+        if (bytes(uri).length == 0) {
+            revert Error.Token_NoURIFound(tokenId);
+        }
 
         return string(abi.encodePacked(_baseURI(), uri));
     }
