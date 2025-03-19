@@ -50,7 +50,7 @@ contract CryptoartNFT is
     uint128 public maxSupply;
 
     // Wallet in charge of receiving all tokens transfered for minting
-    address public _nftReceiver;
+    address public nftReceiver;
 
     // IERC7160
     mapping(uint256 => string[]) private _tokenURIs;
@@ -121,7 +121,7 @@ contract CryptoartNFT is
         baseURI = "";
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
 
-        _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7; // TODO: don't hard code this
+        nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7; // TODO: don't hard code this
         authoritySigner = contractAuthoritySigner;
         maxSupply = _maxSupply;
 
@@ -169,7 +169,7 @@ contract CryptoartNFT is
             if (!_isOwnerOf(tokenId, msg.sender)) {
                 revert Error.Token_NotOwned(tokenId, msg.sender);
             }
-            _transfer(msg.sender, _nftReceiver, tokenId);
+            _transfer(msg.sender, nftReceiver, tokenId);
             unchecked {
                 ++i;
             }
@@ -390,7 +390,7 @@ contract CryptoartNFT is
     }
 
     function updateNftReceiver(address newNftReceiver) external onlyOwner {
-        _nftReceiver = newNftReceiver;
+        nftReceiver = newNftReceiver;
         emit NftReceiverUpdated(newNftReceiver);
     }
 
@@ -455,9 +455,10 @@ contract CryptoartNFT is
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
                 uriParams.redeemableDefaultIndex,
-                _useNonce(data.recipient),
-                block.chainid,
-                address(this)
+                _useNonce(data.recipient)
+                // TODO: Review potentially getting rid of these to avoid Stack too deep errors. These stack errors are coming from this function and eliminating some of the arguments here solves the problem. 
+                // block.chainid,
+                // address(this)
             )
         );
         if (!_isValidSignature(contentHash, data.signature)) {
