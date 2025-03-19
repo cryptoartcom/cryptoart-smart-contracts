@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import "@openzeppelin-contracts-upgradeable-5.0.2/access/OwnableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/NoncesUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/ReentrancyGuardUpgradeable.sol";
@@ -17,9 +18,10 @@ import {Error} from "./libraries/Error.sol";
 
 contract CryptoartNFT is
     IERC7160,
-    IERC4906,
+    IERC4906, // TODO: Should check why this is being used, possible question to other dev
     ERC721URIStorageUpgradeable,
     ERC721RoyaltyUpgradeable,
+    ERC721EnumerableUpgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
     NoncesUpgradeable,
@@ -44,7 +46,8 @@ contract CryptoartNFT is
 
     string public baseURI;
     address public authoritySigner;
-    uint256 public totalSupply;
+    // TODO: question: there's a total supply variable and setter function in the original contract but no checks for it.  What was the intention here with this? Maybe the last dev meant it to be MaxSupply
+    uint128 public maxSupply;
 
     // Wallet in charge of receiving all tokens transfered for minting
     address public _nftReceiver;
@@ -83,7 +86,7 @@ contract CryptoartNFT is
 
     event Initialized(address contractOwner, address contractAuthoritySigner);
     event BaseURISet(string newBaseURI);
-    event TotalSupplySet(uint256 newTotalSupply);
+    event MaxSupplySet(uint256 newMaxSupply);
     event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
     event AuthoritySignerUpdated(address newAuthoritySigner);
     event NftReceiverUpdated(address newNftReceiver);
@@ -100,10 +103,11 @@ contract CryptoartNFT is
     // Initialization
     // ==========================================================================
 
-    function initialize(address contractOwner, address contractAuthoritySigner) external initializer {
+    function initialize(address contractOwner, address contractAuthoritySigner, uint128 _maxSupply) external initializer {
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __ERC721Royalty_init();
+        __ERC721Enumerable_init();
         __Ownable_init(contractOwner);
         __Pausable_init();
         __Nonces_init();
@@ -113,6 +117,7 @@ contract CryptoartNFT is
 
         _nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7; // TODO: don't hard code this
         authoritySigner = contractAuthoritySigner;
+        maxSupply = _maxSupply;
 
         emit Initialized(contractOwner, contractAuthoritySigner);
     }
@@ -130,8 +135,8 @@ contract CryptoartNFT is
         if (_tokenExists(mintParams.tokenId)) {
             revert Error.Token_AlreadyMinted(mintParams.tokenId);
         }
-        if (totalSupply > 0 && mintParams.tokenId >= totalSupply) {
-            revert Error.Mint_ExceedsTotalSupply(mintParams.tokenId, totalSupply);
+        if (ERC721EnumerableUpgradeable.totalSupply() > maxSupply) {
+            revert Error.Mint_ExceedsTotalSupply(mintParams.tokenId, totalSupply());
         }
 
         _validateAuthorizedMint(
@@ -165,10 +170,6 @@ contract CryptoartNFT is
         whenNotPaused
         nonReentrant
     {
-        if (_tokenExists(mintParams.tokenId)) {
-            revert Error.Token_AlreadyClaimed(mintParams.tokenId);
-        }
-
         _validateAuthorizedMint(
             msg.sender,
             mintParams.tokenId,
@@ -490,14 +491,25 @@ contract CryptoartNFT is
         }
     }
 
-    function setTotalSupply(uint256 newTotalSupply) external onlyOwner {
-        totalSupply = newTotalSupply;
-        emit TotalSupplySet(newTotalSupply);
+    function setMaxSupply(uint128 newMaxSupply) external onlyOwner {
+        maxSupply = newMaxSupply;
+        emit MaxSupplySet(newMaxSupply);
     }
 
     // ==========================================================================
     // Internal Functions
     // ==========================================================================
+
+    // function _coreMint(
+    //     MintValidationData calldata data,
+    //     TokenURISet calldata tokenUriSet,
+    //     bytes calldata signature
+    // ) private {
+    //     if (_tokenExists(mintParams.tokenId)) {
+    //         revert Error.Token_AlreadyClaimed(mintParams.tokenId);
+    //     }
+
+    // }
 
     function _validateAuthorizedMint(
         address minter,
@@ -591,7 +603,7 @@ contract CryptoartNFT is
     }
 
     // ==========================================================================
-    // Overrides
+    // Required Overrides By Solidity
     // ==========================================================================
 
     /// @dev See {IERC165-supportsInterface}.
@@ -599,7 +611,7 @@ contract CryptoartNFT is
         public
         view
         virtual
-        override(IERC165, ERC721URIStorageUpgradeable, ERC721RoyaltyUpgradeable)
+        override(IERC165, ERC721URIStorageUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable)
         returns (bool)
     {
         return interfaceId == type(IERC7160).interfaceId || interfaceId == type(IERC4906).interfaceId
@@ -630,5 +642,22 @@ contract CryptoartNFT is
 
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
+    }
+
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        virtual
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        returns (address)
+    {
+        return ERC721EnumerableUpgradeable._update(to, tokenId, auth);
+    }
+
+    function _increaseBalance(address account, uint128 amount)
+        internal
+        virtual
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+    {
+        ERC721EnumerableUpgradeable._increaseBalance(account, amount);
     }
 }
