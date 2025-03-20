@@ -9,6 +9,7 @@ library Error {
     error Token_URIAlreadySet(uint256 tokenId);
     error Token_NoURIFound(uint256 tokenId);
     error Token_IndexOutOfBounds(uint256 tokenId, uint256 index, uint256 maxIndex);
+    error Token_InvalidDefaultIndex(uint256 redeemableDefaultIndex);
 
     // Batch operation errors
     error Batch_EmptyArray();
