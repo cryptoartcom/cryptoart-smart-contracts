@@ -46,7 +46,6 @@ contract CryptoartNFT is
 
     string public baseURI;
     address public authoritySigner;
-    // TODO: question: there's a total supply variable and setter function in the original contract but no checks for it.  What was the intention here with this? Maybe the last dev meant it to be MaxSupply
     uint128 public maxSupply;
 
     // Wallet in charge of receiving all tokens transfered for minting
@@ -118,7 +117,7 @@ contract CryptoartNFT is
         __Ownable_init(contractOwner);
         __Pausable_init();
         __Nonces_init();
-        // TODO: question: is this really what we want the base URI to be?
+        
         baseURI = "";
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
         nftReceiver = _nftReceiver;
@@ -131,7 +130,7 @@ contract CryptoartNFT is
     // ==========================================================================
     // Minting Operations
     // ==========================================================================
-    // TODO: question: what was the intention with MintType? When was each mint type suppose to be used? For example, "claimable" is only for claimable function? OpenMint and whitelist is for the mint function?
+    
     function mint(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
         external
         payable
@@ -157,7 +156,6 @@ contract CryptoartNFT is
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
     ) external payable whenNotPaused nonReentrant {
-        // TODO: question: Verify this check is correct. I'm a bit confused why it says "mintedTokenId" but then checks that the token should not exist
         if (tradedTokenIds.length == 0) {
             revert Error.Batch_EmptyArray();
         }
@@ -197,8 +195,6 @@ contract CryptoartNFT is
     // ==========================================================================
     // Burn Operations
     // ==========================================================================
-
-    // TODO: Gotta check this virtual stuff.  Why are these functions marked as virtual?
 
     function burn(uint256 tokenId) public virtual whenNotPaused {
         if (!_isOwnerOf(tokenId, msg.sender)) {
@@ -282,7 +278,6 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.unpinTokenURI
-    // TODO: question: check this against the original contract and ask a question about if necessary
     function unpinTokenURI(uint256) external pure {
         // TODO: implement
         return;
@@ -380,7 +375,6 @@ contract CryptoartNFT is
     }
 
     function triggerMetadataUpdate(uint256 _tokenId) public onlyOwner {
-        // TODO: question: evaluate this; don't know why this would be here
         emit MetadataUpdate(_tokenId);
     }
 
