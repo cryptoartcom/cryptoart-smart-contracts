@@ -36,23 +36,21 @@ contract CryptoartNFT is
     // Constants
     // ==========================================================================
 
+    uint256 private constant MAX_BATCH_SIZE = 50;
     uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250; // default royalty percentage 2.5%
-    uint256 private constant MAX_BATCH_SIZE = 50;
 
     // ==========================================================================
     // State Variables
     // ==========================================================================
 
-    string public baseURI;
     address public authoritySigner;
+    address public nftReceiver; // wallet in charge of receiving tokens transferred for minting
     uint128 public maxSupply;
-
-    // Wallet in charge of receiving all tokens transfered for minting
-    address public nftReceiver;
+    string public baseURI;
 
     // IERC7160
-    mapping(uint256 => string[]) private _tokenURIs;
+    mapping(uint256 => string[2]) private _tokenURIs;
     mapping(uint256 => uint256) private _pinnedURIIndices;
     mapping(uint256 => bool) private _hasPinnedTokenURI;
 
@@ -110,6 +108,9 @@ contract CryptoartNFT is
         address _nftReceiver,
         uint128 _maxSupply
     ) external initializer {
+        if (contractOwner == address(0) || contractAuthoritySigner == address(0) || _nftReceiver == address(0)) {
+            revert Error.Admin_ZeroAddress();
+        }
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __ERC721Royalty_init();
@@ -196,7 +197,7 @@ contract CryptoartNFT is
     // Burn Operations
     // ==========================================================================
 
-    function burn(uint256 tokenId) public virtual whenNotPaused {
+    function burn(uint256 tokenId) public virtual whenNotPaused nonReentrant {
         if (!_isOwnerOf(tokenId, msg.sender)) {
             revert Error.Token_NotOwned(tokenId, msg.sender);
         }
@@ -205,7 +206,7 @@ contract CryptoartNFT is
         emit Burned(tokenId);
     }
 
-    function batchBurn(uint256[] calldata tokenIds) public virtual whenNotPaused {
+    function batchBurn(uint256[] calldata tokenIds) public virtual whenNotPaused nonReentrant {
         uint256 tokenIdArrayLength = tokenIds.length;
         if (tokenIdArrayLength == 0) {
             revert Error.Batch_EmptyArray();
@@ -234,7 +235,12 @@ contract CryptoartNFT is
     // ==========================================================================
 
     // @inheritdoc IERC721MultiMetadata.tokenURIs
-    function tokenURIs(uint256 tokenId) external view returns (uint256 index, string[] memory uris, bool pinned) {
+    function tokenURIs(uint256 tokenId)
+        external
+        view
+        override
+        returns (uint256 index, string[2] memory uris, bool pinned)
+    {
         if (!_tokenExists(tokenId)) {
             revert Error.Token_DoesNotExist(tokenId);
         }
@@ -477,8 +483,8 @@ contract CryptoartNFT is
             revert Error.Token_URIAlreadySet(tokenId);
         }
 
-        _tokenURIs[tokenId].push(uriWhenRedeemable);
-        _tokenURIs[tokenId].push(uriWhenNotRedeemable);
+        _tokenURIs[tokenId][0] = uriWhenRedeemable;
+        _tokenURIs[tokenId][1] = uriWhenNotRedeemable;
         _pinnedURIIndices[tokenId] = redeemableDefaultIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
@@ -496,7 +502,7 @@ contract CryptoartNFT is
         }
     }
 
-    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) internal {
+    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) private {
         bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
         if (!_isValidSignature(contentHash, signature)) {
             revert Error.Auth_UnauthorizedSigner();
@@ -504,7 +510,7 @@ contract CryptoartNFT is
     }
 
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
-    function _getTokenURIIndex(uint256 tokenId) internal view returns (uint256) {
+    function _getTokenURIIndex(uint256 tokenId) private view returns (uint256) {
         return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
     }
 
@@ -512,7 +518,7 @@ contract CryptoartNFT is
         return ownerOf(tokenId) == msgSender;
     }
 
-    function _tokenExists(uint256 _tokenId) internal view returns (bool) {
+    function _tokenExists(uint256 _tokenId) private view returns (bool) {
         return _ownerOf(_tokenId) != address(0);
     }
 
@@ -544,7 +550,7 @@ contract CryptoartNFT is
         }
 
         uint256 index = _getTokenURIIndex(tokenId);
-        string[] memory uris = _tokenURIs[tokenId];
+        string[2] memory uris = _tokenURIs[tokenId];
         string memory uri = uris[index];
 
         if (bytes(uri).length == 0) {
@@ -552,7 +558,6 @@ contract CryptoartNFT is
         }
         return string.concat(_baseURI(), uri);
     }
-    
 
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;

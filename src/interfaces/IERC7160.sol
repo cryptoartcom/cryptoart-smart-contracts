@@ -19,7 +19,7 @@ interface IERC7160 {
     /// @return index An unisgned integer that specifies which uri is pinned for a token (or the default uri if unpinned)
     /// @return uris A string array of all uris associated with a token
     /// @return pinned A boolean showing if the token has pinned metadata or not
-    function tokenURIs(uint256 tokenId) external view returns (uint256 index, string[] memory uris, bool pinned);
+    function tokenURIs(uint256 tokenId) external view returns (uint256 index, string[2] memory uris, bool pinned);
 
     /// @notice Pin a specific token uri for a particular token
     /// @dev This call MUST revert if the token does not exist
