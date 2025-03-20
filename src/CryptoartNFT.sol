@@ -217,10 +217,10 @@ contract CryptoartNFT is
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
-        
+
         batchBurn(tokenIds);
         _coreMint(data, tokenUriSet);
-        
+
         emit MintedByBurning(data.tokenId, tokenIds);
     }
 
@@ -228,7 +228,7 @@ contract CryptoartNFT is
     // Burn Operations
     // ==========================================================================
 
-    function burn(uint256 tokenId) public virtual whenNotPaused nonReentrant onlyTokenOwner(tokenId) {
+    function burn(uint256 tokenId) public whenNotPaused nonReentrant onlyTokenOwner(tokenId) {
         ERC721Upgradeable._burn(tokenId);
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         emit Burned(tokenId);
@@ -236,7 +236,6 @@ contract CryptoartNFT is
 
     function batchBurn(uint256[] calldata tokenIds)
         public
-        virtual
         whenNotPaused
         nonReentrant
         validBatchSize(tokenIds)
@@ -537,7 +536,6 @@ contract CryptoartNFT is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        virtual
         override(IERC165, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable)
         returns (bool)
     {
@@ -548,7 +546,6 @@ contract CryptoartNFT is
     function tokenURI(uint256 tokenId)
         public
         view
-        virtual
         override(ERC721Upgradeable)
         onlyIfTokenExists(tokenId)
         returns (string memory)
@@ -563,13 +560,12 @@ contract CryptoartNFT is
         return string.concat(_baseURI(), uri);
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
+    function _baseURI() internal view override returns (string memory) {
         return baseURI;
     }
 
     function _update(address to, uint256 tokenId, address auth)
         internal
-        virtual
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
         returns (address)
     {
@@ -578,7 +574,6 @@ contract CryptoartNFT is
 
     function _increaseBalance(address account, uint128 amount)
         internal
-        virtual
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
     {
         ERC721EnumerableUpgradeable._increaseBalance(account, amount);
