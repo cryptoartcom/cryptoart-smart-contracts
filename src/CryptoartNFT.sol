@@ -117,7 +117,7 @@ contract CryptoartNFT is
         __Ownable_init(contractOwner);
         __Pausable_init();
         __Nonces_init();
-        
+        // TODO: properly address setting up this baseURI
         baseURI = "";
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
         nftReceiver = _nftReceiver;
@@ -130,7 +130,7 @@ contract CryptoartNFT is
     // ==========================================================================
     // Minting Operations
     // ==========================================================================
-    
+
     function mint(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
         external
         payable
@@ -431,7 +431,7 @@ contract CryptoartNFT is
             revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
         }
     }
-    
+
     function _validateTokenRequirements(uint256 tokenId) private view {
         if (_tokenExists(tokenId)) {
             revert Error.Token_AlreadyMinted(tokenId);
@@ -440,7 +440,7 @@ contract CryptoartNFT is
             revert Error.Mint_ExceedsTotalSupply(tokenId, totalSupply());
         }
     }
-    
+
     function _validateSignature(MintValidationData calldata data, TokenURISet calldata uriParams) private {
         bytes32 contentHash = keccak256(
             abi.encode(
@@ -550,10 +550,9 @@ contract CryptoartNFT is
         if (bytes(uri).length == 0) {
             revert Error.Token_NoURIFound(tokenId);
         }
-        // TODO: Examine this. Couldn't we just concatenate instead like this:
-        //       return string.concat(base, _tokenURI);
-        return string(abi.encodePacked(_baseURI(), uri));
+        return string.concat(_baseURI(), uri);
     }
+    
 
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
