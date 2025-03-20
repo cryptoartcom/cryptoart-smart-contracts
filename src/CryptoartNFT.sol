@@ -111,7 +111,7 @@ contract CryptoartNFT is
         address contractOwner,
         address contractAuthoritySigner,
         address _nftReceiver,
-        uint128 _maxSupply,
+        uint256 _maxSupply,
         string memory baseURI_
     ) external initializer {
         if (contractOwner == address(0) || contractAuthoritySigner == address(0) || _nftReceiver == address(0)) {
