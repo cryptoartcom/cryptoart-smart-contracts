@@ -73,7 +73,6 @@ contract CryptoartNFT is
         uint256 tokenId;
         uint256 tokenPrice;
         MintType mintType;
-        uint256 tokenCount;
         bytes signature;
     }
 
@@ -106,10 +105,12 @@ contract CryptoartNFT is
     // Initialization
     // ==========================================================================
 
-    function initialize(address contractOwner, address contractAuthoritySigner, uint128 _maxSupply)
-        external
-        initializer
-    {
+    function initialize(
+        address contractOwner,
+        address contractAuthoritySigner,
+        address _nftReceiver,
+        uint128 _maxSupply
+    ) external initializer {
         __ERC721_init("Cryptoart", "CNFT");
         __ERC721URIStorage_init();
         __ERC721Royalty_init();
@@ -120,8 +121,7 @@ contract CryptoartNFT is
         // TODO: question: is this really what we want the base URI to be?
         baseURI = "";
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
-
-        nftReceiver = 0x07f38db5E4d333bC6956D817258fe305520f2Fd7; // TODO: don't hard code this
+        nftReceiver = _nftReceiver;
         authoritySigner = contractAuthoritySigner;
         maxSupply = _maxSupply;
 
@@ -415,13 +415,6 @@ contract CryptoartNFT is
     // ==========================================================================
 
     function _coreMint(MintValidationData calldata data, TokenURISet calldata tokenUriSet) private {
-        if (_tokenExists(data.tokenId)) {
-            revert Error.Token_AlreadyMinted(data.tokenId);
-        }
-        if (ERC721EnumerableUpgradeable.totalSupply() > maxSupply) {
-            revert Error.Mint_ExceedsTotalSupply(data.tokenId, totalSupply());
-        }
-
         _validateMintAuthorization(data, tokenUriSet);
         ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _setTokenMetadata(
@@ -435,6 +428,7 @@ contract CryptoartNFT is
 
     function _validateMintAuthorization(MintValidationData calldata data, TokenURISet calldata uriParams) private {
         _validatePayment(data.tokenPrice);
+        _validateTokenRequirements(data.tokenId);
         _validateSignature(data, uriParams);
     }
 
@@ -443,7 +437,16 @@ contract CryptoartNFT is
             revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
         }
     }
-
+    
+    function _validateTokenRequirements(uint256 tokenId) private view {
+        if (_tokenExists(tokenId)) {
+            revert Error.Token_AlreadyMinted(tokenId);
+        }
+        if (ERC721EnumerableUpgradeable.totalSupply() > maxSupply) {
+            revert Error.Mint_ExceedsTotalSupply(tokenId, totalSupply());
+        }
+    }
+    
     function _validateSignature(MintValidationData calldata data, TokenURISet calldata uriParams) private {
         bytes32 contentHash = keccak256(
             abi.encode(
@@ -451,14 +454,11 @@ contract CryptoartNFT is
                 data.tokenId,
                 data.mintType,
                 data.tokenPrice,
-                data.tokenCount,
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
                 uriParams.redeemableDefaultIndex,
-                _useNonce(data.recipient)
-                // TODO: Review potentially getting rid of these to avoid Stack too deep errors. These stack errors are coming from this function and eliminating some of the arguments here solves the problem. 
-                // block.chainid,
-                // address(this)
+                _useNonce(data.recipient),
+                address(this)
             )
         );
         if (!_isValidSignature(contentHash, data.signature)) {
