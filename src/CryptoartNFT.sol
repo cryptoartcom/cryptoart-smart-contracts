@@ -163,7 +163,7 @@ contract CryptoartNFT is
     }
 
     // ==========================================================================
-    // Minting Operations
+    // Mint Operations
     // ==========================================================================
 
     function mint(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
@@ -234,12 +234,7 @@ contract CryptoartNFT is
         emit Burned(tokenId);
     }
 
-    function batchBurn(uint256[] calldata tokenIds)
-        public
-        whenNotPaused
-        nonReentrant
-        validBatchSize(tokenIds)
-    {
+    function batchBurn(uint256[] calldata tokenIds) public whenNotPaused nonReentrant validBatchSize(tokenIds) {
         uint256 tokenIdArrayLength = tokenIds.length;
 
         // Check for duplicates
@@ -380,9 +375,6 @@ contract CryptoartNFT is
     }
 
     function setBaseURI(string calldata newBaseURI) external onlyOwner {
-        if (bytes(newBaseURI).length == 0) {
-            revert Error.Admin_EmptyBaseURI();
-        }
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
@@ -482,7 +474,7 @@ contract CryptoartNFT is
         string calldata uriWhenNotRedeemable,
         uint256 redeemableDefaultIndex
     ) private {
-        if (_tokenURIs[tokenId].length != 0) {
+        if (bytes(_tokenURIs[tokenId][0]).length != 0) {
             revert Error.Token_URIAlreadySet(tokenId);
         }
         if (redeemableDefaultIndex >= URIS_PER_TOKEN) {

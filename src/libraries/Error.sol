@@ -27,7 +27,6 @@ library Error {
 
     // Admin errors
     error Admin_RoyaltyTooHigh(uint256 percentage, uint256 maxPercentage);
-    error Admin_EmptyBaseURI();
     error Admin_NoWithdrawableFunds();
     error Admin_WithdrawalFailed(address recipient, uint256 amount);
     error Admin_ZeroAddress();
