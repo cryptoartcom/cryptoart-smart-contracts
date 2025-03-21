@@ -17,17 +17,17 @@ contract InitializationTest is CryptoartNFTBase {
         assertEq(nft.nftReceiver(), nftReceiver);
         assertEq(nft.maxSupply(), MAX_SUPPLY);
         assertEq(nft.baseURI(), BASE_URI);
-        
+
         // Test ERC721 metadat
         assertEq(nft.name(), "Cryptoart");
         assertEq(nft.symbol(), "CNFT");
-        
+
         // Test deafult royalty settings
         (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(1, 10_000);
         assertEq(receiver, owner);
-        assertEq(royaltyAmount, nft.DEFAULT_ROYALTY_PERCENTAGE());   
+        assertEq(royaltyAmount, nft.DEFAULT_ROYALTY_PERCENTAGE());
     }
-    
+
     function test_SupportsCorrectInterfaces() public view {
         // ERC165 interface ID
         bytes4 erc165InterfaceId = 0x01ffc9a7;
@@ -53,60 +53,45 @@ contract InitializationTest is CryptoartNFTBase {
         assertTrue(nft.supportsInterface(erc4906InterfaceId));
         assertTrue(nft.supportsInterface(erc7160InterfaceId));
     }
-    
+
     function test_RevertWhenInitializedTwice() public {
-        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));        
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         nft.initialize(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
 
     function test_RevertWhenZeroAddressOwner() public {
         CryptoartNFT implementation = new CryptoartNFT();
-        
+
         bytes memory initData = abi.encodeWithSelector(
-            CryptoartNFT.initialize.selector,
-            address(0),
-            authoritySigner,
-            nftReceiver,
-            MAX_SUPPLY,
-            BASE_URI 
+            CryptoartNFT.initialize.selector, address(0), authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI
         );
-        
+
         vm.expectRevert(Error.Admin_ZeroAddress.selector);
         new ERC1967Proxy(address(implementation), initData);
     }
-    
+
     function test_RevertWhenZeroAddressAuthoritySigner() public {
         CryptoartNFT implementation = new CryptoartNFT();
-        
+
         bytes memory initData = abi.encodeWithSelector(
-            CryptoartNFT.initialize.selector,
-            owner,
-            address(0),
-            nftReceiver,
-            MAX_SUPPLY,
-            BASE_URI 
+            CryptoartNFT.initialize.selector, owner, address(0), nftReceiver, MAX_SUPPLY, BASE_URI
         );
-        
+
         vm.expectRevert(Error.Admin_ZeroAddress.selector);
         new ERC1967Proxy(address(implementation), initData);
     }
-    
+
     function test_RevertWhenZeroAddressNftReceiver() public {
         CryptoartNFT implementation = new CryptoartNFT();
-        
+
         bytes memory initData = abi.encodeWithSelector(
-            CryptoartNFT.initialize.selector,
-            owner,
-            authoritySigner,
-            address(0),
-            MAX_SUPPLY,
-            BASE_URI 
+            CryptoartNFT.initialize.selector, owner, authoritySigner, address(0), MAX_SUPPLY, BASE_URI
         );
-        
+
         vm.expectRevert(Error.Admin_ZeroAddress.selector);
         new ERC1967Proxy(address(implementation), initData);
     }
-    
+
     function test_ConstructorDisablesInitializers() public {
         CryptoartNFT uninitNft = new CryptoartNFT();
         vm.expectRevert();

@@ -30,22 +30,16 @@ contract CryptoartNFTBase is Test {
 
     function setUp() public virtual {
         // Fund test accounts
-        vm.deal(owner, 100 ether);
-        vm.deal(user1, 100 ether);
-        vm.deal(user2, 100 ether);
+        vm.deal(owner, 1 ether);
+        vm.deal(user1, 1 ether);
+        vm.deal(user2, 1 ether);
 
         // Set authority signer address to match private key for testing
         authoritySigner = vm.addr(authoritySignerPrivateKey);
-        
-        nft = _deployProxyWithNFTInitialized(
-            owner,
-            authoritySigner,
-            nftReceiver,
-            MAX_SUPPLY,
-            BASE_URI
-        );
+
+        nft = _deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
-    
+
     function _deployProxyWithNFTInitialized(
         address _owner,
         address _authoritySigner,
@@ -53,23 +47,17 @@ contract CryptoartNFTBase is Test {
         uint256 _maxSupply,
         string memory _baseURI
     ) internal returns (CryptoartNFT) {
-        
-        // Deploy implementation 
+        // Deploy implementation
         CryptoartNFT implementation = new CryptoartNFT();
-        
+
         // Initialize data
         bytes memory initData = abi.encodeWithSelector(
-            CryptoartNFT.initialize.selector,
-            _owner,
-            _authoritySigner,
-            _nftReceiver,
-            _maxSupply,
-            _baseURI 
+            CryptoartNFT.initialize.selector, _owner, _authoritySigner, _nftReceiver, _maxSupply, _baseURI
         );
-        
+
         // Create proxy pointing to implementation and initData to call the initialize function
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-       
+
         // Typecast proxy contract as the implementation contract
         return CryptoartNFT(address(proxy));
     }
@@ -157,69 +145,20 @@ contract CryptoartNFTBase is Test {
     function _mintNFT(address user, uint256 tokenId) internal returns (uint256) {
         (CryptoartNFT.MintValidationData memory validationData, CryptoartNFT.TokenURISet memory tokenURISet) =
             _createMintParams(user, tokenId);
-        
+
         vm.prank(user);
         nft.mint{value: validationData.tokenPrice}(validationData, tokenURISet);
-        
+
         return tokenId;
     }
-    
+
     function _batchMintNFTS(address user, uint256[] memory tokenIds) internal {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             _mintNFT(user, tokenIds[i]);
         }
     }
-    
+
     function _assertTokenOwnership(uint256 tokenId, address expectedOwner) internal view {
         assertEq(nft.ownerOf(tokenId), expectedOwner, "Token owner does not match expected owner");
     }
-
-    // ==========================================================================
-    // Test Admin Controls
-    // ==========================================================================
-
-    // function test_PauseAndUnpause() public {
-    //     vm.startPrank(owner);
-    //     nft.pause();
-    //     assertTrue(nft.paused());
-    //     nft.unpause();
-    //     assertFalse(nft.paused());
-    //     vm.stopPrank();
-    // }
-
-//     function test_UpdateRoyalties() public {
-//         address newReceiver = makeAddr("newReceiver");
-//         uint96 newPercentage = 500; // 5%
-
-//         vm.prank(owner);
-//         nft.updateRoyalties(payable(newReceiver), newPercentage);
-//         (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(1, 10_000);
-
-//         assertEq(receiver, newReceiver);
-//         assertEq(royaltyAmount, 500); // 5% of 10,000
-//     }
-
-//     function test_UpdateAuthoritySigner() public {
-//         address newAuthoritySigner = makeAddr("newAuthoritySigner");
-//         vm.prank(owner);
-//         nft.updateAuthoritySigner(newAuthoritySigner);
-
-//         assertEq(newAuthoritySigner, nft.authoritySigner());
-//     }
-
-//     function test_UpdateNftReceiver() public {
-//         address newNftReceiver = makeAddr("newNftReceeiver");
-//         vm.prank(owner);
-//         nft.updateNftReceiver(newNftReceiver);
-
-//         assertEq(newNftReceiver, nft.nftReceiver());
-//     }
-
-//     function test_SetMaxSupply() public {
-//         uint128 newMaxSupply = 100_000;
-//         vm.prank(owner);
-//         nft.setMaxSupply(newMaxSupply);
-
-//         assertEq(newMaxSupply, nft.maxSupply());
-//     }
 }
