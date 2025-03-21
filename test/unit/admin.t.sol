@@ -6,7 +6,6 @@ import {Error} from "../../src/libraries/Error.sol";
 import {ICryptoartNFTEvents} from "../ICryptoartNFTEvents.sol";
 
 contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
-    
     function test_PauseAndUnpause() public {
         vm.startPrank(owner);
         nft.pause();
@@ -47,7 +46,7 @@ contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
         vm.prank(owner);
         nft.updateRoyalties(payable(newReceiver), tooHighPercentage);
     }
-    
+
     function test_RevertWhennonownerUpdatesRoyalties() public {
         address newReceiver = makeAddr("newReceiver");
         uint96 newPercentage = 500;
@@ -55,14 +54,14 @@ contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
         vm.prank(user1);
         nft.updateRoyalties(payable(newReceiver), newPercentage);
     }
-    
+
     function test_SetBaseURI() public {
         string memory newBaseURI = "https://some.test.com/";
         vm.prank(owner);
         nft.setBaseURI(newBaseURI);
         assertEq(nft.baseURI(), newBaseURI);
     }
-    
+
     function test_RevertWhenNonOwnerSetsBaseURI() public {
         string memory newBaseURI = "https://some.test.com/";
         vm.expectRevert();
@@ -76,7 +75,7 @@ contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
         nft.updateAuthoritySigner(newAuthoritySigner);
         assertEq(newAuthoritySigner, nft.authoritySigner());
     }
-    
+
     function test_RevertWhenNonOwnerUpdatesAuthoritySigner() public {
         address newAuthoritySigner = makeAddr("newAuthoritySigner");
         vm.expectRevert();
@@ -97,21 +96,21 @@ contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
         vm.prank(user1);
         nft.updateNftReceiver(newNftReceiver);
     }
-    
+
     function test_SetMaxSupply() public {
         uint128 newMaxSupply = 100_000;
         vm.prank(owner);
         nft.setMaxSupply(newMaxSupply);
         assertEq(newMaxSupply, nft.maxSupply());
     }
-    
+
     function test_RevertWhenNonOwnerSetsMaxSupply() public {
         uint128 newMaxSupply = 100_000;
         vm.expectRevert();
         vm.prank(user1);
         nft.setMaxSupply(newMaxSupply);
-    }   
-    
+    }
+
     function test_WithdrawFunds() public {
         // add funds to contract
         vm.deal(address(nft), 1 ether);
@@ -119,83 +118,83 @@ contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
         vm.prank(owner);
         nft.withdraw();
         uint256 ownerBalanceAfter = owner.balance;
-        
+
         assertEq(1 ether, ownerBalanceBefore);
         assertEq(2 ether, ownerBalanceAfter);
         assertEq(0 ether, address(nft).balance);
     }
-    
+
     function test_RevertWhenNoFundsToWithdraw() public {
         assertEq(address(nft).balance, 0 ether);
         vm.expectRevert();
         vm.prank(owner);
         nft.withdraw();
     }
-    
+
     function test_RevertWhenNonOwnerWithdrawsFunds() public {
         vm.deal(address(nft), 1 ether);
         vm.expectRevert();
         vm.prank(user1);
         nft.withdraw();
     }
-    
+
     function test_RevertWhenWithdrawFailes() public {
         vm.deal(address(nft), 1 ether);
-        
+
         // create a contract that rejects paymetns
         address payable receiverContract = payable(address(new PaymentRejector()));
-        
+
         // transfer ownership to rejecting contract
         vm.prank(owner);
         nft.transferOwnership(receiverContract);
-        
+
         // try to withdraw
         vm.prank(receiverContract);
         vm.expectRevert(abi.encodeWithSelector(Error.Admin_WithdrawalFailed.selector, receiverContract, 1 ether));
         nft.withdraw();
     }
-    
+
     function test_EmitsEventsForAdminFunctions() public {
         vm.startPrank(owner);
-        
+
         // Test BaseURISet event
         vm.expectEmit(false, false, false, true);
         emit BaseURISet("https://newuri.com/");
         nft.setBaseURI("https://newuri.com/");
-        
+
         // Test MaxSupplySet event
         vm.expectEmit(false, false, false, true);
         emit MaxSupplySet(20000);
         nft.setMaxSupply(20000);
-        
+
         // Test RoyaltiesUpdated event
         address newRoyaltyReceiver = makeAddr("royaltyReceiver");
         vm.expectEmit(true, false, false, true);
         emit RoyaltiesUpdated(newRoyaltyReceiver, 300);
         nft.updateRoyalties(payable(newRoyaltyReceiver), 300);
-        
+
         // Test AuthoritySignerUpdated event
         address newSigner = makeAddr("newSigner");
         vm.expectEmit(false, false, false, true);
         emit AuthoritySignerUpdated(newSigner);
         nft.updateAuthoritySigner(newSigner);
-        
+
         // Test NftReceiverUpdated event
         address newReceiver = makeAddr("newReceiver");
         vm.expectEmit(false, false, false, true);
         emit NftReceiverUpdated(newReceiver);
         nft.updateNftReceiver(newReceiver);
-        
+
         vm.stopPrank();
     }
 }
 
 contract PaymentRejector {
-   // rejects all payments
-   receive() external payable {
-       revert();
-   }
-   
-   // allow calling the NFT ccontract
-   fallback() external payable {}
+    // rejects all payments
+    receive() external payable {
+        revert();
+    }
+
+    // allow calling the NFT ccontract
+    fallback() external payable {}
 }

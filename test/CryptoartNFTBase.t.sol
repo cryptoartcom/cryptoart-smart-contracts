@@ -62,103 +62,12 @@ contract CryptoartNFTBase is Test {
         return CryptoartNFT(address(proxy));
     }
 
-    function _createMintSignature(
-        address recipient,
-        uint256 tokenId,
-        CryptoartNFT.MintType mintType,
-        uint256 tokenPrice,
-        string memory uriWhenRedeemable,
-        string memory uriWhenNotRedeemable,
-        uint256 redeemableDefaultIndex,
-        uint256 nonce,
-        address contractAddress
-    ) internal view returns (bytes memory) {
-        bytes32 contentHash = keccak256(
-            abi.encode(
-                recipient,
-                tokenId,
-                mintType,
-                tokenPrice,
-                uriWhenRedeemable,
-                uriWhenNotRedeemable,
-                redeemableDefaultIndex,
-                nonce,
-                contractAddress
-            )
-        );
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
+    // function _createUnpairSignature(address _owner, uint256 tokenId) internal view returns (bytes memory) {
+    //     uint256 nonce = nft.nonces(owner);
+    //     bytes32 contentHash = keccak256(abi.encode(_owner, tokenId, nonce, block.chainid, address(nft)));
+    //     bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
 
-        return abi.encodePacked(r, s, v);
-    }
-
-    function _createMintParams(address recipient, uint256 tokenId)
-        internal
-        view
-        returns (CryptoartNFT.MintValidationData memory validationData, CryptoartNFT.TokenURISet memory tokenURISet)
-    {
-        uint256 tokenPrice = 0.1 ether;
-        string memory uriWhenRedeemable = string(abi.encodePacked("token-", tokenId.toString(), "-redeemable.json"));
-        string memory uriWhenNotRedeemable =
-            string(abi.encodePacked("token-", tokenId.toString(), "-not-redeemable.json"));
-        uint8 redeemableDefaultIndex = 0; // Default to redeemable
-
-        uint256 nonce = nft.nonces(recipient);
-        CryptoartNFT.MintType mintType = CryptoartNFT.MintType.OpenMint;
-
-        bytes memory signature = _createMintSignature(
-            recipient,
-            tokenId,
-            mintType,
-            tokenPrice,
-            uriWhenRedeemable,
-            uriWhenNotRedeemable,
-            redeemableDefaultIndex,
-            nonce,
-            address(nft)
-        );
-
-        validationData = CryptoartNFT.MintValidationData({
-            recipient: recipient,
-            tokenId: tokenId,
-            tokenPrice: tokenPrice,
-            mintType: mintType,
-            signature: signature
-        });
-
-        tokenURISet = CryptoartNFT.TokenURISet({
-            uriWhenRedeemable: uriWhenRedeemable,
-            uriWhenNotRedeemable: uriWhenNotRedeemable,
-            redeemableDefaultIndex: redeemableDefaultIndex
-        });
-    }
-
-    function _createUnpairSignature(address _owner, uint256 tokenId) internal view returns (bytes memory) {
-        uint256 nonce = nft.nonces(owner);
-        bytes32 contentHash = keccak256(abi.encode(_owner, tokenId, nonce, block.chainid, address(nft)));
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
-
-        return abi.encodePacked(r, s, v);
-    }
-
-    function _mintNFT(address user, uint256 tokenId) internal returns (uint256) {
-        (CryptoartNFT.MintValidationData memory validationData, CryptoartNFT.TokenURISet memory tokenURISet) =
-            _createMintParams(user, tokenId);
-
-        vm.prank(user);
-        nft.mint{value: validationData.tokenPrice}(validationData, tokenURISet);
-
-        return tokenId;
-    }
-
-    function _batchMintNFTS(address user, uint256[] memory tokenIds) internal {
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            _mintNFT(user, tokenIds[i]);
-        }
-    }
-
-    function _assertTokenOwnership(uint256 tokenId, address expectedOwner) internal view {
-        assertEq(nft.ownerOf(tokenId), expectedOwner, "Token owner does not match expected owner");
-    }
+    //     return abi.encodePacked(r, s, v);
+    // }
 }

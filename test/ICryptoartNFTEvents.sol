@@ -15,5 +15,5 @@ interface ICryptoartNFTEvents {
     event MintedByBurning(uint256 tokenId, uint256[] burnedTokenIds);
     event Claimed(uint256 tokenId);
     event Burned(uint256 tokenId);
-    event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds); 
+    event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 }
