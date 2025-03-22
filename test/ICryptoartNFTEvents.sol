@@ -9,6 +9,7 @@ interface ICryptoartNFTEvents {
     event AuthoritySignerUpdated(address newAuthoritySigner);
     event NftReceiverUpdated(address newNftReceiver);
     event ToggleStoryVisibility(uint256 tokenId, string storyId, bool visible);
+    event Paused(address account);
 
     // NFT lifecycle events
     event Minted(address indexed recipient, uint256 tokenId);
