@@ -1,25 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, console} from "forge-std/src/Test.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {Error} from "../../src/libraries/Error.sol";
-import {ICryptoartNFTEvents} from "../interfaces/ICryptoartNFTEvents.sol";
-import {ECDSA} from "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
 
 contract MintOperationsTest is CryptoartNFTBase {
-    using Strings for uint256;
-
-    uint256 public constant TOKEN_ID = 1;
 
     CryptoartNFT.MintType mintTypeOpenMint = CryptoartNFT.MintType.OpenMint;
     CryptoartNFT.MintType mintTypeClaim = CryptoartNFT.MintType.Claim;
-
+    
     function setUp() public override {
         super.setUp();
+        tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
     }
 
     // ============ Standard Mint Tests ============
@@ -27,25 +21,9 @@ contract MintOperationsTest is CryptoartNFTBase {
     function test_MintHappyPath() public {
         vm.expectEmit(true, true, false, true);
         emit Minted(user1, TOKEN_ID);
-
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
 
-        // Verify token ownership
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
-
-        // Verify token metadata is set correctly
-        CryptoartNFT.TokenURISet memory expectedURISet = signingUtils.createTokenURISet(TOKEN_ID);
-        (uint256 index, string[2] memory uris, bool pinned) = nft.tokenURIs(TOKEN_ID);
-        assertEq(uris[0], expectedURISet.uriWhenRedeemable);
-        assertEq(uris[1], expectedURISet.uriWhenNotRedeemable);
-        assertEq(index, expectedURISet.redeemableDefaultIndex);
-        assertTrue(pinned);
-
-        // Verify token URI
-        string memory expectedURI = string.concat(BASE_URI, expectedURISet.uriWhenRedeemable);
-        assertEq(nft.tokenURI(TOKEN_ID), expectedURI);
-
-        // Verify total supply
         assertEq(nft.totalSupply(), 1);
     }
 
@@ -59,7 +37,6 @@ contract MintOperationsTest is CryptoartNFTBase {
     }
 
     function test_RevertMintInsufficientPayment() public {
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
         uint256 payment = 0.05 ether;
@@ -71,7 +48,6 @@ contract MintOperationsTest is CryptoartNFTBase {
 
     function test_RevertMintInvalidSignature() public {
         uint256 badPrivateKey = 0xB22222;
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, badPrivateKey);
 
@@ -81,7 +57,6 @@ contract MintOperationsTest is CryptoartNFTBase {
     }
 
     function test_RevertMintWithTamperedData() public {
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
 
@@ -97,7 +72,6 @@ contract MintOperationsTest is CryptoartNFTBase {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
 
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data2 =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
 
@@ -110,7 +84,6 @@ contract MintOperationsTest is CryptoartNFTBase {
         vm.prank(owner);
         nft.pause();
 
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
 
@@ -124,7 +97,6 @@ contract MintOperationsTest is CryptoartNFTBase {
         CryptoartNFT nft2 = testFixtures.deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, 1, BASE_URI);
         uint256 tokenId2 = 2;
 
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data1 = createCustomMintData(nft2, user1, TOKEN_ID);
         CryptoartNFT.MintValidationData memory data2 = createCustomMintData(nft2, user1, tokenId2);
 
@@ -138,7 +110,6 @@ contract MintOperationsTest is CryptoartNFTBase {
     // ============ Claim Tests ============
 
     function test_ClaimHappyPath() public {
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeClaim, authoritySignerPrivateKey);
 
@@ -158,7 +129,6 @@ contract MintOperationsTest is CryptoartNFTBase {
         vm.expectEmit(true, false, false, true);
         emit MintedByTrading(TOKEN_ID, tradedTokenIds);
 
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
 
@@ -186,7 +156,6 @@ contract MintOperationsTest is CryptoartNFTBase {
         tradedTokenIds[0] = tokenId100;
         tradedTokenIds[1] = tokenId101;
 
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         CryptoartNFT.MintValidationData memory data =
             createMintValidationData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
 

@@ -22,6 +22,9 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
     address public nftReceiver = makeAddr("nftReceiver");
     address public user1 = makeAddr("user1");
     address public user2 = makeAddr("user2");
+    
+    // Test Token URI data
+    CryptoartNFT.TokenURISet tokenURISet;
 
     // Test key for authoritySigner (for creating signatures)
     uint256 public authoritySignerPrivateKey = 0xA11CE;
@@ -30,6 +33,7 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
     string public constant BASE_URI = "ipfs://";
     uint256 public constant MAX_SUPPLY = 10000;
     uint256 public constant TOKEN_PRICE = 0.1 ether;
+    uint256 public constant TOKEN_ID = 1;
 
     // Helper contracts
     SigningUtils public signingUtils;
@@ -49,7 +53,7 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
 
         // Set authority signer address to match private key for testing
         authoritySigner = vm.addr(authoritySignerPrivateKey);
-
+        
         nft = testFixtures.deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
 
