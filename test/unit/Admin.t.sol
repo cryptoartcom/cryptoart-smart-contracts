@@ -3,9 +3,8 @@ pragma solidity ^0.8.28;
 
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {Error} from "../../src/libraries/Error.sol";
-import {ICryptoartNFTEvents} from "../ICryptoartNFTEvents.sol";
 
-contract AdminTest is CryptoartNFTBase, ICryptoartNFTEvents {
+contract AdminTest is CryptoartNFTBase {
     function test_PauseAndUnpause() public {
         vm.startPrank(owner);
         nft.pause();

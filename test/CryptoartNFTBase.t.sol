@@ -3,15 +3,17 @@ pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/src/Test.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
-import {ECDSA} from "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.0.2/proxy/ERC1967/ERC1967Proxy.sol";
-import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
-import {IERC7160} from "../src/interfaces/IERC7160.sol";
+import {SigningUtils} from "./helpers/SigningUtils.sol";
+import {TestAssertions} from "./helpers/TestAssertions.sol";
+import {TestFixtures} from "./helpers/TestFixtures.sol";
+import {ICryptoartNFTEvents} from "./interfaces/ICryptoartNFTEvents.sol";
 
-contract CryptoartNFTBase is Test {
-    using Strings for uint256;
-
+/**
+ * @title CryptoartNFTBase
+ * @dev Base contract for CryptoartNFT tests with common setup and utilities
+ */
+contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
+    // Contract instance
     CryptoartNFT nft;
 
     // Test accounts
@@ -27,8 +29,19 @@ contract CryptoartNFTBase is Test {
     // Test parameters
     string public constant BASE_URI = "ipfs://";
     uint256 public constant MAX_SUPPLY = 10000;
+    uint256 public constant TOKEN_PRICE = 0.1 ether;
+
+    // Helper contracts
+    SigningUtils public signingUtils;
+    TestAssertions public testAssertions;
+    TestFixtures public testFixtures;
 
     function setUp() public virtual {
+        // Initialize helper contracts
+        signingUtils = new SigningUtils();
+        testAssertions = new TestAssertions();
+        testFixtures = new TestFixtures();
+
         // Fund test accounts
         vm.deal(owner, 1 ether);
         vm.deal(user1, 1 ether);
@@ -37,37 +50,73 @@ contract CryptoartNFTBase is Test {
         // Set authority signer address to match private key for testing
         authoritySigner = vm.addr(authoritySignerPrivateKey);
 
-        nft = _deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
+        nft = testFixtures.deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
 
-    function _deployProxyWithNFTInitialized(
-        address _owner,
-        address _authoritySigner,
-        address _nftReceiver,
-        uint256 _maxSupply,
-        string memory _baseURI
-    ) internal returns (CryptoartNFT) {
-        // Deploy implementation
-        CryptoartNFT implementation = new CryptoartNFT();
+    function createMintValidationData(
+        address user,
+        uint256 tokenId,
+        CryptoartNFT.MintType mintType,
+        uint256 signerPrivateKey
+    ) internal view returns (CryptoartNFT.MintValidationData memory) {
+        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
 
-        // Initialize data
-        bytes memory initData = abi.encodeWithSelector(
-            CryptoartNFT.initialize.selector, _owner, _authoritySigner, _nftReceiver, _maxSupply, _baseURI
+        bytes memory signature = signingUtils.createMintSignature(
+            user, tokenId, mintType, signerPrivateKey, tokenURISet, TOKEN_PRICE, nft.nonces(user), address(nft)
         );
 
-        // Create proxy pointing to implementation and initData to call the initialize function
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-
-        // Typecast proxy contract as the implementation contract
-        return CryptoartNFT(address(proxy));
+        return CryptoartNFT.MintValidationData({
+            recipient: user,
+            tokenId: tokenId,
+            tokenPrice: TOKEN_PRICE,
+            mintType: mintType,
+            signature: signature
+        });
     }
 
-    // function _createUnpairSignature(address _owner, uint256 tokenId) internal view returns (bytes memory) {
-    //     uint256 nonce = nft.nonces(owner);
-    //     bytes32 contentHash = keccak256(abi.encode(_owner, tokenId, nonce, block.chainid, address(nft)));
-    //     bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
-    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
+    function createCustomMintData(CryptoartNFT targetNft, address user, uint256 tokenId)
+        internal
+        view
+        returns (CryptoartNFT.MintValidationData memory)
+    {
+        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
+        CryptoartNFT.MintType mintType = CryptoartNFT.MintType.OpenMint;
 
-    //     return abi.encodePacked(r, s, v);
-    // }
+        bytes memory signature = signingUtils.createMintSignature(
+            user,
+            tokenId,
+            mintType,
+            authoritySignerPrivateKey,
+            tokenURISet,
+            TOKEN_PRICE,
+            targetNft.nonces(user),
+            address(targetNft)
+        );
+
+        return CryptoartNFT.MintValidationData({
+            recipient: user,
+            tokenId: tokenId,
+            tokenPrice: TOKEN_PRICE,
+            mintType: mintType,
+            signature: signature
+        });
+    }
+
+    function mintNFT(address user, uint256 tokenId, uint256 paymentValue) internal {
+        CryptoartNFT.MintValidationData memory data =
+            createMintValidationData(user, tokenId, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
+
+        vm.prank(user);
+        nft.mint{value: paymentValue}(data, tokenURISet);
+    }
+
+    function mintMultipleTokens(address to, uint256 count) internal returns (uint256[] memory) {
+        uint256[] memory tokenIds = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            tokenIds[i] = 100 + i;
+            mintNFT(to, tokenIds[i], TOKEN_PRICE);
+        }
+        return tokenIds;
+    }
 }
