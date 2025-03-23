@@ -213,7 +213,7 @@ contract CryptoartNFT is
         uint256 requiredBurnCount,
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
-    ) external payable whenNotPaused nonReentrant {
+    ) external payable whenNotPaused {
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
@@ -234,7 +234,7 @@ contract CryptoartNFT is
         emit Burned(tokenId);
     }
 
-    function batchBurn(uint256[] calldata tokenIds) public whenNotPaused nonReentrant validBatchSize(tokenIds) {
+    function batchBurn(uint256[] calldata tokenIds) public whenNotPaused validBatchSize(tokenIds) {
         uint256 tokenIdArrayLength = tokenIds.length;
 
         // Check for duplicates
