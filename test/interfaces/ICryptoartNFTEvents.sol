@@ -10,6 +10,8 @@ interface ICryptoartNFTEvents {
     event NftReceiverUpdated(address newNftReceiver);
     event ToggleStoryVisibility(uint256 tokenId, string storyId, bool visible);
     event Paused(address account);
+    event MetadataUpdate(uint256 tokenId);
+    event TokenUriPinned(uint256 tokenId, uint8 index);
 
     // NFT lifecycle events
     event Minted(address indexed recipient, uint256 tokenId);
