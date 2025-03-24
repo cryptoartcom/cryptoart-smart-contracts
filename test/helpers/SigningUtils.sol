@@ -38,11 +38,37 @@ contract SigningUtils is Test {
                 contractAddress
             )
         );
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMessageHash);
+        return _generateSignatureFrom(contentHash, signerPrivateKey);
+    }
 
+    function createRedeemableSignature(
+        address user,
+        uint256 tokenId,
+        uint256 nonce,
+        address contractAddress,
+        uint256 signerPrivateKey
+    ) public pure returns (bytes memory) {
+        bytes32 contentHash = keccak256(abi.encode(user, tokenId, nonce, contractAddress));
+        return _generateSignatureFrom(contentHash, signerPrivateKey);
+    }
+
+    function _generateSignatureFrom(bytes32 contentHash, uint256 privateKey) internal pure returns (bytes memory) {
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSignedMessageHash);
         return abi.encodePacked(r, s, v);
     }
+
+    // function gensig(address user, uint256 tokenId, uint256 nonce, address contractAddress, uint256 privateKey) public returns (bytes memory) {
+    //     bytes32 contentHash = keccak256(abi.encode(
+    //          user,
+    //          tokenId,
+    //          nonce,
+    //          contractAddress
+    //      ));
+    //     bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
+    //     return abi.encodePacked(r, s, v);
+    // }
 
     function createTokenURISet(uint256 tokenId) public pure returns (CryptoartNFT.TokenURISet memory) {
         return CryptoartNFT.TokenURISet({
