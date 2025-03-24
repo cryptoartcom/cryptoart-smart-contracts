@@ -272,9 +272,8 @@ contract CryptoartNFT is
         onlyOwner
         onlyIfTokenExists(tokenId)
     {
-        string[2] storage uris = _tokenURIs[tokenId];
-        uris[0] = newRedeemableURI;
-        uris[1] = newNotRedeemableURI;
+        _tokenURIs[tokenId][0] = newRedeemableURI;
+        _tokenURIs[tokenId][1] = newNotRedeemableURI;
         emit MetadataUpdate(tokenId);
     }
 
@@ -452,7 +451,7 @@ contract CryptoartNFT is
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
                 uriParams.redeemableDefaultIndex,
-                _useNonce(data.recipient),
+                NoncesUpgradeable._useNonce(data.recipient),
                 address(this)
             )
         );

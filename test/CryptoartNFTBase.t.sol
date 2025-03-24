@@ -22,9 +22,6 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
     address public nftReceiver = makeAddr("nftReceiver");
     address public user1 = makeAddr("user1");
     address public user2 = makeAddr("user2");
-    
-    // Test Token URI data
-    CryptoartNFT.TokenURISet tokenURISet;
 
     // Test key for authoritySigner (for creating signatures)
     uint256 public authoritySignerPrivateKey = 0xA11CE;
@@ -53,51 +50,20 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
 
         // Set authority signer address to match private key for testing
         authoritySigner = vm.addr(authoritySignerPrivateKey);
-        
+
         nft = testFixtures.deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
 
-    function createMintValidationData(
-        address user,
-        uint256 tokenId,
-        CryptoartNFT.MintType mintType,
-        uint256 signerPrivateKey
-    ) internal view returns (CryptoartNFT.MintValidationData memory) {
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
-
+    function createMintData(address user, uint256 tokenId, CryptoartNFT.MintType mintType, uint256 signerPrivateKey)
+        internal
+        view
+        returns (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet)
+    {
+        tokenURISet = signingUtils.createTokenURISet(tokenId);
         bytes memory signature = signingUtils.createMintSignature(
             user, tokenId, mintType, signerPrivateKey, tokenURISet, TOKEN_PRICE, nft.nonces(user), address(nft)
         );
-
-        return CryptoartNFT.MintValidationData({
-            recipient: user,
-            tokenId: tokenId,
-            tokenPrice: TOKEN_PRICE,
-            mintType: mintType,
-            signature: signature
-        });
-    }
-
-    function createCustomMintData(CryptoartNFT targetNft, address user, uint256 tokenId)
-        internal
-        view
-        returns (CryptoartNFT.MintValidationData memory)
-    {
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
-        CryptoartNFT.MintType mintType = CryptoartNFT.MintType.OpenMint;
-
-        bytes memory signature = signingUtils.createMintSignature(
-            user,
-            tokenId,
-            mintType,
-            authoritySignerPrivateKey,
-            tokenURISet,
-            TOKEN_PRICE,
-            targetNft.nonces(user),
-            address(targetNft)
-        );
-
-        return CryptoartNFT.MintValidationData({
+        data = CryptoartNFT.MintValidationData({
             recipient: user,
             tokenId: tokenId,
             tokenPrice: TOKEN_PRICE,
@@ -107,9 +73,8 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
     }
 
     function mintNFT(address user, uint256 tokenId, uint256 paymentValue) internal {
-        CryptoartNFT.MintValidationData memory data =
-            createMintValidationData(user, tokenId, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
-        CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
+        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+            createMintData(user, tokenId, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
 
         vm.prank(user);
         nft.mint{value: paymentValue}(data, tokenURISet);
