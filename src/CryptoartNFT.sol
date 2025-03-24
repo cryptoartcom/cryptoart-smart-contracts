@@ -500,7 +500,7 @@ contract CryptoartNFT is
     }
 
     function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) private {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), block.chainid, address(this)));
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), address(this)));
         if (!_isValidSignature(contentHash, signature)) {
             revert Error.Auth_UnauthorizedSigner();
         }
