@@ -19,14 +19,14 @@ contract BurnOperationsTest is CryptoartNFTBase {
         vm.expectRevert();
         nft.ownerOf(TOKEN_ID);
     }
-    
+
     function test_BurnByApprovedOperator() public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
-        
+
         vm.prank(user1);
         nft.approve(user2, TOKEN_ID);
-        
+
         vm.prank(user2);
         nft.burn(TOKEN_ID);
         vm.expectRevert();

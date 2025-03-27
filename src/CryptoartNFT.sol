@@ -45,7 +45,7 @@ contract CryptoartNFT is
     uint256 private constant MAX_BATCH_SIZE = 50;
     uint256 private constant ROYALTY_BASE = 10_000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     /// @notice Default royalty percentage basis points (2.5%).
-    uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250; 
+    uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250;
     uint8 private constant URIS_PER_TOKEN = 2;
 
     // ==========================================================================
@@ -60,7 +60,7 @@ contract CryptoartNFT is
     uint256 public maxSupply;
     /// @notice Base URI prepended to token URIs.
     string public baseURI;
-    
+
     // IERC7160
     mapping(uint256 => string[2]) private _tokenURIs;
     mapping(uint256 => uint256) private _pinnedURIIndices;
@@ -438,7 +438,7 @@ contract CryptoartNFT is
     ) external onlyTokenOwner(tokenId) {
         emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
-    
+
     /**
      * @notice Emits an event signaling a change in visibility for a story. Token owner only.
      * @dev Off-chain listeners interpret this event to control story display.

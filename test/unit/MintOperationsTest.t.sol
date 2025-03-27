@@ -15,13 +15,13 @@ contract MintOperationsTest is CryptoartNFTBase {
     function test_MintHappyPath() public {
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
-        
+
         vm.expectEmit(true, true, false, false);
         emit CryptoartNFT.Minted(user1, TOKEN_ID);
-        
+
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
-        
+
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
         assertEq(nft.totalSupply(), 1);
     }
