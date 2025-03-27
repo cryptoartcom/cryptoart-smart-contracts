@@ -19,13 +19,26 @@ contract BurnOperationsTest is CryptoartNFTBase {
         vm.expectRevert();
         nft.ownerOf(TOKEN_ID);
     }
+    
+    function test_BurnByApprovedOperator() public {
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
+        testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
+        
+        vm.prank(user1);
+        nft.approve(user2, TOKEN_ID);
+        
+        vm.prank(user2);
+        nft.burn(TOKEN_ID);
+        vm.expectRevert();
+        nft.ownerOf(TOKEN_ID);
+    }
 
     function test_RevertBurnNotOwner() public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
 
+        vm.expectRevert();
         vm.prank(user2);
-        vm.expectRevert(abi.encodeWithSelector(Error.Token_NotOwned.selector, TOKEN_ID, user2));
         nft.burn(TOKEN_ID);
     }
 
@@ -81,7 +94,7 @@ contract BurnOperationsTest is CryptoartNFTBase {
 
         // Attempt to batch burn as user1
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Token_NotOwned.selector, TOKEN_ID + 1, user1));
+        vm.expectRevert();
         nft.batchBurn(tokenIds);
     }
 

@@ -6,6 +6,7 @@ import "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
 import "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/access/OwnableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/NoncesUpgradeable.sol";
@@ -18,6 +19,7 @@ import {Error} from "./libraries/Error.sol";
 contract CryptoartNFT is
     IERC7160,
     IERC4906,
+    ERC721BurnableUpgradeable,
     ERC721RoyaltyUpgradeable,
     ERC721EnumerableUpgradeable,
     OwnableUpgradeable,
@@ -118,6 +120,7 @@ contract CryptoartNFT is
             revert Error.Admin_ZeroAddress();
         }
         __ERC721_init("Cryptoart", "CNFT");
+        __ERC721Burnable_init();
         __ERC721Royalty_init();
         __ERC721Enumerable_init();
         __Ownable_init(contractOwner);
@@ -237,10 +240,10 @@ contract CryptoartNFT is
     // Burn Operations
     // ==========================================================================
 
-    function batchBurn(uint256[] calldata tokenIds) external nonReentrant whenNotPaused {
+    function batchBurn(uint256[] calldata tokenIds) external whenNotPaused {
         _batchBurn(tokenIds);
     }
-
+    
     function _batchBurn(uint256[] calldata tokenIds) private validBatchSize(tokenIds) {
         uint256 tokenIdArrayLength = tokenIds.length;
         for (uint256 i = 0; i < tokenIdArrayLength - 1; ++i) {
@@ -249,19 +252,15 @@ contract CryptoartNFT is
             }
         }
         for (uint256 i = 0; i < tokenIdArrayLength;) {
-            _burnToken(tokenIds[i]);
+            burn(tokenIds[i]);
             unchecked {
                 ++i;
             }
         }
     }
-
-    function burn(uint256 tokenId) external nonReentrant whenNotPaused {
-        _burnToken(tokenId);
-    }
-
-    function _burnToken(uint256 tokenId) private onlyTokenOwner(tokenId) {
-        ERC721Upgradeable._burn(tokenId);
+    
+    function burn(uint256 tokenId) public override whenNotPaused {
+        ERC721BurnableUpgradeable.burn(tokenId);
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         emit Burned(tokenId);
     }
@@ -479,7 +478,11 @@ contract CryptoartNFT is
         }
     }
 
-    function _isValidSignature(bytes32 contentHash, bytes calldata signature) private view returns (bool isValidSignature) {
+    function _isValidSignature(bytes32 contentHash, bytes calldata signature)
+        private
+        view
+        returns (bool isValidSignature)
+    {
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
         isValidSignature = signer == authoritySigner;
     }
@@ -546,11 +549,11 @@ contract CryptoartNFT is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(IERC165, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable)
+        override(IERC165, ERC721Upgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable)
         returns (bool)
     {
         return interfaceId == type(IERC7160).interfaceId || interfaceId == type(IERC4906).interfaceId
-            || super.supportsInterface(interfaceId);
+        || super.supportsInterface(interfaceId);
     }
 
     function tokenURI(uint256 tokenId)
