@@ -2,15 +2,15 @@
 
 ## Table of Contents
 
-1.  [Project Overview](#project-overview)
-2.  [Features Overview](#features-overview>)
-3.  [Architecture & Core Mechanisms](#architecture--core-mechanisms)
-4.  [Actors & Roles](#actors--roles)
-5.  [Trust Assumptions & Centralization Risks](#trust-assumptions--centralization-risks)
-6.  [External Dependencies](#external-dependencies)
-7.  [Scope Definition](#scope-definition)
-8.  [Setup & Testing Instructions](#setup--testing-instructions)
-7.  [Known Issues & TODOs](#known-issues--todos)
+1.  [Project Overview](#1-project-overview)
+2.  [Features Overview](#2-features-overview)
+3.  [Architecture & Core Mechanisms](#3-architecture--core-mechanisms)
+4.  [Actors & Roles](#4-actors--roles)
+5.  [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks)
+6.  [External Dependencies](#6-external-dependencies)
+7.  [Scope Definition](#7-scope-definition)
+8.  [Setup & Testing](#8-setup--testing)
+9.  [Known Issues](#9-known-issues)
 
 ---
 
@@ -22,7 +22,7 @@ The Cryptoart NFT project aims to create a unique NFT collection on the Base blo
 *   Holders can "pair" (redeem) their NFT to receive a physical, limited-edition art piece shipped by Cryptoart.com. This marks the NFT metadata as `Redeemable = FALSE`.
 *   To sell the NFT digitally without shipping the physical item, the holder must destroy the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to "unpair" the NFT, marking its metadata as `Redeemable = TRUE`.
 *   The collection utilizes scarcity mechanics, allowing users to burn or trade existing NFTs within the collection for potentially more desirable ones.
-*   Owners can add "stories" (text/images) to their NFTs, creating a permanent, on-chain provenance log via emitted events (IStory interface).
+*   Owners can add "stories" to their NFTs, creating a permanent, on-chain provenance log via emitted events (IStory interface).
 
 The primary smart contract, `CryptoartNFT.sol`, manages the minting, burning, ownership, metadata (including pairing status via IERC7160), royalties (ERC2981), and story inscriptions for the collection. Minting operations are primarily controlled via an off-chain voucher system, requiring signatures from a trusted `authoritySigner`.
 
@@ -61,7 +61,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 *   The contract verifies the signature against a hash of the parameters, the contract address, and a unique nonce for the recipient (`_validateSignature`, `_isValidSignature`). The nonce prevents replay attacks using the same signature.
 *   Payment is handled within the mint functions, validating `msg.value` against `tokenPrice` and refunding excess ETH.
 
-### Physical/Digital Paring - NFT Pairing/Redemption (IERC7160)
+### Physical/Digital Pairing - NFT Pairing/Redemption (IERC7160)
 
 *   This mechanism manages the "redeemable" status of the NFT, corresponding to whether a physical counterpart can be claimed.
 *   Each token stores two URIs (`_tokenURIs` mapping): one for when redeemable (`Redeemable = TRUE`) and one for when not redeemable (`Redeemable = FALSE`).
@@ -276,7 +276,7 @@ test/
 
 2.  **Unimplemented `addCollectionStory`:** The `addCollectionStory` function required by `IStory` is currently an empty stub.
 
-3.  **Centralization:** As noted in [Trust Assumptions](#trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
+3.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
 
 4. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
 
