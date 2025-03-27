@@ -13,10 +13,15 @@ contract MintOperationsTest is CryptoartNFTBase {
     // ============ Standard Mint Tests ============
 
     function test_MintHappyPath() public {
-        vm.expectEmit(true, false, false, true);
-        emit Minted(user1, TOKEN_ID);
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
-
+        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
+        
+        vm.expectEmit(true, true, false, false);
+        emit CryptoartNFT.Minted(user1, TOKEN_ID);
+        
+        vm.prank(user1);
+        nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
+        
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
         assertEq(nft.totalSupply(), 1);
     }
@@ -122,7 +127,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         uint256[] memory tradedTokenIds = mintMultipleTokens(user1, 5);
 
         vm.expectEmit(true, false, false, true);
-        emit MintedByTrading(TOKEN_ID, tradedTokenIds);
+        emit CryptoartNFT.MintedByTrading(TOKEN_ID, tradedTokenIds);
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
@@ -197,7 +202,7 @@ contract MintOperationsTest is CryptoartNFTBase {
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.expectEmit(true, false, false, true);
-        emit MintedByBurning(TOKEN_ID, burnTokenIds);
+        emit CryptoartNFT.MintedByBurning(TOKEN_ID, burnTokenIds);
 
         // Then burn and mint
         vm.prank(user1);

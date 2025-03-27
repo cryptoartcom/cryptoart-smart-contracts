@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import {IStory} from "../../src/interfaces/IStory.sol";
 
 contract LifecycleTest is CryptoartNFTBase {
     using Strings for address;
@@ -20,14 +21,14 @@ contract LifecycleTest is CryptoartNFTBase {
         string memory creatorStory = "Some NFT creator story about the the art";
         vm.prank(user1);
         vm.expectEmit();
-        emit CreatorStory(TOKEN_ID, user1, user1.toHexString(), creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, user1, user1.toHexString(), creatorStory);
         nft.addCreatorStory(TOKEN_ID, "", creatorStory);
 
         // user adds a story
         string memory story = "Some cool art story";
         vm.prank(user1);
         vm.expectEmit();
-        emit Story(TOKEN_ID, user1, user1.toHexString(), story);
+        emit IStory.Story(TOKEN_ID, user1, user1.toHexString(), story);
         nft.addStory(TOKEN_ID, "", story);
 
         // Step 3: Transfer NFT to another user

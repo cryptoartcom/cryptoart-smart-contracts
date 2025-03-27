@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import {IStory} from "../../src/interfaces/IStory.sol";
 
 contract FullWorkFlow is CryptoartNFTBase {
     using Strings for address;
@@ -52,13 +53,13 @@ contract FullWorkFlow is CryptoartNFTBase {
         string memory storyContent = "Once upon a time, in a galaxy far far away...";
         vm.prank(user1);
         vm.expectEmit();
-        emit Story(tokenId, user1, user1.toHexString(), storyContent);
+        emit IStory.Story(tokenId, user1, user1.toHexString(), storyContent);
         nft.addStory(tokenId, "", storyContent);
 
         // NFT owner toggles story visibility
         vm.prank(user1);
         vm.expectEmit(true, true, false, true);
-        emit ToggleStoryVisibility(tokenId, storyId, true);
+        emit CryptoartNFT.ToggleStoryVisibility(tokenId, storyId, true);
         nft.toggleStoryVisibility(tokenId, storyId, true);
     }
 }

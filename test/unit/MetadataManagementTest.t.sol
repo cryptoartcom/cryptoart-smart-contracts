@@ -6,9 +6,10 @@ import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {Error} from "../../src/libraries/Error.sol";
 import {SigningUtils} from "../helpers/SigningUtils.sol";
-
+import {IERC4906} from "@openzeppelin-contracts-5.0.2/interfaces/IERC4906.sol";
 import {ECDSA} from "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
+import {IERC7160} from "../../src/interfaces/IERC7160.sol";
 
 contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     using Strings for uint256;
@@ -42,7 +43,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
             string(abi.encodePacked("token-", TOKEN_ID.toString(), "-newNonRedeemable.json"));
 
         vm.expectEmit(true, false, false, true);
-        emit MetadataUpdate(TOKEN_ID);
+        emit IERC4906.MetadataUpdate(TOKEN_ID);
         vm.prank(owner);
         nft.updateMetadata(TOKEN_ID, newRedeemableURI, newNotRedeemableURI);
         (uint256 index, string[2] memory uris, bool pinned) = nft.tokenURIs(TOKEN_ID);
@@ -79,9 +80,9 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         uint8 index = 1;
 
         vm.expectEmit(true, false, false, true);
-        emit TokenUriPinned(TOKEN_ID, index);
+        emit IERC7160.TokenUriPinned(TOKEN_ID, index);
         vm.expectEmit();
-        emit MetadataUpdate(TOKEN_ID);
+        emit IERC4906.MetadataUpdate(TOKEN_ID);
         vm.prank(owner);
         nft.pinTokenURI(TOKEN_ID, index);
         (,, bool pinned) = nft.tokenURIs(TOKEN_ID);
@@ -110,9 +111,9 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
 
         // Emit events and check asserts
         vm.expectEmit(true, false, false, true);
-        emit TokenUriPinned(TOKEN_ID, 0);
+        emit IERC7160.TokenUriPinned(TOKEN_ID, 0);
         vm.expectEmit();
-        emit MetadataUpdate(TOKEN_ID);
+        emit IERC4906.MetadataUpdate(TOKEN_ID);
         vm.prank(user1);
         nft.markAsRedeemable(TOKEN_ID, signature);
         (uint256 index,, bool pinned) = nft.tokenURIs(TOKEN_ID);

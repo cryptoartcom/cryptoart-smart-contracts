@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {Error} from "../../src/libraries/Error.sol";
 
@@ -158,30 +159,30 @@ contract AdminTest is CryptoartNFTBase {
 
         // Test BaseURISet event
         vm.expectEmit(false, false, false, true);
-        emit BaseURISet("https://newuri.com/");
+        emit CryptoartNFT.BaseURISet("https://newuri.com/");
         nft.setBaseURI("https://newuri.com/");
 
         // Test MaxSupplySet event
         vm.expectEmit(false, false, false, true);
-        emit MaxSupplySet(20000);
+        emit CryptoartNFT.MaxSupplySet(20000);
         nft.setMaxSupply(20000);
 
         // Test RoyaltiesUpdated event
         address newRoyaltyReceiver = makeAddr("royaltyReceiver");
         vm.expectEmit(true, false, false, true);
-        emit RoyaltiesUpdated(newRoyaltyReceiver, 300);
+        emit CryptoartNFT.RoyaltiesUpdated(newRoyaltyReceiver, 300);
         nft.updateRoyalties(payable(newRoyaltyReceiver), 300);
 
         // Test AuthoritySignerUpdated event
         address newSigner = makeAddr("newSigner");
         vm.expectEmit(false, false, false, true);
-        emit AuthoritySignerUpdated(newSigner);
+        emit CryptoartNFT.AuthoritySignerUpdated(newSigner);
         nft.updateAuthoritySigner(newSigner);
 
         // Test NftReceiverUpdated event
         address newReceiver = makeAddr("newReceiver");
         vm.expectEmit(false, false, false, true);
-        emit NftReceiverUpdated(newReceiver);
+        emit CryptoartNFT.NftReceiverUpdated(newReceiver);
         nft.updateNftReceiver(newReceiver);
 
         vm.stopPrank();

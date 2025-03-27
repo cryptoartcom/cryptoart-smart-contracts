@@ -6,13 +6,12 @@ import {CryptoartNFT} from "../src/CryptoartNFT.sol";
 import {SigningUtils} from "./helpers/SigningUtils.sol";
 import {TestAssertions} from "./helpers/TestAssertions.sol";
 import {TestFixtures} from "./helpers/TestFixtures.sol";
-import {ICryptoartNFTEvents} from "./interfaces/ICryptoartNFTEvents.sol";
 
 /**
  * @title CryptoartNFTBase
  * @dev Base contract for CryptoartNFT tests with common setup and utilities
  */
-contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
+contract CryptoartNFTBase is Test {
     // Contract instance
     CryptoartNFT nft;
 

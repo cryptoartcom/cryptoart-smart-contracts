@@ -12,7 +12,7 @@ contract BurnOperationsTest is CryptoartNFTBase {
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
 
         vm.expectEmit(true, false, false, true);
-        emit Burned(TOKEN_ID);
+        emit CryptoartNFT.Burned(TOKEN_ID);
         vm.prank(user1);
         nft.burn(TOKEN_ID);
 
@@ -57,7 +57,7 @@ contract BurnOperationsTest is CryptoartNFTBase {
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit Burned(tokenIds[i]);
+            emit CryptoartNFT.Burned(tokenIds[i]);
         }
 
         vm.prank(user1);
