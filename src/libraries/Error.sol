@@ -14,7 +14,7 @@ library Error {
     // Batch operation errors
     error Batch_EmptyArray();
     error Batch_MaxSizeExceeded(uint256 size, uint256 maxSize);
-    error Batch_DuplicateTokenIds();
+    error Batch_DuplicateTokenIds(uint256 tokenId);
     error Batch_InsufficientTokenAmount(uint256 expected, uint256 provided);
 
     // Mint errors
