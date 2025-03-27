@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin-contracts-5.0.2/interfaces/IERC4906.sol";
+import "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
+import "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/access/OwnableUpgradeable.sol";
-import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable-5.0.2/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/NoncesUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable-5.0.2/utils/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
-import "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
-import "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
-import {IERC4906} from "@openzeppelin-contracts-5.0.2/interfaces/IERC4906.sol";
 import {IERC7160} from "./interfaces/IERC7160.sol";
 import {IStory} from "./interfaces/IStory.sol";
 import {Error} from "./libraries/Error.sol";
@@ -34,7 +34,7 @@ contract CryptoartNFT is
     // ==========================================================================
 
     uint256 private constant MAX_BATCH_SIZE = 50;
-    uint256 private constant ROYALTY_BASE = 10000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
+    uint256 private constant ROYALTY_BASE = 10_000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250; // default royalty percentage 2.5%
     uint8 private constant URIS_PER_TOKEN = 2;
 
@@ -81,19 +81,19 @@ contract CryptoartNFT is
     // Events
     // ==========================================================================
 
-    event Initialized(address contractOwner, address contractAuthoritySigner);
+    event Initialized(address indexed contractOwner, address indexed contractAuthoritySigner);
     event BaseURISet(string newBaseURI);
-    event MaxSupplySet(uint256 newMaxSupply);
-    event RoyaltiesUpdated(address indexed receiver, uint256 newPercentage);
-    event AuthoritySignerUpdated(address newAuthoritySigner);
-    event NftReceiverUpdated(address newNftReceiver);
-    event ToggleStoryVisibility(uint256 tokenId, string storyId, bool visible);
+    event MaxSupplySet(uint256 indexed newMaxSupply);
+    event RoyaltiesUpdated(address indexed receiver, uint256 indexed newPercentage);
+    event AuthoritySignerUpdated(address indexed newAuthoritySigner);
+    event NftReceiverUpdated(address indexed newNftReceiver);
+    event ToggleStoryVisibility(uint256 indexed tokenId, string indexed storyId, bool visible);
 
     // NFT lifecycle events
-    event Minted(address indexed recipient, uint256 tokenId);
+    event Minted(address indexed recipient, uint256 indexed tokenId);
     event MintedByBurning(uint256 tokenId, uint256[] burnedTokenIds);
-    event Claimed(uint256 tokenId);
-    event Burned(uint256 tokenId);
+    event Claimed(uint256 indexed tokenId);
+    event Burned(uint256 indexed tokenId);
     event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 
     // ==========================================================================
@@ -112,7 +112,7 @@ contract CryptoartNFT is
         address contractAuthoritySigner,
         address _nftReceiver,
         uint256 _maxSupply,
-        string memory baseURI_
+        string calldata baseURI_
     ) external initializer {
         if (contractOwner == address(0) || contractAuthoritySigner == address(0) || _nftReceiver == address(0)) {
             revert Error.Admin_ZeroAddress();
@@ -162,6 +162,13 @@ contract CryptoartNFT is
         _;
     }
 
+    modifier nonZeroAddress(address _address) {
+        if (_address == address(0)) {
+            revert Error.Admin_ZeroAddress();
+        }
+        _;
+    }
+
     // ==========================================================================
     // Mint Operations
     // ==========================================================================
@@ -169,8 +176,8 @@ contract CryptoartNFT is
     function mint(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
         external
         payable
-        whenNotPaused
         nonReentrant
+        whenNotPaused
     {
         _coreMint(data, tokenUriSet);
         emit Minted(data.recipient, data.tokenId);
@@ -179,8 +186,8 @@ contract CryptoartNFT is
     function claim(MintValidationData calldata data, TokenURISet calldata tokenUriSet)
         external
         payable
-        whenNotPaused
         nonReentrant
+        whenNotPaused
     {
         _coreMint(data, tokenUriSet);
         emit Claimed(data.tokenId);
@@ -190,22 +197,24 @@ contract CryptoartNFT is
         uint256[] calldata tradedTokenIds,
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
-    ) external payable whenNotPaused nonReentrant validBatchSize(tradedTokenIds) {
-        // Transfer ownership of the traded tokens to the owner
+    ) external payable nonReentrant whenNotPaused validBatchSize(tradedTokenIds) {
+        _batchTransferToNftReceiver(tradedTokenIds);
+        _coreMint(data, tokenUriSet);
+        emit MintedByTrading(data.tokenId, tradedTokenIds);
+    }
+
+    function _batchTransferToNftReceiver(uint256[] calldata tradedTokenIds) private {
         uint256 tradedTokensArrayLength = tradedTokenIds.length;
-        for (uint256 i; i < tradedTokensArrayLength;) {
-            uint256 tokenId = tradedTokenIds[i];
-            if (!_isOwnerOf(tokenId, msg.sender)) {
-                revert Error.Token_NotOwned(tokenId, msg.sender);
-            }
-            _transfer(msg.sender, nftReceiver, tokenId);
+        for (uint256 i = 0; i < tradedTokensArrayLength;) {
+            _transferToNftReceiver(tradedTokenIds[i]);
             unchecked {
                 ++i;
             }
         }
+    }
 
-        _coreMint(data, tokenUriSet);
-        emit MintedByTrading(data.tokenId, tradedTokenIds);
+    function _transferToNftReceiver(uint256 tokenId) private onlyTokenOwner(tokenId) {
+        ERC721Upgradeable.safeTransferFrom(msg.sender, nftReceiver, tokenId);
     }
 
     function burnAndMint(
@@ -213,12 +222,12 @@ contract CryptoartNFT is
         uint256 requiredBurnCount,
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
-    ) external payable whenNotPaused {
+    ) external payable nonReentrant whenNotPaused {
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
 
-        batchBurn(tokenIds);
+        _batchBurn(tokenIds);
         _coreMint(data, tokenUriSet);
 
         emit MintedByBurning(data.tokenId, tokenIds);
@@ -228,28 +237,33 @@ contract CryptoartNFT is
     // Burn Operations
     // ==========================================================================
 
-    function burn(uint256 tokenId) public whenNotPaused nonReentrant onlyTokenOwner(tokenId) {
-        ERC721Upgradeable._burn(tokenId);
-        ERC2981Upgradeable._resetTokenRoyalty(tokenId);
-        emit Burned(tokenId);
+    function batchBurn(uint256[] calldata tokenIds) external nonReentrant whenNotPaused {
+        _batchBurn(tokenIds);
     }
 
-    function batchBurn(uint256[] calldata tokenIds) public whenNotPaused validBatchSize(tokenIds) {
+    function _batchBurn(uint256[] calldata tokenIds) private validBatchSize(tokenIds) {
         uint256 tokenIdArrayLength = tokenIds.length;
-
-        // Check for duplicates
-        for (uint256 i; i < tokenIdArrayLength - 1; i++) {
-            for (uint256 j = i + 1; j < tokenIdArrayLength; j++) {
-                if (tokenIds[i] == tokenIds[j]) revert Error.Batch_DuplicateTokenIds();
+        for (uint256 i = 0; i < tokenIdArrayLength - 1; ++i) {
+            for (uint256 j = i + 1; j < tokenIdArrayLength; ++j) {
+                if (tokenIds[i] == tokenIds[j]) revert Error.Batch_DuplicateTokenIds(tokenIds[i]);
             }
         }
-
-        for (uint256 i; i < tokenIdArrayLength;) {
-            burn(tokenIds[i]);
+        for (uint256 i = 0; i < tokenIdArrayLength;) {
+            _burnToken(tokenIds[i]);
             unchecked {
                 ++i;
             }
         }
+    }
+
+    function burn(uint256 tokenId) external nonReentrant whenNotPaused {
+        _burnToken(tokenId);
+    }
+
+    function _burnToken(uint256 tokenId) private onlyTokenOwner(tokenId) {
+        ERC721Upgradeable._burn(tokenId);
+        ERC2981Upgradeable._resetTokenRoyalty(tokenId);
+        emit Burned(tokenId);
     }
 
     // ==========================================================================
@@ -327,7 +341,7 @@ contract CryptoartNFT is
         string calldata,
         /*creatorName*/
         string calldata story
-    ) external onlyTokenOwner(tokenId) onlyIfTokenExists(tokenId) {
+    ) external onlyTokenOwner(tokenId) {
         emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
 
@@ -337,7 +351,7 @@ contract CryptoartNFT is
         string calldata,
         /*collectorName*/
         string calldata story
-    ) external onlyTokenOwner(tokenId) onlyIfTokenExists(tokenId) {
+    ) external onlyTokenOwner(tokenId) {
         emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
 
@@ -373,17 +387,22 @@ contract CryptoartNFT is
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
 
+    /// @dev Set token-specific royalties
+    function setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) external onlyOwner {
+        ERC2981Upgradeable._setTokenRoyalty(tokenId, receiver, feeNumerator);
+    }
+
     function setBaseURI(string calldata newBaseURI) external onlyOwner {
         baseURI = newBaseURI;
         emit BaseURISet(newBaseURI);
     }
 
-    function updateAuthoritySigner(address newAuthoritySigner) external onlyOwner {
+    function updateAuthoritySigner(address newAuthoritySigner) external onlyOwner nonZeroAddress(newAuthoritySigner) {
         authoritySigner = newAuthoritySigner;
         emit AuthoritySignerUpdated(newAuthoritySigner);
     }
 
-    function updateNftReceiver(address newNftReceiver) external onlyOwner {
+    function updateNftReceiver(address newNftReceiver) external onlyOwner nonZeroAddress(newNftReceiver) {
         nftReceiver = newNftReceiver;
         emit NftReceiverUpdated(newNftReceiver);
     }
@@ -405,18 +424,18 @@ contract CryptoartNFT is
     }
 
     // ==========================================================================
-    // Internal Functions
+    // Internal Core Mint Functions
     // ==========================================================================
 
     function _coreMint(MintValidationData calldata data, TokenURISet calldata tokenUriSet) private {
         _validateMintAuthorization(data, tokenUriSet);
-        ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _setTokenMetadata(
             data.tokenId,
             tokenUriSet.uriWhenRedeemable,
             tokenUriSet.uriWhenNotRedeemable,
             tokenUriSet.redeemableDefaultIndex
         );
+        ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _refundExcessPayment(data.tokenPrice);
     }
 
@@ -460,9 +479,9 @@ contract CryptoartNFT is
         }
     }
 
-    function _isValidSignature(bytes32 contentHash, bytes calldata signature) private view returns (bool) {
+    function _isValidSignature(bytes32 contentHash, bytes calldata signature) private view returns (bool isValidSignature) {
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
-        return signer == authoritySigner;
+        isValidSignature = signer == authoritySigner;
     }
 
     /// @notice Sets base metadata for the token
@@ -499,24 +518,24 @@ contract CryptoartNFT is
         }
     }
 
+    function _tokenExists(uint256 _tokenId) private view returns (bool tokenExists) {
+        tokenExists = _ownerOf(_tokenId) != address(0);
+    }
+
+    // ==========================================================================
+    // Internal Metadata Functions
+    // ==========================================================================
+
     function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) private {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, _useNonce(minter), address(this)));
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, NoncesUpgradeable._useNonce(minter), address(this)));
         if (!_isValidSignature(contentHash, signature)) {
             revert Error.Auth_UnauthorizedSigner();
         }
     }
 
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
-    function _getTokenURIIndex(uint256 tokenId) private view returns (uint256) {
-        return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
-    }
-
-    function _isOwnerOf(uint256 tokenId, address msgSender) private view returns (bool) {
-        return ownerOf(tokenId) == msgSender;
-    }
-
-    function _tokenExists(uint256 _tokenId) private view returns (bool) {
-        return _ownerOf(_tokenId) != address(0);
+    function _getTokenURIIndex(uint256 tokenId) private view returns (uint256 tokenURIIndex) {
+        tokenURIIndex = _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
     }
 
     // ==========================================================================
