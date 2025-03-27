@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/src/Test.sol";
-import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
+import {CryptoartNFT} from "../src/CryptoartNFT.sol";
 import {SigningUtils} from "./helpers/SigningUtils.sol";
 import {TestAssertions} from "./helpers/TestAssertions.sol";
 import {TestFixtures} from "./helpers/TestFixtures.sol";
@@ -28,7 +28,7 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
 
     // Test parameters
     string public constant BASE_URI = "ipfs://";
-    uint256 public constant MAX_SUPPLY = 10000;
+    uint256 public constant MAX_SUPPLY = 10001;
     uint256 public constant TOKEN_PRICE = 0.1 ether;
     uint256 public constant TOKEN_ID = 1;
 
@@ -54,27 +54,33 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
         nft = testFixtures.deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
 
-    function createMintData(address user, uint256 tokenId, CryptoartNFT.MintType mintType, uint256 signerPrivateKey)
+    function createMintData(
+        address user,
+        uint256 tokenId,
+        uint256 tokenPrice,
+        CryptoartNFT.MintType mintType,
+        uint256 signerPrivateKey
+    )
         internal
         view
         returns (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet)
     {
         tokenURISet = signingUtils.createTokenURISet(tokenId);
         bytes memory signature = signingUtils.createMintSignature(
-            user, tokenId, mintType, signerPrivateKey, tokenURISet, TOKEN_PRICE, nft.nonces(user), address(nft)
+            user, tokenId, mintType, signerPrivateKey, tokenURISet, tokenPrice, nft.nonces(user), address(nft)
         );
         data = CryptoartNFT.MintValidationData({
             recipient: user,
             tokenId: tokenId,
-            tokenPrice: TOKEN_PRICE,
+            tokenPrice: tokenPrice,
             mintType: mintType,
             signature: signature
         });
     }
 
-    function mintNFT(address user, uint256 tokenId, uint256 paymentValue) internal {
+    function mintNFT(address user, uint256 tokenId, uint256 tokenPrice, uint256 paymentValue) internal {
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user, tokenId, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            createMintData(user, tokenId, tokenPrice, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
 
         vm.prank(user);
         nft.mint{value: paymentValue}(data, tokenURISet);
@@ -84,7 +90,7 @@ contract CryptoartNFTBase is Test, ICryptoartNFTEvents {
         uint256[] memory tokenIds = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
             tokenIds[i] = 100 + i;
-            mintNFT(to, tokenIds[i], TOKEN_PRICE);
+            mintNFT(to, tokenIds[i], TOKEN_PRICE, TOKEN_PRICE);
         }
         return tokenIds;
     }

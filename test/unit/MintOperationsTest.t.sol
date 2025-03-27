@@ -13,9 +13,9 @@ contract MintOperationsTest is CryptoartNFTBase {
     // ============ Standard Mint Tests ============
 
     function test_MintHappyPath() public {
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, false, false, true);
         emit Minted(user1, TOKEN_ID);
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
 
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
         assertEq(nft.totalSupply(), 1);
@@ -25,14 +25,14 @@ contract MintOperationsTest is CryptoartNFTBase {
         uint256 excessPayment = 0.05 ether + TOKEN_PRICE;
         uint256 balanceBefore = user1.balance;
 
-        mintNFT(user1, TOKEN_ID, excessPayment);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, excessPayment);
 
         assertEq(user1.balance, balanceBefore - TOKEN_PRICE);
     }
 
     function test_RevertMintInsufficientPayment() public {
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
         uint256 payment = 0.05 ether;
 
         vm.prank(user1);
@@ -43,7 +43,7 @@ contract MintOperationsTest is CryptoartNFTBase {
     function test_RevertMintInvalidSignature() public {
         uint256 badPrivateKey = 0xB22222;
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, badPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, badPrivateKey);
 
         vm.prank(user1);
         vm.expectRevert(Error.Auth_UnauthorizedSigner.selector);
@@ -52,7 +52,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
     function test_RevertMintWithTamperedData() public {
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         // Tamper with data
         data.tokenPrice = data.tokenPrice * 2;
@@ -63,11 +63,11 @@ contract MintOperationsTest is CryptoartNFTBase {
     }
 
     function test_RevertMintTokenAlreadyMinted() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
 
         (CryptoartNFT.MintValidationData memory data2, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Error.Token_AlreadyMinted.selector, TOKEN_ID));
@@ -79,7 +79,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         nft.pause();
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.prank(user1);
         vm.expectRevert();
@@ -91,9 +91,9 @@ contract MintOperationsTest is CryptoartNFTBase {
         nft.setMaxSupply(1);
         uint256 tokenId2 = 2;
         (CryptoartNFT.MintValidationData memory data1, CryptoartNFT.TokenURISet memory tokenURISet1) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
         (CryptoartNFT.MintValidationData memory data2, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, tokenId2, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, tokenId2, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.startPrank(user1);
         nft.mint{value: TOKEN_PRICE}(data1, tokenURISet1);
@@ -106,7 +106,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
     function test_ClaimHappyPath() public {
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeClaim, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeClaim, authoritySignerPrivateKey);
 
         vm.expectEmit(true, false, false, true);
         emit CryptoartNFT.Claimed(TOKEN_ID);
@@ -125,7 +125,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         emit MintedByTrading(TOKEN_ID, tradedTokenIds);
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.prank(user1);
         nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokenIds, data, tokenURISet);
@@ -140,8 +140,8 @@ contract MintOperationsTest is CryptoartNFTBase {
         uint256 tokenId100 = 100;
         uint256 tokenId101 = 101;
 
-        mintNFT(user1, tokenId100, TOKEN_PRICE);
-        mintNFT(user2, tokenId101, TOKEN_PRICE);
+        mintNFT(user1, tokenId100, TOKEN_PRICE, TOKEN_PRICE);
+        mintNFT(user2, tokenId101, TOKEN_PRICE, TOKEN_PRICE);
 
         testAssertions.assertTokenOwnership(nft, tokenId100, user1);
         testAssertions.assertTokenOwnership(nft, tokenId101, user2);
@@ -152,7 +152,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         tradedTokenIds[1] = tokenId101;
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Error.Token_NotOwned.selector, tokenId101, user1));
@@ -163,7 +163,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         uint256[] memory tradedTokenIds = new uint256[](0);
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Error.Batch_EmptyArray.selector));
@@ -177,7 +177,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         }
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Error.Batch_MaxSizeExceeded.selector, 51, 50));
@@ -194,7 +194,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         }
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         vm.expectEmit(true, false, false, true);
         emit MintedByBurning(TOKEN_ID, burnTokenIds);
@@ -220,7 +220,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         }
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         // Attempt to burn with wrong token count
         uint256 requiredBurnCount = 3;
@@ -234,7 +234,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
     function test_RevertBurnAndMintDuplicateTokens() public {
         // Mint a token to burn
-        mintNFT(user1, 100, TOKEN_PRICE);
+        mintNFT(user1, 100, TOKEN_PRICE, TOKEN_PRICE);
 
         // Create duplicate array
         uint256[] memory burnTokenIds = new uint256[](2);
@@ -242,11 +242,11 @@ contract MintOperationsTest is CryptoartNFTBase {
         burnTokenIds[1] = 100;
 
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, mintTypeOpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeOpenMint, authoritySignerPrivateKey);
 
         // Attempt to burn with duplicate tokens
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Batch_DuplicateTokenIds.selector));
+        vm.expectRevert(abi.encodeWithSelector(Error.Batch_DuplicateTokenIds.selector, burnTokenIds[0]));
         nft.burnAndMint{value: TOKEN_PRICE}(burnTokenIds, burnTokenIds.length, data, tokenURISet);
     }
 }

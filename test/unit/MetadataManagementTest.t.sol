@@ -21,7 +21,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     }
 
     function test_TokenURIsReturnsCorrectData() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
 
         // Verify token metadata is set correctly
         (uint256 index, string[2] memory uris, bool pinned) = nft.tokenURIs(TOKEN_ID);
@@ -36,7 +36,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     }
 
     function test_UpdateMetadataByOwner() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         string memory newRedeemableURI = string(abi.encodePacked("token-", TOKEN_ID.toString(), "-newRedeemable.json"));
         string memory newNotRedeemableURI =
             string(abi.encodePacked("token-", TOKEN_ID.toString(), "-newNonRedeemable.json"));
@@ -53,7 +53,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     }
 
     function test_RevertUpdateMetadataByOwner() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         string memory newRedeemableURI = string(abi.encodePacked("token-", TOKEN_ID.toString(), "-newRedeemable.json"));
         string memory newNotRedeemableURI =
             string(abi.encodePacked("token-", TOKEN_ID.toString(), "-newNonRedeemable.json"));
@@ -75,7 +75,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     }
 
     function test_PinTokenURIByOwner() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         uint8 index = 1;
 
         vm.expectEmit(true, false, false, true);
@@ -91,7 +91,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     }
 
     function test_RevertPinTokenURIByNonOwner() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         uint8 index = 1;
 
         vm.prank(user1);
@@ -102,7 +102,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     function test_MarkAsRedeemable() public {
         // Create data
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
         bytes memory signature =
@@ -129,7 +129,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         // Create data
         uint256 badPrivateKey = 0xB22222;
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, TOKEN_ID, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            createMintData(user1, TOKEN_ID, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
         bytes memory signature =
@@ -141,7 +141,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
     }
 
     function test_TokenMetadataAfterTransfer() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         (uint256 initialIndex, string[2] memory initialUris, bool initialPinned) = nft.tokenURIs(TOKEN_ID);
 
         vm.prank(user1);
@@ -158,13 +158,13 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         assertEq(initialUris[1], postTransferUris[1]);
         assertEq(initialPinned, postTransferPinned);
 
-        // Veruft token URI is consistent
+        // Verify token URI is consistent
         string memory expectedURI = string.concat(BASE_URI, postTransferUris[postTransferIndex]);
         assertEq(nft.tokenURI(TOKEN_ID), expectedURI);
     }
 
     function test_RevertMetadataOperationsForBurnedToken() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE);
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
 
         // Burn the token
         vm.prank(user1);

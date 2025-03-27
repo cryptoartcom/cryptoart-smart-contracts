@@ -58,18 +58,6 @@ contract SigningUtils is Test {
         return abi.encodePacked(r, s, v);
     }
 
-    // function gensig(address user, uint256 tokenId, uint256 nonce, address contractAddress, uint256 privateKey) public returns (bytes memory) {
-    //     bytes32 contentHash = keccak256(abi.encode(
-    //          user,
-    //          tokenId,
-    //          nonce,
-    //          contractAddress
-    //      ));
-    //     bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
-    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
-    //     return abi.encodePacked(r, s, v);
-    // }
-
     function createTokenURISet(uint256 tokenId) public pure returns (CryptoartNFT.TokenURISet memory) {
         return CryptoartNFT.TokenURISet({
             uriWhenRedeemable: string(abi.encodePacked("token-", tokenId.toString(), "-redeemable.json")),
