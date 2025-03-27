@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
+import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
+import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+
+contract FullWorkFlow is CryptoartNFTBase {
+    using Strings for address;
+
+    /// @dev tests full workflow from minting, admin updates, unpairing
+    function test_FullWorkFlow() public {
+        // --- Mint Workflow ---
+        uint256 tokenId = 1;
+        (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory tokenURISet) =
+            createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+
+        vm.prank(user1);
+        nft.mint{value: TOKEN_PRICE}(mintData, tokenURISet);
+
+        // Verify ownership and initial metadata
+        assertEq(nft.ownerOf(tokenId), user1);
+        string memory initialRedeemableURI = tokenURISet.uriWhenRedeemable;
+        string memory expectedInitialURI = string.concat(BASE_URI, initialRedeemableURI);
+        assertEq(nft.tokenURI(tokenId), expectedInitialURI);
+
+        // --- Admin Updates ---
+        string memory newRedeemableURI = "ipfs://new-redeemable.json";
+        string memory newNotRedeemableURI = "ipfs://new-not-redeemable.json";
+        vm.prank(owner);
+        nft.updateMetadata(tokenId, newRedeemableURI, newNotRedeemableURI);
+
+        // Verify updated metadata
+        (, string[2] memory uris, bool pinned) = nft.tokenURIs(tokenId);
+        assertEq(uris[0], newRedeemableURI);
+        assertEq(uris[1], newNotRedeemableURI);
+        assertTrue(pinned);
+
+        // --- Unpair Workflow ---
+        bytes memory unpairSignature = signingUtils.createRedeemableSignature(
+            user1, tokenId, nft.nonces(user1), address(nft), authoritySignerPrivateKey
+        );
+        vm.prank(user1);
+        nft.markAsRedeemable(tokenId, unpairSignature);
+
+        // Verify token URI reflects redeemable state
+        string memory expectedRedeemableURI = string.concat(BASE_URI, newRedeemableURI);
+        assertEq(nft.tokenURI(tokenId), expectedRedeemableURI);
+
+        // --- IStory Workflow ---
+        string memory storyId = "story1";
+        string memory storyContent = "Once upon a time, in a galaxy far far away...";
+        vm.prank(user1);
+        vm.expectEmit();
+        emit Story(tokenId, user1, user1.toHexString(), storyContent);
+        nft.addStory(tokenId, "", storyContent);
+
+        // NFT owner toggles story visibility
+        vm.prank(user1);
+        vm.expectEmit(true, true, false, true);
+        emit ToggleStoryVisibility(tokenId, storyId, true);
+        nft.toggleStoryVisibility(tokenId, storyId, true);
+    }
+}
