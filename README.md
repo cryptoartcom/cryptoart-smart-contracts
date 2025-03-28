@@ -19,9 +19,8 @@
 The Cryptoart NFT project aims to create a unique NFT collection on the Base blockchain that bridges digital ownership with physical art pieces. The core concept revolves around "pairable" NFTs:
 
 *   NFTs represent ownership of crypto-related art.
-*   Holders can "pair" (redeem) their NFT to receive a physical, limited-edition art piece shipped by Cryptoart.com. This marks the NFT metadata as `Redeemable = FALSE`.
-*   To sell the NFT digitally without shipping the physical item, the holder must destroy the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to "unpair" the NFT, marking its metadata as `Redeemable = TRUE`. This allows the holder to sell the NFT in a redeemable state, enabling future holders to pair it with the same physical numbered art piece. The process removes risks and authentication concerns normally associated with collector-to-collector shipment of physical art.
-*   Holders may opt to sell their NFT while it's still paired.  Since NFTs can only be paired with one numbered art piece, paired NFTs trade/function like traditional (non-redeemable) NFTs.
+*   Holders can "unpair" (un-redeem) their NFT by destroying the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to reset its metadata to Redeemable = TRUE.This allows the holder to sell the NFT in a redeemable state, enabling future holders to pair it with the same physical numbered art piece. The process removes risks and authentication concerns normally associated with collector-to-collector shipment of physical art.
+*   Holders may opt to sell their NFT while it's still paired. Since NFTs can only be paired with one numbered art piece, paired NFTs trade/function like traditional (non-redeemable) NFTs.
 *   The collection utilizes scarcity mechanics, allowing users to burn or trade existing NFTs within the collection for potentially more desirable ones.
 *   Owners can add "stories" to their NFTs, creating a permanent, on-chain provenance log via emitted events (IStory interface).
 
