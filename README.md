@@ -2,15 +2,15 @@
 
 ## Table of Contents
 
-1.  [Project Overview](#1-project-overview)
-2.  [Features Overview](#2-features-overview)
-3.  [Architecture & Core Mechanisms](#3-architecture--core-mechanisms)
-4.  [Actors & Roles](#4-actors--roles)
-5.  [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks)
-6.  [External Dependencies](#6-external-dependencies)
-7.  [Scope Definition](#7-scope-definition)
-8.  [Setup & Testing](#8-setup--testing)
-9.  [Known Issues](#9-known-issues)
+1. [Project Overview](#1-project-overview)
+2. [Scope Definition](#2-scope-definition) 
+3. [Features Overview](#3-features-overview)
+4. [Architecture & Core Mechanisms](#4-architecture--core-mechanisms)
+5. [Actors & Roles](#5-actors--roles)
+6. [Trust Assumptions & Centralization Risks](#6-trust-assumptions--centralization-risks)
+7. [External Dependencies](#7-external-dependencies)
+8. [Setup & Testing](#8-setup--testing)
+9. [Known Issues](#9-known-issues)
 
 ---
 
@@ -30,7 +30,32 @@ The contracts are developed using Foundry and utilize OpenZeppelin's upgradeable
 
 ---
 
-## 2. Features Overview
+## 2. Scope Definition
+
+The following files are in scope:
+
+```
+src/
+├── CryptoartNFT.sol            # Main contract implementing ERC721 with extensions
+├── interfaces
+│   ├── IERC7160.sol            # Interface for multi-metadata extension
+│   └── IStory.sol              # Interface for story functionality
+└── libraries
+    └── Error.sol               # Custom error definitions
+```
+
+### Primary Contract: CryptoartNFT.sol
+
+This contract is the core implementation, inheriting from multiple OpenZeppelin contracts and implementing custom interfaces:
+- Implements ERC721 with Enumerable, Royalty, and Burnable extensions
+- Implements IERC7160 for metadata management
+- Implements IERC4906 for metadata updates
+- Implements IStory for story functionality
+- Includes Ownable, Pausable, and ReentrancyGuard for security and control
+
+---
+
+## 3. Features Overview
 
 - **Signature-Based Voucher System**: Ensures secure, authorized minting through cryptographically verified vouchers
 - **Physical/Digital Pairing**: NFTs can be paired with physical art pieces and later unpaired if the physical art is destroyed
@@ -38,9 +63,90 @@ The contracts are developed using Foundry and utilize OpenZeppelin's upgradeable
 - **Scarcity Mechanics**: Supports burning existing tokens to mint new, potentially more valuable tokens
 - **Admin Controls**: Owner-managed features for royalties, pausing, and contract configuration
 
+```mermaid
+graph TD
+    %% External Actors
+    Users("Users"):::external```mermaid
+    graph TD
+        %% External Actors
+        Users("Users"):::external
+        Admin("Admin/Owner"):::admin
+        Signer("Off-Chain Authority Signer"):::offchain
+        NFTReceiver("NFT Receiver"):::external 
+        %% For specific mint types
+    
+        %% On-Chain Components
+        subgraph "On-Chain Components"
+            Proxy("Proxy/Upgrade Manager"):::onchain
+            Contract("CryptoartNFT (Core Contract) - Handles mint, burn, pairing, metadata, etc."):::onchain
+        end
+    
+        %% Off-Chain Support Components
+        OffchainIndexing["Off-chain Indexing/Provenance"]:::offchain
+    
+        %% Core Relationships
+        Users -->|"Interact (mint, burn, pair, etc.)"| Proxy
+        Admin -->|"Admin Functions (pause, upgrades, etc.)"| Proxy
+        Proxy -->|"delegatecall"| Contract
+    
+        %% Voucher Flow (Simplified & Corrected)
+        Users -->|"Request Signature (Off-Chain)"| Signer
+        Signer -->|"Issues Signature (Off-Chain)"| Users
+        Contract --->|"Verifies Signature using Signer's Key"| Signer
+    
+        %% Event Emission
+        Contract -->|"Emits Events (Transfer, MetadataUpdate, etc.)"| OffchainIndexing
+    
+        %% Specific Mint Interaction (Example)
+        Contract -->|"mintWithTrade"| NFTReceiver
+    
+        %% Styles
+        classDef onchain fill:#6CA6CD,stroke:#000,stroke-width:2px,color:#000;
+        classDef offchain fill:#FF8C00,stroke:#000,stroke-width:2px,color:#000;
+        classDef admin fill:#32CD32,stroke:#000,stroke-width:2px,color:#000;
+        classDef external fill:#FF6B6B,stroke:#000,stroke-width:2px,color:#000;
+    ```
+
+    Admin("Admin/Owner"):::admin
+    Signer("Off-Chain Authority Signer"):::offchain
+    NFTReceiver("NFT Receiver"):::external 
+    %% For specific mint types
+
+    %% On-Chain Components
+    subgraph "On-Chain Components"
+        Proxy("Proxy/Upgrade Manager"):::onchain
+        Contract("CryptoartNFT (Core Contract) - Handles mint, burn, pairing, metadata, etc."):::onchain
+    end
+
+    %% Off-Chain Support Components
+    OffchainIndexing["Off-chain Indexing/Provenance"]:::offchain
+
+    %% Core Relationships
+    Users -->|"Interact (mint, burn, pair, etc.)"| Proxy
+    Admin -->|"Admin Functions (pause, upgrades, etc.)"| Proxy
+    Proxy -->|"delegatecall"| Contract
+
+    %% Voucher Flow (Simplified & Corrected)
+    Users -->|"Request Signature (Off-Chain)"| Signer
+    Signer -->|"Issues Signature (Off-Chain)"| Users
+    Contract --->|"Verifies Signature using Signer's Key"| Signer
+
+    %% Event Emission
+    Contract -->|"Emits Events (Transfer, MetadataUpdate, etc.)"| OffchainIndexing
+
+    %% Specific Mint Interaction (Example)
+    Contract -->|"mintWithTrade"| NFTReceiver
+
+    %% Styles
+    classDef onchain fill:#6CA6CD,stroke:#000,stroke-width:2px,color:#000;
+    classDef offchain fill:#FF8C00,stroke:#000,stroke-width:2px,color:#000;
+    classDef admin fill:#32CD32,stroke:#000,stroke-width:2px,color:#000;
+    classDef external fill:#FF6B6B,stroke:#000,stroke-width:2px,color:#000;
+```
+
 ---
 
-## 3. Architecture & Core Mechanisms
+## 4. Architecture & Core Mechanisms
 
 The system revolves around the `CryptoartNFT.sol` contract, which inherits these contracts:
 
@@ -97,7 +203,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 ---
 
-## 4. Actors & Roles
+## 5. Actors & Roles
 
 *   **Contract Owner (`OwnableUpgradeable`):**
     *   Privileged administrator of the contract.
@@ -126,7 +232,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 ---
 
-## 5. Trust Assumptions & Centralization Risks
+## 6. Trust Assumptions & Centralization Risks
 
 This system has significant centralization aspects that auditors should be aware of:
 
@@ -149,7 +255,7 @@ This system has significant centralization aspects that auditors should be aware
 
 ---
 
-## 6. External Dependencies
+## 7. External Dependencies
 
 *   **@openzeppelin/contracts-upgradeable v5.0.2:**
     *   `access/OwnableUpgradeable.sol`
@@ -168,72 +274,6 @@ This system has significant centralization aspects that auditors should be aware
 **Assumptions about Dependencies:**
 *   The OpenZeppelin contracts are assumed to be secure and behave as documented for version 5.0.2.
 *   Standard cryptographic primitives (`ECDSA`, `keccak256`) are assumed to be secure.
-
----
-
-## 7. Scope Definition
-
-The following files are in scope:
-
-```
-src/
-├── CryptoartNFT.sol            # Main contract implementing ERC721 with extensions
-├── interfaces
-│   ├── IERC7160.sol            # Interface for multi-metadata extension
-│   └── IStory.sol              # Interface for story functionality
-└── libraries
-    └── Error.sol               # Custom error definitions
-```
-
-### Primary Contract: CryptoartNFT.sol
-
-This contract is the core implementation, inheriting from multiple OpenZeppelin contracts and implementing custom interfaces:
-- Implements ERC721 with Enumerable, Royalty, and Burnable extensions
-- Implements IERC7160 for metadata management
-- Implements IERC4906 for metadata updates
-- Implements IStory for story functionality
-- Includes Ownable, Pausable, and ReentrancyGuard for security and control
-
-```mermaid
-graph TD
-    %% External Actors
-    Users("Users"):::external
-    Admin("Admin/Owner"):::admin
-    Signer("Off-Chain Authority Signer"):::offchain
-    NFTReceiver("NFT Receiver"):::external 
-    %% For specific mint types
-
-    %% On-Chain Components
-    subgraph "On-Chain Components"
-        Proxy("Proxy/Upgrade Manager"):::onchain
-        Contract("CryptoartNFT (Core Contract) - Handles mint, burn, pairing, metadata, etc."):::onchain
-    end
-
-    %% Off-Chain Support Components
-    OffchainIndexing["Off-chain Indexing/Provenance"]:::offchain
-
-    %% Core Relationships
-    Users -->|"Interact (mint, burn, pair, etc.)"| Proxy
-    Admin -->|"Admin Functions (pause, upgrades, etc.)"| Proxy
-    Proxy -->|"delegatecall"| Contract
-
-    %% Voucher Flow (Simplified & Corrected)
-    Users -->|"Request Signature (Off-Chain)"| Signer
-    Signer -->|"Issues Signature (Off-Chain)"| Users
-    Contract --->|"Verifies Signature using Signer's Key"| Signer
-
-    %% Event Emission
-    Contract -->|"Emits Events (Transfer, MetadataUpdate, etc.)"| OffchainIndexing
-
-    %% Specific Mint Interaction (Example)
-    Contract -->|"mintWithTrade"| NFTReceiver
-
-    %% Styles
-    classDef onchain fill:#6CA6CD,stroke:#000,stroke-width:2px,color:#000;
-    classDef offchain fill:#FF8C00,stroke:#000,stroke-width:2px,color:#000;
-    classDef admin fill:#32CD32,stroke:#000,stroke-width:2px,color:#000;
-    classDef external fill:#FF6B6B,stroke:#000,stroke-width:2px,color:#000;
-```
 
 ---
 
