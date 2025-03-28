@@ -66,47 +66,7 @@ This contract is the core implementation, inheriting from multiple OpenZeppelin 
 ```mermaid
 graph TD
     %% External Actors
-    Users("Users"):::external```mermaid
-    graph TD
-        %% External Actors
-        Users("Users"):::external
-        Admin("Admin/Owner"):::admin
-        Signer("Off-Chain Authority Signer"):::offchain
-        NFTReceiver("NFT Receiver"):::external 
-        %% For specific mint types
-    
-        %% On-Chain Components
-        subgraph "On-Chain Components"
-            Proxy("Proxy/Upgrade Manager"):::onchain
-            Contract("CryptoartNFT (Core Contract) - Handles mint, burn, pairing, metadata, etc."):::onchain
-        end
-    
-        %% Off-Chain Support Components
-        OffchainIndexing["Off-chain Indexing/Provenance"]:::offchain
-    
-        %% Core Relationships
-        Users -->|"Interact (mint, burn, pair, etc.)"| Proxy
-        Admin -->|"Admin Functions (pause, upgrades, etc.)"| Proxy
-        Proxy -->|"delegatecall"| Contract
-    
-        %% Voucher Flow (Simplified & Corrected)
-        Users -->|"Request Signature (Off-Chain)"| Signer
-        Signer -->|"Issues Signature (Off-Chain)"| Users
-        Contract --->|"Verifies Signature using Signer's Key"| Signer
-    
-        %% Event Emission
-        Contract -->|"Emits Events (Transfer, MetadataUpdate, etc.)"| OffchainIndexing
-    
-        %% Specific Mint Interaction (Example)
-        Contract -->|"mintWithTrade"| NFTReceiver
-    
-        %% Styles
-        classDef onchain fill:#6CA6CD,stroke:#000,stroke-width:2px,color:#000;
-        classDef offchain fill:#FF8C00,stroke:#000,stroke-width:2px,color:#000;
-        classDef admin fill:#32CD32,stroke:#000,stroke-width:2px,color:#000;
-        classDef external fill:#FF6B6B,stroke:#000,stroke-width:2px,color:#000;
-    ```
-
+    Users("Users"):::external
     Admin("Admin/Owner"):::admin
     Signer("Off-Chain Authority Signer"):::offchain
     NFTReceiver("NFT Receiver"):::external 
