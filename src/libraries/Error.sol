@@ -24,6 +24,7 @@ library Error {
 
     // Auth errors
     error Auth_UnauthorizedSigner();
+    error Auth_Unauthorized(address msgSender);
 
     // Admin errors
     error Admin_RoyaltyTooHigh(uint256 percentage, uint256 maxPercentage);

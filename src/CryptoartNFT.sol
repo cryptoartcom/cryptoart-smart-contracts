@@ -417,45 +417,40 @@ contract CryptoartNFT is
     // Story Features
     // ==========================================================================
 
-    // TODO: Appropriately add the implementations to the story functions
+    /// @inheritdoc IStory
+    function addCollectionStory(string calldata, /*creatorName*/ string calldata story) external onlyOwner {
+        emit CollectionStory(msg.sender, msg.sender.toHexString(), story);
+    }
 
     /// @inheritdoc IStory
-    function addCreatorStory(
-        uint256 tokenId,
-        string calldata,
-        /*creatorName*/
-        string calldata story
-    ) external onlyTokenOwner(tokenId) {
+    function addCreatorStory(uint256 tokenId, string calldata, /*creatorName*/ string calldata story)
+        external
+        onlyTokenOwner(tokenId)
+    {
         emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
 
     /// @inheritdoc IStory
-    function addStory(
-        uint256 tokenId,
-        string calldata,
-        /*collectorName*/
-        string calldata story
-    ) external onlyTokenOwner(tokenId) {
+    function addStory(uint256 tokenId, string calldata, /*collectorName*/ string calldata story)
+        external
+        onlyTokenOwner(tokenId)
+    {
         emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
 
     /**
-     * @notice Emits an event signaling a change in visibility for a story. Token owner only.
+     * @notice Emits an event signaling a change in visibility for a story. Token owner or admin only.
      * @dev Off-chain listeners interpret this event to control story display.
      * @param tokenId The token ID the story belongs to.
-     * @param storyId An identifier for the specific story (likely derived off-chain from event logs).
+     * @param storyId An identifier for the specific story (derived off-chain from event logs).
      * @param visible The desired visibility state.
      */
-    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible)
-        external
-        onlyTokenOwner(tokenId)
-        onlyIfTokenExists(tokenId)
-    {
+    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external {
+        if (ownerOf(tokenId) != msg.sender && msg.sender != owner()) {
+            revert Error.Auth_Unauthorized(msg.sender);
+        }
         emit ToggleStoryVisibility(tokenId, storyId, visible);
     }
-
-    /// @inheritdoc IStory
-    function addCollectionStory(string calldata creatorName, string calldata story) external override {}
 
     // ==========================================================================
     // Admin Controls
