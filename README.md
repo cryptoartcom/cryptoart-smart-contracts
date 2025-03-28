@@ -1,4 +1,4 @@
-# CryptoArt NFT
+# Cryptoart NFT
 
 ## Table of Contents
 
@@ -315,7 +315,7 @@ test/
 
 1. The `unpinTokenURI` function is currently a stub. This function is required by the IERC7160 interface but has not been implemented yet.  Per the EIP, its behaviour is flexible, but currently, there's no way to revert a token to an "unpinned" state via this function.
 
-2.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
+2.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#6-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
 
 3. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
 
