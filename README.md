@@ -141,8 +141,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 *   Implements functions (`addCreatorStory`, `addStory`) allowing token owners to emit events containing story text/metadata.
 *   Visibility toggling (`toggleStoryVisibility`) emits an event, interpreted off-chain.
-*   `addCollectionStory` is currently unimplemented.
-*   Right now, story content is stored in event logs, not contract storage. This may change though.
+*   Right now, story content is stored in event logs, not contract storage. This could potentially change though.
 
 ### Scarcity Mechanics
 
@@ -308,17 +307,16 @@ test/
     ├── BurnOperationsTest.t.sol
     ├── Initialization.t.sol
     ├── MetadataManagementTest.t.sol
-    └── MintOperationsTest.t.sol
+    ├── MintOperationsTest.t.sol
+    └── StoryFeaturesTest.t.sol 
 ```
 
 ## 9. Known Issues 
 
 1. The `unpinTokenURI` function is currently a stub. This function is required by the IERC7160 interface but has not been implemented yet.  Per the EIP, its behaviour is flexible, but currently, there's no way to revert a token to an "unpinned" state via this function.
 
-2.  **Unimplemented `addCollectionStory`:** The `addCollectionStory` function required by `IStory` is currently an empty stub.
+2.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
 
-3.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
-
-4. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
+3. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
 
 4.  **Gas Usage in Batch Operations:** Functions like `_batchBurn`, `_batchTransferToNftReceiver` iterate over arrays. While there's a `MAX_BATCH_SIZE` constant, ensure this limit is appropriate to avoid exceeding block gas limits in practice on the target network (Base). The duplicate check in `_batchBurn` has O(n^2) complexity, which could be very costly for larger batches near the limit, but again, the max batch size constant should restrict this effect.
