@@ -1,4 +1,4 @@
-# CryptoArt NFT
+# Cryptoart NFT
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@
 The Cryptoart NFT project aims to create a unique NFT collection on the Base blockchain that bridges digital ownership with physical art pieces. The core concept revolves around "pairable" NFTs:
 
 *   NFTs represent ownership of crypto-related art.
-*   Holders can "unpair" (un-redeem) their NFT by destroying the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to reset its metadata to Redeemable = TRUE.This allows the holder to sell the NFT in a redeemable state, enabling future holders to pair it with the same physical numbered art piece. The process removes risks and authentication concerns normally associated with collector-to-collector shipment of physical art.
+*   Holders can "unpair" (un-redeem) their NFT by destroying the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to reset its metadata to Redeemable = TRUE. This allows the holder to sell the NFT in a redeemable state, enabling future holders to pair it with the same physical numbered art piece. The process removes risks and authentication concerns normally associated with collector-to-collector shipment of physical art.
 *   Holders may opt to sell their NFT while it's still paired. Since NFTs can only be paired with one numbered art piece, paired NFTs trade/function like traditional (non-redeemable) NFTs.
 *   The collection utilizes scarcity mechanics, allowing users to burn or trade existing NFTs within the collection for potentially more desirable ones.
 *   Owners can add "stories" to their NFTs, creating a permanent, on-chain provenance log via emitted events (IStory interface).
@@ -315,7 +315,7 @@ test/
 
 1. The `unpinTokenURI` function is currently a stub. This function is required by the IERC7160 interface but has not been implemented yet.  Per the EIP, its behaviour is flexible, but currently, there's no way to revert a token to an "unpinned" state via this function.
 
-2.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
+2.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#6-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
 
 3. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
 
