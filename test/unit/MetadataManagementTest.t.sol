@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {Error} from "../../src/libraries/Error.sol";
 import {SigningUtils} from "../helpers/SigningUtils.sol";
-import {IERC4906} from "@openzeppelin-contracts-5.0.2/interfaces/IERC4906.sol";
-import {ECDSA} from "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IERC7160} from "../../src/interfaces/IERC7160.sol";
 
 contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {

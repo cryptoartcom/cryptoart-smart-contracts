@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, console} from "forge-std/src/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {CryptoartNFT} from "../src/CryptoartNFT.sol";
 import {SigningUtils} from "./helpers/SigningUtils.sol";
 import {TestAssertions} from "./helpers/TestAssertions.sol";

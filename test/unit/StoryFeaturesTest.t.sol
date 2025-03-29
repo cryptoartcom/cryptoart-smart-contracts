@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/src/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
-import {Strings} from "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IStory} from "../../src/interfaces/IStory.sol";
 import {Error} from "../../src/libraries/Error.sol";
 

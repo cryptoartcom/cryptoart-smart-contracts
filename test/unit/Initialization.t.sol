@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/src/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {Error} from "../../src/libraries/Error.sol";
 import {IERC7160} from "../../src/interfaces/IERC7160.sol";
-import {IERC4906} from "@openzeppelin-contracts-5.0.2/interfaces/IERC4906.sol";
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.0.2/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract InitializationTest is CryptoartNFTBase {
     function test_InitializationSetsCorrecctValues() public view {

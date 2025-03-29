@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
-import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import {IStory} from "../../src/interfaces/IStory.sol";
 
 contract LifecycleTest is CryptoartNFTBase {

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/src/Script.sol";
-import {console} from "forge-std/src/console.sol";
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/src/Upgrades.sol";
 
 contract DeployCryptoartNFT is Script {
     function run() external {

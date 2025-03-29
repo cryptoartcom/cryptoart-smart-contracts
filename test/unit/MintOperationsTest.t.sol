@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {Error} from "../../src/libraries/Error.sol";
-import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract MintOperationsTest is CryptoartNFTBase {
     CryptoartNFT.MintType mintTypeOpenMint = CryptoartNFT.MintType.OpenMint;

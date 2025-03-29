@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test, Vm} from "forge-std/src/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
-import {ECDSA} from "@openzeppelin-contracts-5.0.2/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin-contracts-5.0.2/utils/cryptography/MessageHashUtils.sol";
-import "@openzeppelin-contracts-5.0.2/utils/Strings.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title SigningUtils

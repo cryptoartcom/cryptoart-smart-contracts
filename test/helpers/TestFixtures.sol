@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/src/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
-import {ERC1967Proxy} from "@openzeppelin-contracts-5.0.2/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract TestFixtures {
     function deployProxyWithNFTInitialized(

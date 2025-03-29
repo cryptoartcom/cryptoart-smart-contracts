@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {console} from "forge-std/src/console.sol";
+import {console} from "forge-std/console.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import {Error} from "../../src/libraries/Error.sol";
