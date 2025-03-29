@@ -14,27 +14,20 @@ contract DeployCryptoartNFT is Script {
         address nftReceiver = vm.envAddress("NFT_RECEIVER");
         uint256 maxSupply = vm.envUint("MAX_SUPPLY");
         string memory baseURI = vm.envString("BASE_URI");
+        uint256 proxyAdminDeployer = vm.envUint("PROXY_ADMIN_PRIVATE_KEY");
+        
+        // vm.startBroadcast(proxyAdminDeployer);
 
-        vm.startBroadcast();
+        // // address proxyAddress = Upgrades
+        
+        // // Prepare initialization data
+        // bytes memory initData = abi.encodeWithSelector(
+        //     CryptoartNFT.initialize.selector, owner, authoritySigner, nftReceiver, maxSupply, baseURI
+        // );
 
-        // Deploy the implementation contract
-        CryptoartNFT implementation = new CryptoartNFT();
+        // vm.stopBroadcast();
 
-        // Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            CryptoartNFT.initialize.selector,
-            owner,
-            authoritySigner,
-            nftReceiver,
-            maxSupply,
-            baseURI
-        );
-
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-
-        vm.stopBroadcast();
-
-        console.log("Proxy deployed at:", address(proxy));
-        console.log("Implementation deployed at:", address(implementation));
+        // console.log("Proxy deployed at:", address(proxy));
+        // console.log("Implementation deployed at:", address(implementation));
     }
 }
