@@ -162,6 +162,7 @@ contract CryptoartNFT is
         __Ownable_init(contractOwner);
         __Pausable_init();
         __Nonces_init();
+        __ReentrancyGuard_init();
 
         baseURI = baseURI_;
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
