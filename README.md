@@ -9,7 +9,7 @@
 5. [Actors & Roles](#5-actors--roles)
 6. [Trust Assumptions & Centralization Risks](#6-trust-assumptions--centralization-risks)
 7. [External Dependencies](#7-external-dependencies)
-8. [Setup & Testing](#8-setup--testing)
+8. [Setup, Testing, Deployment & Upgrades](#8-setup-testing-deployment--upgrades)
 9. [Known Issues](#9-known-issues)
 
 ---
@@ -236,32 +236,51 @@ This system has significant centralization aspects that auditors should be aware
 
 ---
 
-## 8. Setup & Testing
+## 8. Setup, Testing, Deployment & Upgrades
 
 The project uses Foundry for development and testing.
 
 ### Environment Setup
 
-1. Install Foundry:
+1. **Install Foundry**:
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-2. Clone the repository:
+2. **Clone the repository**:
 ```bash
 git clone https://github.com/cryptoartcom/cryptoart-smart-contracts.git
 cd cryptoart-smart-contracts
 ```
 
-3. Install dependencies:
+3. **Install dependencies**:
 ```bash
 forge install
 ```
 
-4. Compile contracts:
+4. **Compile contracts**:
 ```bash
 forge build
+```
+
+5. **Environment Variables (.env file)**: Create a `.env` file in the project root. Populate it with the necessary keys and addresses for deployment/upgrades. Example: 
+```bash
+# .env file
+RPC_URL=https://your_rpc_url/...
+PROXY_ADMIN_PRIVATE_KEY=0x...your_admin_private_key...
+# Add other keys/addresses as needed for deployment/upgrade steps
+
+# --- Initial Deployment Vars ---
+OWNER_ADDRESS=0x...initial_nft_contract_owner...
+AUTHORITY_SIGNER=0x...initial_signer...
+NFT_RECEIVER=0x...initial_receiver...
+MAX_SUPPLY=10000 # or whatever the supply is
+BASE_URI="ipfs://your_initial_cid/"
+
+# --- Upgrade Vars ---
+# EXISTING_PROXY_ADDRESS will be set after initial deployment
+# DEPLOYER_PRIVATE_KEY might be the same as PROXY_ADMIN_PRIVATE_KEY or different
 ```
 
 ### Running Tests
@@ -289,27 +308,110 @@ Our test suite includes:
 
 ```
 test/
-├── CryptoartNFTBase.t.sol        # Base test setup
-├── fuzz/                         # Fuzz testing
+├── CryptoartNFTBase.t.sol
+├── fuzz
 │   ├── BurnFuzzTest.t.sol
 │   ├── MetadataFuzzTest.t.sol
 │   └── MintFuzzTest.t.sol
-├── helpers/                      # Test helpers
+├── helpers
 │   ├── SigningUtils.sol
 │   ├── TestAssertions.sol
 │   └── TestFixtures.sol
-├── integration/                  # Integration tests
+├── integation
 │   ├── FullWorkFlow.t.sol
 │   ├── LifecycleTest.t.sol
 │   └── RoyaltyMetadataTest.t.sol
-└── unit/                         # Unit tests
-    ├── Admin.t.sol
-    ├── BurnOperationsTest.t.sol
-    ├── Initialization.t.sol
-    ├── MetadataManagementTest.t.sol
-    ├── MintOperationsTest.t.sol
-    └── StoryFeaturesTest.t.sol 
+├── unit
+│   ├── Admin.t.sol
+│   ├── BurnOperationsTest.t.sol
+│   ├── Initialization.t.sol
+│   ├── MetadataManagementTest.t.sol
+│   ├── MintOperationsTest.t.sol
+│   └── StoryFeaturesTest.t.sol
+└── upgrade
+    ├── CryptoartNFTMockUpgrade.sol
+    ├── MockSigningUtils.sol
+    └── Upgrades.t.sol
 ```
+
+### Deployment & Upgrading
+Deployment and upgrades are managed via Foundry scripts located in the `script/` directory.
+
+#### Required Enviroment Variables
+Ensure the following are set in your .env file or shell environment before running scripts:
+
+* **RPC_URL**: RPC endpoint for the target network.
+* **PROXY_ADMIN_PRIVATE_KEY**: Private key of the account owning the ProxyAdmin (controls upgrades). DO NOT STORE IN PLAIN TEXT, ENCRYPT THIS.
+
+#### Initial Deployment (DeployCryptoartNFT.s.sol)
+This deploys the first version (CryptoartNFT.sol) behind a Transparent Upgradeable Proxy.
+
+1. Additional Environment Variables:
+
+* **OWNER_ADDRESS**: Initial owner() of the CryptoartNFT logic contract.
+* **AUTHORITY_SIGNER**: Initial address for signing mint/unpair vouchers.
+* **NFT_RECEIVER**: Initial address for receiving traded NFTs.
+* **MAX_SUPPLY**: Maximum NFT supply.
+* **BASE_URI**: Initial base URI for metadata.
+* **PROXY_ADMIN_ADDRESS**: The public address corresponding to PROXY_ADMIN_PRIVATE_KEY. Can be derived using `cast wallet address $PROXY_ADMIN_PRIVATE_KEY`.
+
+2. Run Script:
+```bash
+forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  --verify # Optional: attempt verification
+```
+
+#### Upgrade Process (UpgradeCryptoartNFT.s.sol)
+This upgrades the proxy to point to a new, already deployed implementation (e.g., CryptoartNFTV2.sol).
+
+**Step 1: Deploy New Implementation Code**
+Deploy only the new logic contract using forge create. Use a deployer key (can be the same as PROXY_ADMIN_PRIVATE_KEY or different).
+```bash
+# Set DEPLOYER_PRIVATE_KEY if needed
+# export DEPLOYER_PRIVATE_KEY=0x...
+
+forge create src/CryptoartNFTV2.sol:CryptoartNFTV2 \
+  --rpc-url $RPC_URL \
+  --private-key $DEPLOYER_PRIVATE_KEY \
+  --verify # Optional verification
+```
+
+**Step 2: Run the Upgrade script**
+  1. Additional Environment Variables:
+      - **EXISTING_PROXY_ADDRESS**: The proxy address saved from the initial deployment.
+
+  2. Prepare Script Arguments (Command Line):
+      - existingImplementationName: Artifact name of the current version (e.g., "CryptoartNFT").
+      - newImplementationName: Artifact name of the new version (e.g., "CryptoartNFTV2").
+      - newImplementationAddress: The address recorded in Step 1.3.
+      - `initializerCallData`: (Optional) Encoded call data for a V2 initializer (e.g., initializeV2()). Use "" if no initializer call is needed.
+          ```bash
+          # Example: Get calldata for initializeV2() with no args
+          export INIT_DATA=$(cast calldata "initializeV2()")
+          # Or empty for no call
+          # export INIT_DATA=""
+          ```
+          
+  3. Run Upgrade Script:
+  ```bash
+  # Define argument variables for clarity
+  export CURRENT_ARTIFACT_NAME="CryptoartNFT" # Or whatever the current version name is
+  export NEW_ARTIFACT_NAME="CryptoartNFTV2"   # Or whatever the new version name is
+  export NEW_IMPL_ADDR=0xNewImplementationAddress 
+  # Ensure INIT_DATA is set from step 2
+  
+  forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
+    --rpc-url $RPC_URL \
+    --broadcast \
+    --sig "run(string,string,address,bytes)" \
+    "$CURRENT_ARTIFACT_NAME" \
+    "$NEW_ARTIFACT_NAME" \
+    "$NEW_IMPL_ADDR" \
+    "$INIT_DATA"
+    --verify # Optional verification
+  ```
 
 ## 9. Known Issues 
 
