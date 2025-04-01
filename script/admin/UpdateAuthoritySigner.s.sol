@@ -1,29 +1,64 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity ^0.8.28;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
 
-// import {Script} from "forge-std/Script.sol";
-// import {console} from "forge-std/console.sol";
-// import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
+import {CryptoartNFT} from "../../src/CryptoartNFT.sol"; 
 
-// contract UpdateAuthoritySigner is Script {
-//     address public proxyAddress = vm.envOr("PROXY_ADDRESS", address(0));
-//     address public newAuthoritySigner = vm.envOr("NEW_AUTHORITY_SIGNER", address(0));
+/**
+ * @title UpdateAuthoritySigner Script
+ * @notice Updates the authority signer address on the CryptoartNFT contract via its proxy.
+ * @dev Reads required addresses and the owner's private key from environment variables.
+ *      Ensure the following environment variables are set:
+ *      - PROXY_ADDRESS: The address of the CryptoartNFT proxy contract.
+ *      - NEW_AUTHORITY_SIGNER: The address to set as the new authority signer.
+ *      - OWNER_PRIVATE_KEY: The private key of the current owner of the CryptoartNFT contract.
+ */
+contract UpdateAuthoritySigner is Script {
+    address proxyAddress = vm.envAddress("PROXY_ADDRESS");
+    address newAuthoritySigner = vm.envAddress("NEW_AUTHORITY_SIGNER");
+    uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY"); 
 
-//     function run() public {
-//         require(proxyAddress != address(0), "Proxy address not set");
-//         require(newAuthoritySigner != address(0), "New authority signer not set");
+    function run() public returns (bool success) {
+        require(newAuthoritySigner != address(0), "NEW_AUTHORITY_SIGNER cannot be the zero address.");
+        require(ownerPrivateKey != 0, "OWNER_PRIVATE_KEY environment variable not set or invalid.");
 
-//         CryptoartNFT nft = CryptoartNFT(proxyAddress);
+        // Derive owner address from private key for checks and logging
+        address designatedOwnerAddress = vm.addr(ownerPrivateKey);
+        
+        console.log("Executing Script As:", designatedOwnerAddress);
+        console.log("Target Proxy Address:", proxyAddress);
+        console.log("New Authority Signer Address:", newAuthoritySigner);
 
-//         console.log("Current authority signer:", nft.authoritySigner());
-//         console.log("Updating authority signer to:", newAuthoritySigner);
+        CryptoartNFT nft = CryptoartNFT(proxyAddress);
 
-//         vm.startBroadcast();
+        // Pre-flight check 1: Ensure the provided private key corresponds to the *current* contract owner
+        address currentOwner = nft.owner();
+        require(currentOwner == designatedOwnerAddress, "Error: Private key provided does not match the current contract owner.");
+        console.log("Owner check passed. Current owner:", currentOwner);
 
-//         nft.updateAuthoritySigner(newAuthoritySigner);
+        // Pre-flight check 2: Prevent setting the same address 
+        address currentSigner = nft.authoritySigner();
+        console.log("Current authority signer:", currentSigner);
+        if (currentSigner == newAuthoritySigner) {
+            console.log("New authority signer is the same as the current one. No update needed.");
+            return true; // Indicate success as no action was required
+        }
 
-//         vm.stopBroadcast();
+        // --- Transaction Execution ---
+        console.log("Broadcasting transaction to update authority signer...");
+        vm.startBroadcast(ownerPrivateKey); 
 
-//         console.log("Authority signer successfully updated");
-//     }
-// }
+        nft.updateAuthoritySigner(newAuthoritySigner);
+
+        vm.stopBroadcast();
+
+        // --- Post-flight Verification ---
+        address updatedSigner = nft.authoritySigner();
+        require(updatedSigner == newAuthoritySigner, "Verification Failed: Authority signer address did not update correctly.");
+        console.log("Successfully updated authority signer to:", updatedSigner);
+
+        success = true;
+        return success;
+    }
+}
