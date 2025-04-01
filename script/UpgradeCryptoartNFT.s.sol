@@ -3,12 +3,12 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
+import {CryptoartNFT} from "../src/CryptoartNFT.sol";
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract UpgradeCryptoartNFT is Script {
-    address existingTransparentProxy = vm.envAddress("EXISTING_PROXY_ADDRESS");
-    uint256 proxyAdminPrivateKey = vm.envUint("PROXY_ADMIN_PRIVATE_KEY");
+    address transparentProxyAddress = vm.envAddress("TRANSPARENT_PROXY_ADDRESS");
+    uint256 proxyAdminPrivateKey = vm.envUint("PROXY_ADMIN_OWNER_PRIVATE_KEY");
  
     /**
      * @notice Upgrades a proxy contract to a pre-deployed implementation address.
@@ -29,10 +29,11 @@ contract UpgradeCryptoartNFT is Script {
         }
         
         console.log("--- Starting Proxy Upgrade ---");
-        console.log("Proxy to upgrade:", existingTransparentProxy);
+        console.log("Proxy to upgrade:", transparentProxyAddress);
         console.log("Current Implementation Name:", currentImplementationName);
         console.log("New Implementation Name:", newImplementationName);
         console.log("New Implementation Address:", newImplementationAddress);
+        
         if (initializerCalldata.length > 0) {
             console.log("Initializer Call Data:", vm.toString(initializerCalldata));
         } else {
@@ -50,13 +51,15 @@ contract UpgradeCryptoartNFT is Script {
         console.log("Broadcasting upgrade transaction...");
         vm.startBroadcast(proxyAdminPrivateKey);
         Upgrades.upgradeProxy(
-            existingTransparentProxy, 
+            transparentProxyAddress, 
             newImplementationName,
             initializerCalldata
         );
         vm.stopBroadcast();
 
         console.log("--- Upgrade Complete ---");
-        console.log("Proxy", existingTransparentProxy, "now points to implementation:", newImplementationAddress);
+        console.log("Proxy", transparentProxyAddress, "now points to implementation:", newImplementationAddress);
     }
 }
+
+

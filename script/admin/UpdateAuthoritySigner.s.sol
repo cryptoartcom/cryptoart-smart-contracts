@@ -15,8 +15,8 @@ import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
  *      - OWNER_PRIVATE_KEY: The private key of the current owner of the CryptoartNFT contract.
  */
 contract UpdateAuthoritySigner is Script {
-    address proxyAddress = vm.envAddress("PROXY_ADDRESS");
-    address newAuthoritySigner = vm.envAddress("NEW_AUTHORITY_SIGNER");
+    address transparentProxyAddress = vm.envAddress("TRANSPARENT_PROXY_ADDRESS");
+    address newAuthoritySigner = vm.envAddress("AUTHORITY_SIGNER");
     uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY"); 
 
     function run() public returns (bool success) {
@@ -27,11 +27,11 @@ contract UpdateAuthoritySigner is Script {
         address designatedOwnerAddress = vm.addr(ownerPrivateKey);
         
         console.log("Executing Script As:", designatedOwnerAddress);
-        console.log("Target Proxy Address:", proxyAddress);
+        console.log("Transparent Proxy Address:", transparentProxyAddress);
         console.log("New Authority Signer Address:", newAuthoritySigner);
 
-        CryptoartNFT nft = CryptoartNFT(proxyAddress);
-
+        CryptoartNFT nft = CryptoartNFT(transparentProxyAddress);
+        
         // Pre-flight check 1: Ensure the provided private key corresponds to the *current* contract owner
         address currentOwner = nft.owner();
         require(currentOwner == designatedOwnerAddress, "Error: Private key provided does not match the current contract owner.");
