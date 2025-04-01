@@ -297,6 +297,11 @@ forge test -vvv
 
 # Check test coverage
 forge coverage
+
+# To run the upgrade test, clean the cache first and run with the `--ffi` flag
+forge cache clean
+forge clean
+forge test --match-contract UpgradesTest --ffi
 ```
 
 ### Test Coverage
