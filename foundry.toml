@@ -28,9 +28,10 @@ forge-std = "1.9.6"
 [rpc_endpoints]
 sepolia = "${SEPOLIA_URL}"
 base-sepolia = "${BASE_SEPOLIA_URL}"
+local-node = "${LOCAL_NODE_URL}"
 
 [etherscan]
-sepolia = { key = "${SEPOLIA_KEY}" }
-base-sepolia = { key = "${BASE_SEPOLIA_KEY}" }
+sepolia = { key = "${SEPOLIA_API_KEY}" }
+base-sepolia = { key = "${BASE_SEPOLIA_API_KEY}" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
