@@ -16,6 +16,7 @@ contract CryptoartNFTBase is Test {
     CryptoartNFT nft;
 
     // Test accounts
+    address public proxyAdmin = makeAddr("proxyAdmin");
     address public owner = makeAddr("owner");
     address public authoritySigner = makeAddr("authoritySigner");
     address public nftReceiver = makeAddr("nftReceiver");
@@ -50,7 +51,7 @@ contract CryptoartNFTBase is Test {
         // Set authority signer address to match private key for testing
         authoritySigner = vm.addr(authoritySignerPrivateKey);
 
-        nft = testFixtures.deployProxyWithNFTInitialized(owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
+        nft = testFixtures.deployTransparentProxyWithNFTInitialized(proxyAdmin, owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
     }
 
     function createMintData(

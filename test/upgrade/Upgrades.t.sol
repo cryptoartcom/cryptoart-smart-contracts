@@ -16,7 +16,7 @@ contract UpgradesTest is CryptoartNFTBase {
         address implementation = address(new CryptoartNFT());
         address proxy = UnsafeUpgrades.deployTransparentProxy(
             implementation,
-            owner,
+            proxyAdmin,
             abi.encodeCall(CryptoartNFT.initialize, (owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI))
         );
 
@@ -44,7 +44,7 @@ contract UpgradesTest is CryptoartNFTBase {
 
         // Upgrade the proxy to the new implementation
         Upgrades.upgradeProxy(
-            proxy, "CryptoartNFTMockUpgrade.sol", abi.encodeCall(CryptoartNFTMockUpgrade.initializeV2, ()), owner
+            proxy, "CryptoartNFTMockUpgrade.sol", abi.encodeCall(CryptoartNFTMockUpgrade.initializeV2, ()), proxyAdmin
         );
 
         // Get the new implementation address after upgrade
