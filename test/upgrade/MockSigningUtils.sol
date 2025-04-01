@@ -5,7 +5,7 @@ import {Test, Vm} from "forge-std/Test.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import {CryptoartNFTMockUpgrade} from "./CryptoartNFTMockUpgrade.sol";
+import {CryptoartNFTMockUpgrade} from "../../src/mock/CryptoartNFTMockUpgrade.sol";
 
 /**
  * @title SigningUtils

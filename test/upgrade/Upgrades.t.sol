@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {console} from "forge-std/Test.sol";
 import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
-import {CryptoartNFTMockUpgrade} from "./CryptoartNFTMockUpgrade.sol";
+import {CryptoartNFTMockUpgrade} from "../../src/mock/CryptoartNFTMockUpgrade.sol";
 import {CryptoartNFTBase} from "../CryptoartNFTBase.t.sol";
 import "./MockSigningUtils.sol";
 
