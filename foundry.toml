@@ -16,7 +16,7 @@ remappings = [
     "forge-std/=dependencies/forge-std/src/",
     "@openzeppelin/contracts/=dependencies/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/",
     "@openzeppelin/contracts-upgradeable/=dependencies/openzeppelin-contracts-upgradeable/contracts/",
-    "openzeppelin-foundry-upgrades/=dependencies/openzeppelin-foundry-upgrades/"
+    "openzeppelin-foundry-upgrades/=dependencies/openzeppelin-foundry-upgrades/src/"
 ]
 
 
