@@ -19,6 +19,7 @@
 The Cryptoart NFT project aims to create a unique NFT collection on the Base blockchain that bridges digital ownership with physical art pieces. The core concept revolves around "pairable" NFTs:
 
 *   NFTs represent ownership of crypto-related art.
+*   Holders can "pair" (redeem) their NFT to receive a physical, limited-edition art piece shipped by Cryptoart.com. This marks the NFT metadata as Redeemable = FALSE.
 *   Holders can "unpair" (un-redeem) their NFT by destroying the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to reset its metadata to Redeemable = TRUE. This allows the holder to sell the NFT in a redeemable state, enabling future holders to pair it with the same physical numbered art piece. The process removes risks and authentication concerns normally associated with collector-to-collector shipment of physical art.
 *   Holders may opt to sell their NFT while it's still paired. Since NFTs can only be paired with one numbered art piece, paired NFTs trade/function like traditional (non-redeemable) NFTs.
 *   The collection utilizes scarcity mechanics, allowing users to burn or trade existing NFTs within the collection for potentially more desirable ones.
@@ -270,10 +271,13 @@ forge build
 
 5. **Set Up Environment Variables**:
     - Copy the example `.env` file:
+    
     ```bash
     cp .example.env .env
     ```
+    
     - The .env.example file includes preset Anvil keys and addresses for local testing (e.g., `PROXY_ADMIN_OWNER_PRIVATE_KEY=0xac0974bec...`). These are safe to use as-is for local testing with Anvil and do not need to be changed. Example `.env` content:
+    
     ```env
     # --- RPC Endpoints ---
     SEPOLIA_URL=
@@ -368,26 +372,29 @@ test/
 
 The Makefile simplifies key tasks to streamline long commands in the CLI. Run `make help` to see all available commands.
 
-**Starting a Local Anvil Node**
+**1. Starting a Local Anvil Node**
 
 Spin up a local Anvil node for testing:
+
 ```bash
 make anvil
 ```
-    - This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
+- This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
 
-**Deploying Contracts Locally**
+**2. Deploying Contracts Locally**
 
 Deploy the contracts to the local Anvil node:
+
 ```bash
 make deploy
 ```
 * Uses `NETWORK=localhost` by default and settings from the `.env` file.
 * Note the deployed proxy address (e.g., `0xYourProxyAddress`) from the output.
 
-**Upgrading the Contract** 
+**3. Upgrading the Contract** 
 
 Upgrade the contract in two steps:
+
 1. Deploy a New Implementation:
 
     - Deploy a mock upgrade contract (e.g., `CryptoartNFTMockUpgrade.sol`):
@@ -417,15 +424,18 @@ Upgrade the contract in two steps:
     
     - Confirm the upgrade when prompted.
   
-**Minting an NFT**
+**4. Minting an NFT**
 
 Mint an NFT on a local node:
-    - Make sure `TRANSPARENT_PROXY_ADDRESS` is set in `.env` from deployment.
-    - Run:
+- Make sure `TRANSPARENT_PROXY_ADDRESS` is set in `.env` from deployment.
+- Run:
+
   ```bash
   make mintNFT TOKENID=1 PRICE=100000000000000000  # 0.1 ETH
   ```
-    - Optional parameters (e.g., for specific mint types):
+
+- Optional parameters (e.g., for specific mint types):
+
   ```bash
   make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE="ipfs://redeemable_uri" URI_NOT_REDEEMABLE="ipfs://not_redeemable_uri"
   ```
