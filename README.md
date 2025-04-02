@@ -366,16 +366,18 @@ test/
 
 ### Deployment and Upgrading via Anvil and the Makefile
 
-The Makefile simplifies key tasks for auditing. Run `make help` to see all available commands.
+The Makefile simplifies key tasks to streamline long commands in the CLI. Run `make help` to see all available commands.
 
 **Starting a Local Anvil Node**
+
 Spin up a local Anvil node for testing:
 ```bash
 make anvil
 ```
-  - This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
+    - This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
 
 **Deploying Contracts Locally**
+
 Deploy the contracts to the local Anvil node:
 ```bash
 make deploy
@@ -383,41 +385,53 @@ make deploy
 * Uses `NETWORK=localhost` by default and settings from the `.env` file.
 * Note the deployed proxy address (e.g., `0xYourProxyAddress`) from the output.
 
-**Upgrading the Contract**  
+**Upgrading the Contract** 
+
 Upgrade the contract in two steps:
-1. *Deploy a New Implementation*:
+1. Deploy a New Implementation:
+
     - Deploy a mock upgrade contract (e.g., `CryptoartNFTMockUpgrade.sol`):
+    
     ```bash
     forge create test/upgrade/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
       --rpc-url http://127.0.0.1:8545 \
       --private-key $PROXY_ADMIN_OWNER_PRIVATE_KEY
     ```
+    
     - Record the new implementation address (e.g., `0xNewImplementationAddress`).
-2. *Upgrade the Proxy*:
+    
+2. Upgrade the Proxy:
+
     - Update `.env` with the proxy address from deployment:
+    
     ```env
     TRANSPARENT_PROXY_ADDRESS=0xYourProxyAddress
     NEW_IMPL_ADDR=0xNewImplementationAddress
     ```
+    
     - Run the upgrade:
+    
     ```bash
     make upgradeCryptoartNFTMock
     ```
+    
     - Confirm the upgrade when prompted.
   
 **Minting an NFT**
+
 Mint an NFT on a local node:
     - Make sure `TRANSPARENT_PROXY_ADDRESS` is set in `.env` from deployment.
     - Run:
-    ```bash
-    make mintNFT TOKENID=1 PRICE=100000000000000000  # 0.1 ETH
-    ```
+  ```bash
+  make mintNFT TOKENID=1 PRICE=100000000000000000  # 0.1 ETH
+  ```
     - Optional parameters (e.g., for specific mint types):
-    ```bash
-    make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE="ipfs://redeemable_uri" URI_NOT_REDEEMABLE="ipfs://not_redeemable_uri"
-    ```
+  ```bash
+  make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE="ipfs://redeemable_uri" URI_NOT_REDEEMABLE="ipfs://not_redeemable_uri"
+  ```
 
 **Additional Makefile Commands**
+
 - Clean Build Artifacts: `make clean`
 - Install Dependencies: `make install`
 - Update Dependencies: `make update`
@@ -426,10 +440,12 @@ Mint an NFT on a local node:
 - List Commands: `make help`
 
 ### Deployment & Upgrading via Scripts
+
 Deployment and upgrades are managed via Foundry scripts located in the `script/` directory.
 
-**Initial Deployment (DeployCryptoartNFT.s.sol)**
-This deploys the first version (CryptoartNFT.sol) behind a Transparent Upgradeable Proxy.
+**Initial Deployment (`DeployCryptoartNFT.s.sol`)**
+
+This deploys the first version (`CryptoartNFT.sol`) behind a Transparent Upgradeable Proxy.
 
 1. Run Script:
 ```bash
@@ -440,10 +456,13 @@ forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT \
 ```
 
 **Upgrade Process (UpgradeCryptoartNFT.s.sol)**
-This upgrades the proxy to point to a new, already deployed implementation (e.g., CryptoartNFTMockUpgrade.sol).
+
+This upgrades the proxy to point to a new, already deployed implementation (e.g., `CryptoartNFTMockUpgrade.sol`).
 
 1. Deploy New Implementation Code
-Deploy only the new logic contract using forge create. Use a deployer key (can be the same as PROXY_ADMIN_PRIVATE_KEY or different).
+
+Deploy only the new logic contract using forge create. Use a deployer key (can be the same as `PROXY_ADMIN_PRIVATE_KEY` or different).
+
 ```bash
 forge create src/mock/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
   --rpc-url <RPC ENDPOINT HERE> \
@@ -452,37 +471,39 @@ forge create src/mock/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
 ```
 
 2. Run the Upgrade script
-  * Prepare Script Arguments (Command Line):
-      - existingImplementationName: Artifact name of the current version (e.g., "CryptoartNFT").
-      - newImplementationName: Artifact name of the new version (e.g., "CryptoartNFTMockUpgrade").
-      - newImplementationAddress: The address recorded in Step 1.
-      - `initializerCallData`: (Optional) Encoded call data for a V2 initializer (e.g., initializeV2()). Use "" if no initializer call is needed.
-          ```bash
-          # Example: Get calldata for initializeV2() with no args
-          export INIT_DATA=$(cast calldata "initializeV2()")
-          # Or empty for no call
-          # export INIT_DATA=""
-          ```
-          
-  * Run Upgrade Script:
-  ```bash
-  # Define argument variables for clarity
-  export CURRENT_ARTIFACT_NAME="CryptoartNFT" # Or whatever the current version name is
-  export NEW_ARTIFACT_NAME="CryptoartNFTMockUpgrade"   # Or whatever the new version name is
-  export NEW_IMPL_ADDR=0xNewImplementationAddress 
-  # Ensure INIT_DATA is set from step 2
-  
-  forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
-    --rpc-url $RPC_URL \
-    --broadcast \
-    --sig "run(string,string,address,bytes)" \
-    "$CURRENT_ARTIFACT_NAME" \
-    "$NEW_ARTIFACT_NAME" \
-    "$NEW_IMPL_ADDR" \
-    "$INIT_DATA"
-    --verify # Optional verification
-  ```
 
+    - Prepare Script Arguments (Command Line):
+        - `existingImplementationName`: Artifact name of the current version (e.g., "CryptoartNFT").
+        - `newImplementationName`: Artifact name of the new version (e.g., "CryptoartNFTMockUpgrade").
+        - `newImplementationAddress`: The address recorded in Step 1.
+        - `initializerCallData`: (Optional) Encoded call data for a V2 initializer (e.g., `initializeV2()`). Use `""` if no initializer call is needed.
+        
+            ```bash
+            # Example: Get calldata for initializeV2() with no args
+            export INIT_DATA=$(cast calldata "initializeV2()")
+            # Or empty for no call
+            # export INIT_DATA=""
+            ```
+          
+    - Run Upgrade Script:
+        ```bash
+        # Define argument variables for clarity
+        export CURRENT_ARTIFACT_NAME="CryptoartNFT" # Or whatever the current version name is
+        export NEW_ARTIFACT_NAME="CryptoartNFTMockUpgrade"   # Or whatever the new version name is
+        export NEW_IMPL_ADDR=0xNewImplementationAddress 
+        # Ensure INIT_DATA is set from step 2
+        
+        forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
+          --rpc-url $RPC_URL \
+          --broadcast \
+          --sig "run(string,string,address,bytes)" \
+          "$CURRENT_ARTIFACT_NAME" \
+          "$NEW_ARTIFACT_NAME" \
+          "$NEW_IMPL_ADDR" \
+          "$INIT_DATA"
+          --verify # Optional verification
+        ```
+  
 ---
 
 ## 9. Known Issues 
