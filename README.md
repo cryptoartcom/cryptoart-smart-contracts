@@ -164,6 +164,10 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 ## 5. Actors & Roles
 
+*   **Proxy Admin:**
+    *   Owns the ProxyAdmin contract, which controls upgrades to the `CryptoartNFT` proxy.
+    *   Solely responsible for executing contract upgrades by updating the implementation address the proxy points to.
+    *   Does not interact with the `CryptoartNFT` logic directly (e.g., no minting or metadata control).
 *   **Contract Owner (`OwnableUpgradeable`):**
     *   Privileged administrator of the contract.
     *   Can pause/unpause the contract.
@@ -264,24 +268,45 @@ forge install
 forge build
 ```
 
-5. **Environment Variables (.env file)**: Create a `.env` file in the project root. Populate it with the necessary keys and addresses for deployment/upgrades. Example: 
-```bash
-# .env file
-RPC_URL=https://your_rpc_url/...
-PROXY_ADMIN_PRIVATE_KEY=0x...your_admin_private_key...
-# Add other keys/addresses as needed for deployment/upgrade steps
-
-# --- Initial Deployment Vars ---
-OWNER_ADDRESS=0x...initial_nft_contract_owner...
-AUTHORITY_SIGNER=0x...initial_signer...
-NFT_RECEIVER=0x...initial_receiver...
-MAX_SUPPLY=10000 # or whatever the supply is
-BASE_URI="ipfs://your_initial_cid/"
-
-# --- Upgrade Vars ---
-# EXISTING_PROXY_ADDRESS will be set after initial deployment
-# DEPLOYER_PRIVATE_KEY might be the same as PROXY_ADMIN_PRIVATE_KEY or different
-```
+5. **Set Up Environment Variables**:
+    - Copy the example `.env` file:
+    ```bash
+    cp .example.env .env
+    ```
+    - The .env.example file includes preset Anvil keys and addresses for local testing (e.g., `PROXY_ADMIN_OWNER_PRIVATE_KEY=0xac0974bec...`). These are safe to use as-is for local testing with Anvil and do not need to be changed. Example `.env` content:
+    ```env
+    # --- RPC Endpoints ---
+    SEPOLIA_URL=
+    BASE_SEPOLIA_URL=
+    LOCAL_NODE_URL=http://127.0.0.1:8545
+    
+    # --- Etherscan API Keys ---
+    SEPOLIA_API_KEY=
+    BASE_SEPOLIA_API_KEY=
+    
+    # --- Private Keys ---
+    PROXY_ADMIN_OWNER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80    # Example Anvil Key 0
+    OWNER_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d                # Example Anvil Key 1
+    AUTHORITY_SIGNER_PRIVATE_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a     # Example Anvil Key 2
+    NFT_RECEIVER_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6         # Example Anvil Key 3
+    MINTER_PRIVATE_KEY=0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a               # Example Anvil Key 4
+    
+    # --- Public Keys ---
+    PROXY_ADMIN_OWNER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266    # Example Anvil Addr 0
+    OWNER_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8        # Example Anvil Addr 1
+    AUTHORITY_SIGNER=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC     # Example Anvil Addr 2
+    NFT_RECEIVER=0x90F79bf6EB2c4f870365E785982E1f101E93b906         # Example Anvil Addr 3
+    MINTER_ADDRESS=0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65       # Example Anvil Addr 4
+    
+    # --- Deployment Vars ---
+    MAX_SUPPLY=10000
+    BASE_URI="ipfs://anvil_test_v1/"
+    
+    # --- Upgrade Vars (Set later) ---
+    TRANSPARENT_PROXY_ADDRESS=
+    IMPLEMENTATION_ADDRESS=
+    NEW_IMPL_ADDR=
+    ```
 
 ### Running Tests
 
@@ -339,58 +364,98 @@ test/
     └── Upgrades.t.sol
 ```
 
-### Deployment & Upgrading
+### Deployment and Upgrading via Anvil and the Makefile
+
+The Makefile simplifies key tasks for auditing. Run `make help` to see all available commands.
+
+**Starting a Local Anvil Node**
+Spin up a local Anvil node for testing:
+```bash
+make anvil
+```
+  - This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
+
+**Deploying Contracts Locally**
+Deploy the contracts to the local Anvil node:
+```bash
+make deploy
+```
+* Uses `NETWORK=localhost` by default and settings from the `.env` file.
+* Note the deployed proxy address (e.g., `0xYourProxyAddress`) from the output.
+
+**Upgrading the Contract**  
+Upgrade the contract in two steps:
+1. *Deploy a New Implementation*:
+    - Deploy a mock upgrade contract (e.g., `CryptoartNFTMockUpgrade.sol`):
+    ```bash
+    forge create test/upgrade/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
+      --rpc-url http://127.0.0.1:8545 \
+      --private-key $PROXY_ADMIN_OWNER_PRIVATE_KEY
+    ```
+    - Record the new implementation address (e.g., `0xNewImplementationAddress`).
+2. *Upgrade the Proxy*:
+    - Update `.env` with the proxy address from deployment:
+    ```env
+    TRANSPARENT_PROXY_ADDRESS=0xYourProxyAddress
+    NEW_IMPL_ADDR=0xNewImplementationAddress
+    ```
+    - Run the upgrade:
+    ```bash
+    make upgradeCryptoartNFTMock
+    ```
+    - Confirm the upgrade when prompted.
+  
+**Minting an NFT**
+Mint an NFT on a local node:
+    - Make sure `TRANSPARENT_PROXY_ADDRESS` is set in `.env` from deployment.
+    - Run:
+    ```bash
+    make mintNFT TOKENID=1 PRICE=100000000000000000  # 0.1 ETH
+    ```
+    - Optional parameters (e.g., for specific mint types):
+    ```bash
+    make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE="ipfs://redeemable_uri" URI_NOT_REDEEMABLE="ipfs://not_redeemable_uri"
+    ```
+
+**Additional Makefile Commands**
+- Clean Build Artifacts: `make clean`
+- Install Dependencies: `make install`
+- Update Dependencies: `make update`
+- Build Contracts: `make build`
+- Format Code: `make format`
+- List Commands: `make help`
+
+### Deployment & Upgrading via Scripts
 Deployment and upgrades are managed via Foundry scripts located in the `script/` directory.
 
-#### Required Enviroment Variables
-Ensure the following are set in your .env file or shell environment before running scripts:
-
-* **RPC_URL**: RPC endpoint for the target network.
-* **PROXY_ADMIN_PRIVATE_KEY**: Private key of the account owning the ProxyAdmin (controls upgrades). DO NOT STORE IN PLAIN TEXT, ENCRYPT THIS.
-
-#### Initial Deployment (DeployCryptoartNFT.s.sol)
+**Initial Deployment (DeployCryptoartNFT.s.sol)**
 This deploys the first version (CryptoartNFT.sol) behind a Transparent Upgradeable Proxy.
 
-1. Additional Environment Variables:
-
-* **OWNER_ADDRESS**: Initial owner() of the CryptoartNFT logic contract.
-* **AUTHORITY_SIGNER**: Initial address for signing mint/unpair vouchers.
-* **NFT_RECEIVER**: Initial address for receiving traded NFTs.
-* **MAX_SUPPLY**: Maximum NFT supply.
-* **BASE_URI**: Initial base URI for metadata.
-* **PROXY_ADMIN_ADDRESS**: The public address corresponding to PROXY_ADMIN_PRIVATE_KEY. Can be derived using `cast wallet address $PROXY_ADMIN_PRIVATE_KEY`.
-
-2. Run Script:
+1. Run Script:
 ```bash
 forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT \
-  --rpc-url $RPC_URL \
+  --rpc-url <RPC ENDPOINT HERE> \
   --broadcast \
   --verify # Optional: attempt verification
 ```
 
-#### Upgrade Process (UpgradeCryptoartNFT.s.sol)
-This upgrades the proxy to point to a new, already deployed implementation (e.g., CryptoartNFTV2.sol).
+**Upgrade Process (UpgradeCryptoartNFT.s.sol)**
+This upgrades the proxy to point to a new, already deployed implementation (e.g., CryptoartNFTMockUpgrade.sol).
 
-**Step 1: Deploy New Implementation Code**
+1. Deploy New Implementation Code
 Deploy only the new logic contract using forge create. Use a deployer key (can be the same as PROXY_ADMIN_PRIVATE_KEY or different).
 ```bash
-# Set DEPLOYER_PRIVATE_KEY if needed
-# export DEPLOYER_PRIVATE_KEY=0x...
-
-forge create src/CryptoartNFTV2.sol:CryptoartNFTV2 \
-  --rpc-url $RPC_URL \
-  --private-key $DEPLOYER_PRIVATE_KEY \
+forge create src/mock/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
+  --rpc-url <RPC ENDPOINT HERE> \
+  --private-key <PRIVATE KEY HERE> \
   --verify # Optional verification
 ```
 
-**Step 2: Run the Upgrade script**
-  1. Additional Environment Variables:
-      - **EXISTING_PROXY_ADDRESS**: The proxy address saved from the initial deployment.
-
-  2. Prepare Script Arguments (Command Line):
+2. Run the Upgrade script
+  * Prepare Script Arguments (Command Line):
       - existingImplementationName: Artifact name of the current version (e.g., "CryptoartNFT").
-      - newImplementationName: Artifact name of the new version (e.g., "CryptoartNFTV2").
-      - newImplementationAddress: The address recorded in Step 1.3.
+      - newImplementationName: Artifact name of the new version (e.g., "CryptoartNFTMockUpgrade").
+      - newImplementationAddress: The address recorded in Step 1.
       - `initializerCallData`: (Optional) Encoded call data for a V2 initializer (e.g., initializeV2()). Use "" if no initializer call is needed.
           ```bash
           # Example: Get calldata for initializeV2() with no args
@@ -399,11 +464,11 @@ forge create src/CryptoartNFTV2.sol:CryptoartNFTV2 \
           # export INIT_DATA=""
           ```
           
-  3. Run Upgrade Script:
+  * Run Upgrade Script:
   ```bash
   # Define argument variables for clarity
   export CURRENT_ARTIFACT_NAME="CryptoartNFT" # Or whatever the current version name is
-  export NEW_ARTIFACT_NAME="CryptoartNFTV2"   # Or whatever the new version name is
+  export NEW_ARTIFACT_NAME="CryptoartNFTMockUpgrade"   # Or whatever the new version name is
   export NEW_IMPL_ADDR=0xNewImplementationAddress 
   # Ensure INIT_DATA is set from step 2
   
@@ -417,6 +482,8 @@ forge create src/CryptoartNFTV2.sol:CryptoartNFTV2 \
     "$INIT_DATA"
     --verify # Optional verification
   ```
+
+---
 
 ## 9. Known Issues 
 
