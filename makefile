@@ -1,68 +1,110 @@
+# ==============================================================================
+# Makefile for CryptoartNFT Foundry Project
+# ==============================================================================
+
+# Load environment variables from .env file
 -include .env
 
-.PHONY: all test clean deploy fund help install snapshot format anvil deployCryptoartNFT
+# Declare phony targets
+.PHONY: all test clean deploy help install snapshot format anvil updateAuthoritySigner upgradeCryptoartNFTMock mintNFT
 
+# ==============================================================================
+# Variables & Configuration
+# ==============================================================================
+
+# Default anvil private key (override if needed)
 DEFAULT_ANVIL_KEY := 0x0
 
-help:
-	@echo "Usage:"
-	@echo "  make deploy [ARGS=...]\n    example: make deploy ARGS=\"--network sepolia\""
-	@echo ""
-	@echo "  make fund [ARGS=...]\n    example: make deploy ARGS=\"--network sepolia\""
+# Default network (override with NETWORK=<network>)
+NETWORK ?= localhost
 
-all: clean remove install update build
-
-# Clean the repo
-clean  :; forge clean
-
-# Remove modules
-remove :; rm -rf .gitmodules && rm -rf .git/modules/* && rm -rf lib && touch .gitmodules && git add . && git commit -m "modules"
-
-install :; forge install 
-
-# Update Dependencies
-update:; forge update
-
-build:; forge build
-
-test :; forge test 
-
-snapshot :; forge snapshot
-
-format :; forge fmt
-
-anvil :; anvil -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
-
-# Instantiate network args variable	
-NETWORK_ARGS := 
-
-ifeq ($(findstring --network localhost,$(ARGS)), --network localhost)
-	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --broadcast 
-endif
-	
-ifeq ($(findstring --network base-sepolia,$(ARGS)),--network base-sepolia)
+# Network-specific arguments
+ifeq ($(NETWORK),localhost)
+	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --broadcast
+else ifeq ($(NETWORK),base-sepolia)
 	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --legacy --broadcast --verify --etherscan-api-key $(BASE_SEPOLIA_API_KEY) -vvvv
-endif
-
-ifeq ($(findstring --network sepolia,$(ARGS)),--network sepolia)
+else ifeq ($(NETWORK),sepolia)
 	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(SEPOLIA_API_KEY) -vvvv
 endif
 
-deployCryptoartNFT:
+# Help: Display usage instructions
+help:
+	@echo "Usage:"
+	@echo "  make deploy [NETWORK=localhost|base-sepolia|sepolia]"
+	@echo "  make mintNFT TOKENID=<id> PRICE=<price> [MINTTYPE=<type>] [URI_REDEEMABLE=<uri>] [URI_NOT_REDEEMABLE=<uri>] [REDEEMABLE_DEFAULT_INDEX=<index>]"
+	@echo "  make test"
+	@echo "  make clean"
+	@echo "  make install"
+	@echo "  make update"
+	@echo "  make build"
+	
+# ==============================================================================
+# Standard Foundry Commands
+# ==============================================================================
+
+# Default target when running just `make`
+all: build
+
+# Clean build artifacts and cache
+clean:
+	@echo "Cleaning build artifacts and cache..."
+	@forge clean
+
+# Install / Update Dependencies
+install:
+	@echo "Installing dependencies..."
+	@forge install
+update:
+	@echo "Updating dependencies..."
+	@forge update
+
+# Compile contracts
+build:
+	@echo "Building contracts..."
+	@forge build
+
+# Run tests
+test: build
+	@echo "Running tests..."
+	@forge test
+
+# Generate gas snapshot
+snapshot: build
+	@echo "Generating gas snapshot..."
+	@forge snapshot
+
+# Format code
+format:
+	@echo "Formatting code..."
+	@forge fmt
+
+# Start local Anvil node with a deterministic mnemonic
+anvil:
+	@echo "Starting Anvil node..."
+	@anvil -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
+
+# ==============================================================================
+# Deployment & Upgrade Commands
+# ==============================================================================
+
+# Deploy initial V1 contract using ProxyAdmin's key
+deploy:
+	@echo "Deploying to $(NETWORK)..."
 	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT $(NETWORK_ARGS)
 
+# Update authority signer
 updateAuthoritySigner:
-	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner --rpc-url $(LOCAL_NODE_URL) --private-key $(OWNER_PRIVATE_KEY) --broadcast -vvvv 
+	@echo "Updating authority signer on $(NETWORK)..."
+	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner $(NETWORK_ARGS) --private-key $(OWNER_PRIVATE_KEY) -vvvv
 
+# Upgrade CryptoartNFTMock (requires NEW_IMPL_ADDR)
 upgradeCryptoartNFTMock:
-	@echo "STEP 1: Ensure you have deployed CryptoartNFTMockUpgrade and set NEW_IMPL_ADDR environment variable."
-	@echo "  Example: forge create test/upgrade/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade --rpc-url $(LOCAL_NODE_URL) --private-key $(PROXY_ADMIN_PRIVATE_KEY)"
-	@echo "  Then: export NEW_IMPL_ADDR=<deployed_address>"
+	@echo "Upgrading CryptoartNFTMock..."
+	@echo "Ensure NEW_IMPL_ADDR is set after deploying CryptoartNFTMockUpgrade."
 	@echo "Press Enter after setting NEW_IMPL_ADDR..." && read REPLY
-	$(eval CURRENT_ARTIFACT_NAME := "CryptoartNFT.sol")
-	$(eval NEW_ARTIFACT_NAME := "CryptoartNFTMockUpgrade.sol")
+	$(eval CURRENT_ARTIFACT_NAME := CryptoartNFT.sol)
+	$(eval NEW_ARTIFACT_NAME := CryptoartNFTMockUpgrade.sol)
 	$(eval INIT_DATA := $(shell cast calldata "initializeV2()"))
-	@echo "STEP 2: Running upgrade script..."
 	@forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
 	  --rpc-url $(LOCAL_NODE_URL) \
 	  --broadcast \
@@ -73,17 +115,13 @@ upgradeCryptoartNFTMock:
 	  "$(NEW_IMPL_ADDR)" \
 	  "$(INIT_DATA)"
 
-# Example Usage:
-# make mintNFT TOKENID=5 PRICE=100000000000000000 # 0.1 ETH
-# make mintNFT TOKENID=6 PRICE=0 # For a free mint voucher
-# Note: MINTTYPE defaults to 0 (OpenMint), URIs default based on TOKENID
-			
+# Mint an NFT
 mintNFT: check_env_mint check_args_mint
-	@echo "Attempting to mint Token ID $(TOKENID) for $(MINTER_ADDRESS) at price $(PRICE) wei..."
-	$(eval MINTTYPE_VALUE ?= 0) 
-	$(eval URI_REDEEMABLE ?= "") 
-	$(eval URI_NOT_REDEEMABLE ?= "") 
-	$(eval REDEEMABLE_DEFAULT_INDEX ?= 0) 
+	@echo "Minting Token ID $(TOKENID) for $(MINTER_ADDRESS) at price $(PRICE) wei..."
+	$(eval MINTTYPE_VALUE := $(or $(MINTTYPE),0))
+	$(eval URI_REDEEMABLE := $(or $(URI_REDEEMABLE),""))
+	$(eval URI_NOT_REDEEMABLE := $(or $(URI_NOT_REDEEMABLE),""))
+	$(eval REDEEMABLE_DEFAULT_INDEX := $(or $(REDEEMABLE_DEFAULT_INDEX),0))
 	@forge script script/MintCryptoartNFT.s.sol:MintCryptoartNFT \
 	  --rpc-url $(LOCAL_NODE_URL) \
 	  --broadcast \
@@ -95,41 +133,28 @@ mintNFT: check_env_mint check_args_mint
 	  '$(MINTTYPE_VALUE)' \
 	  '$(URI_REDEEMABLE)' \
 	  '$(URI_NOT_REDEEMABLE)' \
-	  '$(REDEEMABLE_DEFAULT_INDEX)' \
+	  '$(REDEEMABLE_DEFAULT_INDEX)'
 
-# Helper targets to check for required variables
-.PHONY: check_env_mint check_args_mint
+# Check required environment variables for mintNFT
 check_env_mint:
 ifndef TRANSPARENT_PROXY_ADDRESS
-				$(error TRANSPARENT_PROXY_ADDRESS is not set. Please deploy V1 first and set it in .env)
+	$(error TRANSPARENT_PROXY_ADDRESS is not set. Please deploy V1 first and set it in .env)
 endif
 ifndef AUTHORITY_SIGNER_PRIVATE_KEY
-				$(error AUTHORITY_SIGNER_PRIVATE_KEY is not set in .env)
+	$(error AUTHORITY_SIGNER_PRIVATE_KEY is not set in .env)
 endif
 ifndef MINTER_PRIVATE_KEY
-				$(error MINTER_PRIVATE_KEY is not set in .env. Set this to the key of the account performing the mint.)
+	$(error MINTER_PRIVATE_KEY is not set in .env)
 endif
 ifndef LOCAL_NODE_URL
-				$(error LOCAL_NODE_URL is not set in .env)
+	$(error LOCAL_NODE_URL is not set in .env)
 endif
 
+# Check required arguments for mintNFT
 check_args_mint:
 ifndef TOKENID
-				$(error TOKENID is not set. Pass it like: make mintNFT TOKENID=1 ...)
+	$(error TOKENID is not set. Use: make mintNFT TOKENID=1 ...)
 endif
 ifndef PRICE
-				$(error PRICE (in wei) is not set. Pass it like: make mintNFT PRICE=10000...)
+	$(error PRICE (in wei) is not set. Use: make mintNFT PRICE=10000 ...)
 endif
-			
-			
-# EXAMPLE USAGE:
-# These two commands are the exact same:
-# $ forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --rpc-url $BASE_SEPOLIA_URL --private-key $PROXY_ADMIN_PRIVATE_KEY --legacy --broadcast --verify --etherscan-api-key $(BASE_SEPOLIA_API_KEY) -vvvv
-# $ make deployCryptoartNFT ARGS="--network base-sepolia"
-
-# Cast call examples:
-# cast call <CALLING CONTRACT ADDRESS> <FUNCTION SIG> <ARGUMENTS> <RPC URL> --legacy
-# cast call 0x1a8987e126B572c3De795180A86fCAb643543f92 "ownerOf(uint256)" 2 --rpc-url https://rpc.testnet.sepolia.com --legacy
-# Cast send example
-# cast send <CALLING CONTRACT ADDRESS> <FUNCTION SIG> <ARGUMENTS> <RPC URL> <PRIVATE KEY> --legacy
-# cast send 0x9f2ae804Ae4A496A4F71ae16a509A67a151Ab787 "setControllers(address, bool)" 0x637D7Ea1f3271cC58DBBbC5585F24D26a9010931 true --rpc-url $SEPOLIA_URL --private-key $PRIVATE_KEY --legacy
