@@ -370,7 +370,9 @@ test/
 
 ### Deployment and Upgrading via Anvil and the Makefile
 
-The Makefile simplifies key tasks to streamline long commands in the CLI. Run `make help` to see all available commands.
+The Makefile simplifies key tasks to streamline long commands in the CLI. 
+
+Run `make help` for instructions on how to use the makefile.
 
 **1. Starting a Local Anvil Node**
 
