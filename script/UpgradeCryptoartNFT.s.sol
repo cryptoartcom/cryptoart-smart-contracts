@@ -14,25 +14,18 @@ contract UpgradeCryptoartNFT is Script {
      * @notice Upgrades a proxy contract to a pre-deployed implementation address.
      * @param currentImplementationName The name of the CURRENT implementation. Used for validation baseline.
      * @param newImplementationName The name of the NEW implementation. 
-     * @param newImplementationAddress the address where the new implementation contract has already been deployed.
      * @param initializerCalldata Optional bytes data to call a function (like initializeV2) in the new 
         implementation during the upgrade transaction. Use abi.encodeWithSelector(...) or "" for none.
      */   
     function run(
         string memory currentImplementationName,
         string memory newImplementationName,
-        address newImplementationAddress,
         bytes memory initializerCalldata
     ) public {
-        if (newImplementationAddress == address(0)) {
-            revert("New implementation address cannot be zero");
-        }
-        
         console.log("--- Starting Proxy Upgrade ---");
         console.log("Proxy to upgrade:", transparentProxyAddress);
         console.log("Current Implementation Name:", currentImplementationName);
         console.log("New Implementation Name:", newImplementationName);
-        console.log("New Implementation Address:", newImplementationAddress);
         
         if (initializerCalldata.length > 0) {
             console.log("Initializer Call Data:", vm.toString(initializerCalldata));
@@ -55,6 +48,9 @@ contract UpgradeCryptoartNFT is Script {
             newImplementationName,
             initializerCalldata
         );
+        
+        address newImplementationAddress = Upgrades.getImplementationAddress(transparentProxyAddress);
+        
         vm.stopBroadcast();
 
         console.log("--- Upgrade Complete ---");

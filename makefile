@@ -12,21 +12,6 @@
 # Variables & Configuration
 # ==============================================================================
 
-# Default anvil private key (override if needed)
-DEFAULT_ANVIL_KEY := 0x0
-
-# Default network (override with NETWORK=<network>)
-NETWORK ?= localhost
-
-# Network-specific arguments
-ifeq ($(NETWORK),localhost)
-	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --broadcast
-else ifeq ($(NETWORK),base-sepolia)
-	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --legacy --broadcast --verify --etherscan-api-key $(BASE_SEPOLIA_API_KEY) -vvvv
-else ifeq ($(NETWORK),sepolia)
-	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(SEPOLIA_API_KEY) -vvvv
-endif
-
 # Help: Display detailed usage instructions
 help:
 	@echo "======================================================================"
@@ -73,34 +58,52 @@ help:
 	@echo "----------------------------------------------------------------------"
 	@echo "Upgrading Contracts"
 	@echo "----------------------------------------------------------------------"
-	@echo "  make upgradeCryptoartNFTMock"
+	@echo "  make upgradeCryptoartNFTMock [NETWORK=<network>]"
 	@echo "    Upgrades the deployed proxy to a new implementation (e.g., CryptoartNFTMockUpgrade)."
-	@echo "    - Requires a prior deployment (TRANSPARENT_PROXY_ADDRESS in .env)."
+	@echo "        - Requires a prior proxy deployment (TRANSPARENT_PROXY_ADDRESS in .env)."
+	@echo "        - This will deploy the new implementation contract for you, no need to do that separately"
 	@echo ""
 	@echo "    Steps:"
-	@echo "      1. Deploy the new implementation manually:"
-	@echo "         'forge create test/upgrade/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade --rpc-url $(LOCAL_NODE_URL) --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY)'"
-	@echo "      2. Note the new address (e.g., 0xNewImplementationAddress)."
-	@echo "      3. Update .env: Set NEW_IMPL_ADDR=0xNewImplementationAddress."
-	@echo "      4. Run: 'make upgradeCryptoartNFTMock'."
-	@echo "      5. Press Enter when prompted to confirm."
+	@echo "      1. Run: 'make upgradeCryptoartNFTMock NETWORK=<some network>'."
+	@echo "      2. Wait for deployment and verification (check output for success)."
 	@echo ""
 	@echo "----------------------------------------------------------------------"
 	@echo "Minting an NFT"
 	@echo "----------------------------------------------------------------------"
-	@echo "  make mintNFT TOKENID=<id> PRICE=<price> [optional args]"
+	@echo ""
+	@echo "  make mintNFT  TOKENID=<id> PRICE=<price> [optional args] [NETWORK=<network>] [MINTTYPE=<some mint type value>] [URI_REDEEMABLE=<some URI string>] [URI_NOT_REDEEMABLE=<some URI string>] [REDEEMABLE_DEFAULT_INDEX=<either 0 or 1>]"
 	@echo "    Mints an NFT on localhost (requires a deployed contract)."
 	@echo "    - Required: TOKENID (e.g., 1), PRICE (in wei, e.g., 100000000000000000 for 0.1 ETH)."
-	@echo "    - Optional: MINTTYPE, URI_REDEEMABLE, URI_NOT_REDEEMABLE, REDEEMABLE_DEFAULT_INDEX."
+	@echo "    - Optional: NETWORK, MINTTYPE, URI_REDEEMABLE, URI_NOT_REDEEMABLE, REDEEMABLE_DEFAULT_INDEX."
 	@echo ""
-	@echo "    Steps:"
+	@echo "    Steps to mint locally:"
 	@echo "      1. Deploy the contract: 'make deploy' (if not already done)."
 	@echo "      2. Update .env with TRANSPARENT_PROXY_ADDRESS from deployment."
 	@echo "      3. Run: 'make mintNFT TOKENID=1 PRICE=100000000000000000'."
 	@echo "      4. For a free mint with custom URIs:"
-	@echo "         'make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE=\"ipfs://redeemable\" URI_NOT_REDEEMABLE=\"ipfs://not_redeemable\"'."
+	@echo "         'make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE=\"ipfs://redeemable\" URI_NOT_REDEEMABLE=\"ipfs://not_redeemable\"'."	
+	@echo ""
+	@echo "    Steps to mint to Testnet (e.g., Sepolia):"
+	@echo "      1. Ensure .env has SEPOLIA_URL, and MINTER_ADDRESS."
+	@echo "      2. Run: 'make mintNFT TOKENID=<insert some token id> PRICE=<insert some token price> NETWORK=sepolia'."
+	@echo "      3. Wait for verification (check output for success)."
 	@echo ""
 	
+# Default anvil private key (override if needed)
+DEFAULT_ANVIL_KEY := 0x0
+
+# Default network (override with NETWORK=<network>)
+NETWORK ?= localhost
+
+# Network-specific arguments
+ifeq ($(NETWORK),localhost)
+	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast -vvvv 
+else ifeq ($(NETWORK),base-sepolia)
+	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) --etherscan-api-key $(BASE_SEPOLIA_API_KEY) --broadcast -vvvv
+else ifeq ($(NETWORK),sepolia)
+	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(SEPOLIA_API_KEY) --broadcast -vvvv
+endif
+
 # ==============================================================================
 # Standard Foundry Commands
 # ==============================================================================
@@ -153,30 +156,26 @@ anvil:
 # Deploy initial V1 contract using ProxyAdmin's key
 deploy:
 	@echo "Deploying to $(NETWORK)..."
-	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT $(NETWORK_ARGS)
+	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --verify --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
 
 # Update authority signer
 updateAuthoritySigner:
 	@echo "Updating authority signer on $(NETWORK)..."
-	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner $(NETWORK_ARGS) --private-key $(OWNER_PRIVATE_KEY) -vvvv
+	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner --private-key $(OWNER_PRIVATE_KEY) $(NETWORK_ARGS) 
 
-# Upgrade CryptoartNFTMock (requires NEW_IMPL_ADDR)
+# Upgrade CryptoartNFTMock 
 upgradeCryptoartNFTMock:
 	@echo "Upgrading CryptoartNFTMock..."
-	@echo "Ensure NEW_IMPL_ADDR is set after deploying CryptoartNFTMockUpgrade."
-	@echo "Press Enter after setting NEW_IMPL_ADDR..." && read REPLY
 	$(eval CURRENT_ARTIFACT_NAME := CryptoartNFT.sol)
 	$(eval NEW_ARTIFACT_NAME := CryptoartNFTMockUpgrade.sol)
 	$(eval INIT_DATA := $(shell cast calldata "initializeV2()"))
 	@forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
-	  --rpc-url $(LOCAL_NODE_URL) \
-	  --broadcast \
-	  --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) \
-	  --sig "run(string,string,address,bytes)" \
-	  "$(CURRENT_ARTIFACT_NAME)" \
-	  "$(NEW_ARTIFACT_NAME)" \
-	  "$(NEW_IMPL_ADDR)" \
-	  "$(INIT_DATA)"
+		--private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) \
+		--sig "run(string,string,bytes)" \
+			"$(CURRENT_ARTIFACT_NAME)" \
+			"$(NEW_ARTIFACT_NAME)" \
+			"$(INIT_DATA)" \
+		$(NETWORK_ARGS)
 
 # Mint an NFT
 mintNFT: check_env_mint check_args_mint
@@ -186,17 +185,16 @@ mintNFT: check_env_mint check_args_mint
 	$(eval URI_NOT_REDEEMABLE := $(or $(URI_NOT_REDEEMABLE),""))
 	$(eval REDEEMABLE_DEFAULT_INDEX := $(or $(REDEEMABLE_DEFAULT_INDEX),0))
 	@forge script script/MintCryptoartNFT.s.sol:MintCryptoartNFT \
-	  --rpc-url $(LOCAL_NODE_URL) \
-	  --broadcast \
-	  --private-key $(MINTER_PRIVATE_KEY) \
-	  --sig "run(address,uint256,uint256,uint8,string,string,uint8)" \
-	  '$(MINTER_ADDRESS)' \
-	  '$(TOKENID)' \
-	  '$(PRICE)' \
-	  '$(MINTTYPE_VALUE)' \
-	  '$(URI_REDEEMABLE)' \
-	  '$(URI_NOT_REDEEMABLE)' \
-	  '$(REDEEMABLE_DEFAULT_INDEX)'
+	 	--private-key $(MINTER_PRIVATE_KEY) \
+	  	--sig "run(address,uint256,uint256,uint8,string,string,uint8)" \
+		  	'$(MINTER_ADDRESS)' \
+			'$(TOKENID)' \
+		  	'$(PRICE)' \
+			'$(MINTTYPE_VALUE)' \
+			'$(URI_REDEEMABLE)' \
+			'$(URI_NOT_REDEEMABLE)' \
+			'$(REDEEMABLE_DEFAULT_INDEX)' \
+		$(NETWORK_ARGS)
 
 # Check required environment variables for mintNFT
 check_env_mint:
