@@ -1,5 +1,5 @@
-# CryptoartNFT
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/0fa1415149ef9f765c2e91a56b87fffc054d91d6/src/CryptoartNFT.sol)
+# CryptoartNFTMockUpgrade
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/0fa1415149ef9f765c2e91a56b87fffc054d91d6/src/mock/CryptoartNFTMockUpgrade.sol)
 
 **Inherits:**
 [IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardUpgradeable
@@ -10,6 +10,9 @@ Cryptoart Team
 Manages the Cryptoart NFT collection, supporting voucher-based minting,
 pairing with physical items (via IERC7160), story inscriptions (IStory),
 burning, trading, and ERC2981 royalties. Uses OpenZeppelin upgradeable contracts.
+
+**Note:**
+oz-upgrades-from: CryptoartNFT
 
 
 ## State Variables
@@ -28,11 +31,9 @@ uint256 private constant ROYALTY_BASE = 10_000;
 
 
 ### DEFAULT_ROYALTY_PERCENTAGE
-Default royalty percentage basis points (2.5%).
-
 
 ```solidity
-uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250;
+uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 500;
 ```
 
 
@@ -100,6 +101,20 @@ mapping(uint256 => bool) private _hasPinnedTokenURI;
 ```
 
 
+### mintingPaused
+
+```solidity
+bool public mintingPaused;
+```
+
+
+### version
+
+```solidity
+uint256 public version;
+```
+
+
 ## Functions
 ### constructor
 
@@ -141,6 +156,13 @@ function initialize(
 |`_maxSupply`|`uint256`|The maximum number of NFTs allowed.|
 |`baseURI_`|`string`|The initial base URI for token metadata.|
 
+
+### initializeV2
+
+
+```solidity
+function initializeV2() external reinitializer(2);
+```
 
 ### onlyTokenOwner
 
@@ -602,6 +624,13 @@ function setMaxSupply(uint128 newMaxSupply) external onlyOwner;
 |`newMaxSupply`|`uint128`|The new maximum supply value.|
 
 
+### toggleMintingPause
+
+
+```solidity
+function toggleMintingPause() external onlyOwner;
+```
+
 ### _coreMint
 
 
@@ -691,7 +720,7 @@ function _getTokenURIIndex(uint256 tokenId) private view returns (uint256 tokenU
 
 ### supportsInterface
 
-*See [IERC165-supportsInterface](/src/mock/CryptoartNFTMockUpgrade.sol/contract.CryptoartNFTMockUpgrade.md#supportsinterface).*
+*See [IERC165-supportsInterface](/dependencies/forge-std/src/interfaces/IERC165.sol/interface.IERC165.md#supportsinterface).*
 
 
 ```solidity
@@ -835,6 +864,25 @@ Emitted when a token is minted by trading in other tokens.
 
 ```solidity
 event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
+```
+
+### InitializedV2
+
+```solidity
+event InitializedV2();
+```
+
+### MintingPauseToggled
+
+```solidity
+event MintingPauseToggled(bool isPaused);
+```
+
+## Errors
+### Admin_MintingPaused
+
+```solidity
+error Admin_MintingPaused();
 ```
 
 ## Structs

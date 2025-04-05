@@ -1,16 +1,16 @@
-# CryptoArt NFT
+# Cryptoart NFT
 
 ## Table of Contents
 
-1.  [Project Overview](#1-project-overview)
-2.  [Features Overview](#2-features-overview)
-3.  [Architecture & Core Mechanisms](#3-architecture--core-mechanisms)
-4.  [Actors & Roles](#4-actors--roles)
-5.  [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks)
-6.  [External Dependencies](#6-external-dependencies)
-7.  [Scope Definition](#7-scope-definition)
-8.  [Setup & Testing](#8-setup--testing)
-9.  [Known Issues](#9-known-issues)
+1. [Project Overview](#1-project-overview)
+2. [Scope Definition](#2-scope-definition) 
+3. [Features Overview](#3-features-overview)
+4. [Architecture & Core Mechanisms](#4-architecture--core-mechanisms)
+5. [Actors & Roles](#5-actors--roles)
+6. [Trust Assumptions & Centralization Risks](#6-trust-assumptions--centralization-risks)
+7. [External Dependencies](#7-external-dependencies)
+8. [Setup, Testing, Deployment & Upgrades](#8-setup-testing-deployment--upgrades)
+9. [Known Issues](#9-known-issues)
 
 ---
 
@@ -19,8 +19,9 @@
 The Cryptoart NFT project aims to create a unique NFT collection on the Base blockchain that bridges digital ownership with physical art pieces. The core concept revolves around "pairable" NFTs:
 
 *   NFTs represent ownership of crypto-related art.
-*   Holders can "pair" (redeem) their NFT to receive a physical, limited-edition art piece shipped by Cryptoart.com. This marks the NFT metadata as `Redeemable = FALSE`.
-*   To sell the NFT digitally without shipping the physical item, the holder must destroy the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to "unpair" the NFT, marking its metadata as `Redeemable = TRUE`.
+*   Holders can "pair" (redeem) their NFT to receive a physical, limited-edition art piece shipped by Cryptoart.com. This marks the NFT metadata as Redeemable = FALSE.
+*   Holders can "unpair" (un-redeem) their NFT by destroying the physical piece's authentication mechanism (NFC sticker/QR code) and use an authorized process to reset its metadata to Redeemable = TRUE. This allows the holder to sell the NFT in a redeemable state, enabling future holders to pair it with the same physical numbered art piece. The process removes risks and authentication concerns normally associated with collector-to-collector shipment of physical art.
+*   Holders may opt to sell their NFT while it's still paired. Since NFTs can only be paired with one numbered art piece, paired NFTs trade/function like traditional (non-redeemable) NFTs.
 *   The collection utilizes scarcity mechanics, allowing users to burn or trade existing NFTs within the collection for potentially more desirable ones.
 *   Owners can add "stories" to their NFTs, creating a permanent, on-chain provenance log via emitted events (IStory interface).
 
@@ -30,7 +31,32 @@ The contracts are developed using Foundry and utilize OpenZeppelin's upgradeable
 
 ---
 
-## 2. Features Overview
+## 2. Scope Definition
+
+The following files are in scope:
+
+```
+src/
+├── CryptoartNFT.sol            # Main contract implementing ERC721 with extensions
+├── interfaces
+│   ├── IERC7160.sol            # Interface for multi-metadata extension
+│   └── IStory.sol              # Interface for story functionality
+└── libraries
+    └── Error.sol               # Custom error definitions
+```
+
+### Primary Contract: CryptoartNFT.sol
+
+This contract is the core implementation, inheriting from multiple OpenZeppelin contracts and implementing custom interfaces:
+- Implements ERC721 with Enumerable, Royalty, and Burnable extensions
+- Implements IERC7160 for metadata management
+- Implements IERC4906 for metadata updates
+- Implements IStory for story functionality
+- Includes Ownable, Pausable, and ReentrancyGuard for security and control
+
+---
+
+## 3. Features Overview
 
 - **Signature-Based Voucher System**: Ensures secure, authorized minting through cryptographically verified vouchers
 - **Physical/Digital Pairing**: NFTs can be paired with physical art pieces and later unpaired if the physical art is destroyed
@@ -38,9 +64,50 @@ The contracts are developed using Foundry and utilize OpenZeppelin's upgradeable
 - **Scarcity Mechanics**: Supports burning existing tokens to mint new, potentially more valuable tokens
 - **Admin Controls**: Owner-managed features for royalties, pausing, and contract configuration
 
+```mermaid
+graph TD
+    %% External Actors
+    Users("Users"):::external
+    Admin("Admin/Owner"):::admin
+    Signer("Off-Chain Authority Signer"):::offchain
+    NFTReceiver("NFT Receiver"):::external 
+    %% For specific mint types
+
+    %% On-Chain Components
+    subgraph "On-Chain Components"
+        Proxy("Proxy/Upgrade Manager"):::onchain
+        Contract("CryptoartNFT (Core Contract) - Handles mint, burn, pairing, metadata, etc."):::onchain
+    end
+
+    %% Off-Chain Support Components
+    OffchainIndexing["Off-chain Indexing/Provenance"]:::offchain
+
+    %% Core Relationships
+    Users -->|"Interact (mint, burn, pair, etc.)"| Proxy
+    Admin -->|"Admin Functions (pause, upgrades, etc.)"| Proxy
+    Proxy -->|"delegatecall"| Contract
+
+    %% Voucher Flow (Simplified & Corrected)
+    Users -->|"Request Signature (Off-Chain)"| Signer
+    Signer -->|"Issues Signature (Off-Chain)"| Users
+    Contract --->|"Verifies Signature using Signer's Key"| Signer
+
+    %% Event Emission
+    Contract -->|"Emits Events (Transfer, MetadataUpdate, etc.)"| OffchainIndexing
+
+    %% Specific Mint Interaction (Example)
+    Contract -->|"mintWithTrade"| NFTReceiver
+
+    %% Styles
+    classDef onchain fill:#6CA6CD,stroke:#000,stroke-width:2px,color:#000;
+    classDef offchain fill:#FF8C00,stroke:#000,stroke-width:2px,color:#000;
+    classDef admin fill:#32CD32,stroke:#000,stroke-width:2px,color:#000;
+    classDef external fill:#FF6B6B,stroke:#000,stroke-width:2px,color:#000;
+```
+
 ---
 
-## 3. Architecture & Core Mechanisms
+## 4. Architecture & Core Mechanisms
 
 The system revolves around the `CryptoartNFT.sol` contract, which inherits these contracts:
 
@@ -75,8 +142,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 *   Implements functions (`addCreatorStory`, `addStory`) allowing token owners to emit events containing story text/metadata.
 *   Visibility toggling (`toggleStoryVisibility`) emits an event, interpreted off-chain.
-*   `addCollectionStory` is currently unimplemented.
-*   Right now, story content is stored in event logs, not contract storage. This may change though.
+*   Right now, story content is stored in event logs, not contract storage. This could potentially change though.
 
 ### Scarcity Mechanics
 
@@ -97,8 +163,12 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 ---
 
-## 4. Actors & Roles
+## 5. Actors & Roles
 
+*   **Proxy Admin:**
+    *   Owns the ProxyAdmin contract, which controls upgrades to the `CryptoartNFT` proxy.
+    *   Solely responsible for executing contract upgrades by updating the implementation address the proxy points to.
+    *   Does not interact with the `CryptoartNFT` logic directly (e.g., no minting or metadata control).
 *   **Contract Owner (`OwnableUpgradeable`):**
     *   Privileged administrator of the contract.
     *   Can pause/unpause the contract.
@@ -126,7 +196,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 
 ---
 
-## 5. Trust Assumptions & Centralization Risks
+## 6. Trust Assumptions & Centralization Risks
 
 This system has significant centralization aspects that auditors should be aware of:
 
@@ -149,7 +219,7 @@ This system has significant centralization aspects that auditors should be aware
 
 ---
 
-## 6. External Dependencies
+## 7. External Dependencies
 
 *   **@openzeppelin/contracts-upgradeable v5.0.2:**
     *   `access/OwnableUpgradeable.sol`
@@ -171,58 +241,76 @@ This system has significant centralization aspects that auditors should be aware
 
 ---
 
-## 7. Scope Definition
-
-The following files are in scope:
-
-```
-src/
-├── CryptoartNFT.sol            # Main contract implementing ERC721 with extensions
-├── interfaces
-│   ├── IERC7160.sol            # Interface for multi-metadata extension
-│   └── IStory.sol              # Interface for story functionality
-└── libraries
-    └── Error.sol               # Custom error definitions
-```
-
-### Primary Contract: CryptoartNFT.sol
-
-This contract is the core implementation, inheriting from multiple OpenZeppelin contracts and implementing custom interfaces:
-- Implements ERC721 with Enumerable, Royalty, and Burnable extensions
-- Implements IERC7160 for metadata management
-- Implements IERC4906 for metadata updates
-- Implements IStory for story functionality
-- Includes Ownable, Pausable, and ReentrancyGuard for security and control
-
----
-
-## 8. Setup & Testing
+## 8. Setup, Testing, Deployment & Upgrades
 
 The project uses Foundry for development and testing.
 
 ### Environment Setup
 
-1. Install Foundry:
+1. **Install Foundry**:
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-2. Clone the repository:
+2. **Clone the repository**:
 ```bash
 git clone https://github.com/cryptoartcom/cryptoart-smart-contracts.git
 cd cryptoart-smart-contracts
 ```
 
-3. Install dependencies:
+3. **Install dependencies**:
 ```bash
 forge install
 ```
 
-4. Compile contracts:
+4. **Compile contracts**:
 ```bash
 forge build
 ```
+
+5. **Set Up Environment Variables**:
+    - Copy the example `.env` file:
+    
+    ```bash
+    cp .example.env .env
+    ```
+    
+    - The .env.example file includes preset Anvil keys and addresses for local testing (e.g., `PROXY_ADMIN_OWNER_PRIVATE_KEY=0xac0974bec...`). These are safe to use as-is for local testing with Anvil and do not need to be changed. Example `.env` content:
+    
+    ```env
+    # --- RPC Endpoints ---
+    SEPOLIA_URL=
+    BASE_SEPOLIA_URL=
+    LOCAL_NODE_URL=http://127.0.0.1:8545
+    
+    # --- Etherscan API Keys ---
+    SEPOLIA_API_KEY=
+    BASE_SEPOLIA_API_KEY=
+    
+    # --- Private Keys ---
+    PROXY_ADMIN_OWNER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80    # Example Anvil Key 0
+    OWNER_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d                # Example Anvil Key 1
+    AUTHORITY_SIGNER_PRIVATE_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a     # Example Anvil Key 2
+    NFT_RECEIVER_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6         # Example Anvil Key 3
+    MINTER_PRIVATE_KEY=0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a               # Example Anvil Key 4
+    
+    # --- Public Keys ---
+    PROXY_ADMIN_OWNER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266    # Example Anvil Addr 0
+    OWNER_ADDRESS=0x70997970C51812dc3A010C7d01b50e0d17dc79C8        # Example Anvil Addr 1
+    AUTHORITY_SIGNER=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC     # Example Anvil Addr 2
+    NFT_RECEIVER=0x90F79bf6EB2c4f870365E785982E1f101E93b906         # Example Anvil Addr 3
+    MINTER_ADDRESS=0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65       # Example Anvil Addr 4
+    
+    # --- Deployment Vars ---
+    MAX_SUPPLY=10000
+    BASE_URI="ipfs://anvil_test_v1/"
+    
+    # --- Upgrade Vars (Set later) ---
+    TRANSPARENT_PROXY_ADDRESS=
+    IMPLEMENTATION_ADDRESS=
+    NEW_IMPL_ADDR=
+    ```
 
 ### Running Tests
 
@@ -238,6 +326,11 @@ forge test -vvv
 
 # Check test coverage
 forge coverage
+
+# To run the upgrade test, clean the cache first and run with the `--ffi` flag
+forge cache clean
+forge clean
+forge test --match-contract UpgradesTest --ffi
 ```
 
 ### Test Coverage
@@ -249,35 +342,188 @@ Our test suite includes:
 
 ```
 test/
-├── CryptoartNFTBase.t.sol        # Base test setup
-├── fuzz/                         # Fuzz testing
+├── CryptoartNFTBase.t.sol
+├── fuzz
 │   ├── BurnFuzzTest.t.sol
 │   ├── MetadataFuzzTest.t.sol
 │   └── MintFuzzTest.t.sol
-├── helpers/                      # Test helpers
+├── helpers
 │   ├── SigningUtils.sol
 │   ├── TestAssertions.sol
 │   └── TestFixtures.sol
-├── integration/                  # Integration tests
+├── integation
 │   ├── FullWorkFlow.t.sol
 │   ├── LifecycleTest.t.sol
 │   └── RoyaltyMetadataTest.t.sol
-└── unit/                         # Unit tests
-    ├── Admin.t.sol
-    ├── BurnOperationsTest.t.sol
-    ├── Initialization.t.sol
-    ├── MetadataManagementTest.t.sol
-    └── MintOperationsTest.t.sol
+├── unit
+│   ├── Admin.t.sol
+│   ├── BurnOperationsTest.t.sol
+│   ├── Initialization.t.sol
+│   ├── MetadataManagementTest.t.sol
+│   ├── MintOperationsTest.t.sol
+│   └── StoryFeaturesTest.t.sol
+└── upgrade
+    ├── CryptoartNFTMockUpgrade.sol
+    ├── MockSigningUtils.sol
+    └── Upgrades.t.sol
 ```
+
+### Deployment and Upgrading via Anvil and the Makefile
+
+The Makefile simplifies key tasks to streamline long commands in the CLI. 
+
+Run `make help` for instructions on how to use the makefile.
+
+**1. Starting a Local Anvil Node**
+
+Spin up a local Anvil node for testing:
+
+```bash
+make anvil
+```
+- This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
+
+**2. Deploying Contracts Locally**
+
+Deploy the contracts to the local Anvil node:
+
+```bash
+make deploy
+```
+* Uses `NETWORK=localhost` by default and settings from the `.env` file.
+* Note the deployed proxy address (e.g., `0xYourProxyAddress`) from the output.
+
+**3. Upgrading the Contract** 
+
+Upgrade the contract in two steps:
+
+1. Deploy a New Implementation:
+
+    - Deploy a mock upgrade contract (e.g., `CryptoartNFTMockUpgrade.sol`):
+    
+    ```bash
+    forge create test/upgrade/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
+      --rpc-url http://127.0.0.1:8545 \
+      --private-key $PROXY_ADMIN_OWNER_PRIVATE_KEY
+    ```
+    
+    - Record the new implementation address (e.g., `0xNewImplementationAddress`).
+    
+2. Upgrade the Proxy:
+
+    - Update `.env` with the proxy address from deployment:
+    
+    ```env
+    TRANSPARENT_PROXY_ADDRESS=0xYourProxyAddress
+    NEW_IMPL_ADDR=0xNewImplementationAddress
+    ```
+    
+    - Run the upgrade:
+    
+    ```bash
+    make upgradeCryptoartNFTMock
+    ```
+    
+    - Confirm the upgrade when prompted.
+  
+**4. Minting an NFT**
+
+Mint an NFT on a local node:
+- Make sure `TRANSPARENT_PROXY_ADDRESS` is set in `.env` from deployment.
+- Run:
+
+  ```bash
+  make mintNFT TOKENID=1 PRICE=100000000000000000  # 0.1 ETH
+  ```
+
+- Optional parameters (e.g., for specific mint types):
+
+  ```bash
+  make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE="ipfs://redeemable_uri" URI_NOT_REDEEMABLE="ipfs://not_redeemable_uri"
+  ```
+
+**Additional Makefile Commands**
+
+- Clean Build Artifacts: `make clean`
+- Install Dependencies: `make install`
+- Update Dependencies: `make update`
+- Build Contracts: `make build`
+- Format Code: `make format`
+- List Commands: `make help`
+
+### Deployment & Upgrading via Scripts
+
+Deployment and upgrades are managed via Foundry scripts located in the `script/` directory.
+
+**Initial Deployment (`DeployCryptoartNFT.s.sol`)**
+
+This deploys the first version (`CryptoartNFT.sol`) behind a Transparent Upgradeable Proxy.
+
+1. Run Script:
+```bash
+forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT \
+  --rpc-url <RPC ENDPOINT HERE> \
+  --broadcast \
+  --verify # Optional: attempt verification
+```
+
+**Upgrade Process (UpgradeCryptoartNFT.s.sol)**
+
+This upgrades the proxy to point to a new, already deployed implementation (e.g., `CryptoartNFTMockUpgrade.sol`).
+
+1. Deploy New Implementation Code
+
+Deploy only the new logic contract using forge create. Use a deployer key (can be the same as `PROXY_ADMIN_PRIVATE_KEY` or different).
+
+```bash
+forge create src/mock/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
+  --rpc-url <RPC ENDPOINT HERE> \
+  --private-key <PRIVATE KEY HERE> \
+  --verify # Optional verification
+```
+
+2. Run the Upgrade script
+
+    - Prepare Script Arguments (Command Line):
+        - `existingImplementationName`: Artifact name of the current version (e.g., "CryptoartNFT").
+        - `newImplementationName`: Artifact name of the new version (e.g., "CryptoartNFTMockUpgrade").
+        - `newImplementationAddress`: The address recorded in Step 1.
+        - `initializerCallData`: (Optional) Encoded call data for a V2 initializer (e.g., `initializeV2()`). Use `""` if no initializer call is needed.
+        
+            ```bash
+            # Example: Get calldata for initializeV2() with no args
+            export INIT_DATA=$(cast calldata "initializeV2()")
+            # Or empty for no call
+            # export INIT_DATA=""
+            ```
+          
+    - Run Upgrade Script:
+        ```bash
+        # Define argument variables for clarity
+        export CURRENT_ARTIFACT_NAME="CryptoartNFT" # Or whatever the current version name is
+        export NEW_ARTIFACT_NAME="CryptoartNFTMockUpgrade"   # Or whatever the new version name is
+        export NEW_IMPL_ADDR=0xNewImplementationAddress 
+        # Ensure INIT_DATA is set from step 2
+        
+        forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
+          --rpc-url $RPC_URL \
+          --broadcast \
+          --sig "run(string,string,address,bytes)" \
+          "$CURRENT_ARTIFACT_NAME" \
+          "$NEW_ARTIFACT_NAME" \
+          "$NEW_IMPL_ADDR" \
+          "$INIT_DATA"
+          --verify # Optional verification
+        ```
+  
+---
 
 ## 9. Known Issues 
 
 1. The `unpinTokenURI` function is currently a stub. This function is required by the IERC7160 interface but has not been implemented yet.  Per the EIP, its behaviour is flexible, but currently, there's no way to revert a token to an "unpinned" state via this function.
 
-2.  **Unimplemented `addCollectionStory`:** The `addCollectionStory` function required by `IStory` is currently an empty stub.
+2.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#6-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
 
-3.  **Centralization:** As noted in [Trust Assumptions & Centralization Risks](#5-trust-assumptions--centralization-risks), the system relies heavily on the `Owner` and the off-chain `authoritySigner`.
-
-4. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
+3. The contract relies on signature-based validation, which requires careful key management for the authoritySigner role.
 
 4.  **Gas Usage in Batch Operations:** Functions like `_batchBurn`, `_batchTransferToNftReceiver` iterate over arrays. While there's a `MAX_BATCH_SIZE` constant, ensure this limit is appropriate to avoid exceeding block gas limits in practice on the target network (Base). The duplicate check in `_batchBurn` has O(n^2) complexity, which could be very costly for larger batches near the limit, but again, the max batch size constant should restrict this effect.

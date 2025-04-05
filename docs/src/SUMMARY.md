@@ -6,4 +6,6 @@
     - [IStory](src/interfaces/IStory.sol/interface.IStory.md)
   - [❱ libraries](src/libraries/README.md)
     - [Error](src/libraries/Error.sol/library.Error.md)
+  - [❱ mock](src/mock/README.md)
+    - [CryptoartNFTMockUpgrade](src/mock/CryptoartNFTMockUpgrade.sol/contract.CryptoartNFTMockUpgrade.md)
   - [CryptoartNFT](src/CryptoartNFT.sol/contract.CryptoartNFT.md)
