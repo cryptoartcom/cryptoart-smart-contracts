@@ -1,5 +1,5 @@
 # IStory
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/0fa1415149ef9f765c2e91a56b87fffc054d91d6/src/interfaces/IStory.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/5185e0715ba413464b5f195cb3aa0731d790bc5d/src/interfaces/IStory.sol)
 
 **Author:**
 transientlabs.xyz

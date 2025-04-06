@@ -1,5 +1,5 @@
 # CryptoartNFTMockUpgrade
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/0fa1415149ef9f765c2e91a56b87fffc054d91d6/src/mock/CryptoartNFTMockUpgrade.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/5185e0715ba413464b5f195cb3aa0731d790bc5d/src/mock/CryptoartNFTMockUpgrade.sol)
 
 **Inherits:**
 [IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardUpgradeable

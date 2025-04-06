@@ -309,7 +309,6 @@ forge build
     # --- Upgrade Vars (Set later) ---
     TRANSPARENT_PROXY_ADDRESS=
     IMPLEMENTATION_ADDRESS=
-    NEW_IMPL_ADDR=
     ```
 
 ### Running Tests
@@ -368,7 +367,7 @@ test/
     └── Upgrades.t.sol
 ```
 
-### Deployment and Upgrading via Anvil and the Makefile
+### Deployment and Upgrading via the Makefile to Anvil or Sepolia Testnet
 
 The Makefile simplifies key tasks to streamline long commands in the CLI. 
 
@@ -383,48 +382,38 @@ make anvil
 ```
 - This starts Anvil with a mnemonic for reproducible accounts and a 1-second block time.
 
-**2. Deploying Contracts Locally**
+**2. Deploying Contracts**
 
-Deploy the contracts to the local Anvil node:
+Deploy the contracts to the specified network (default is localhost):
 
 ```bash
-make deploy
+make deploy [NETWORK=<network>]
 ```
-* Uses `NETWORK=localhost` by default and settings from the `.env` file.
-* Note the deployed proxy address (e.g., `0xYourProxyAddress`) from the output.
+* For localhost: `make deploy`
+* For Sepolia: `make deploy NETWORK=sepolia`
+* Ensure your `.env` file has the necessary variables set for the target network (e.g., `SEPOLIA_URL`, `PROXY_ADMIN_OWNER_PRIVATE_KEY`).
+* Note the deployed proxy address from the output (e.g., `0xYourProxyAddress`).
 
 **3. Upgrading the Contract** 
 
-Upgrade the contract in two steps:
+To upgrade the contract to a new implementation (e.g., `CryptoartNFTMockUpgrade.sol`):
 
-1. Deploy a New Implementation:
+* Ensure `TRANSPARENT_PROXY_ADDRESS` is set in `.env` from the deployment step.
 
-    - Deploy a mock upgrade contract (e.g., `CryptoartNFTMockUpgrade.sol`):
-    
-    ```bash
-    forge create test/upgrade/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
-      --rpc-url http://127.0.0.1:8545 \
-      --private-key $PROXY_ADMIN_OWNER_PRIVATE_KEY
-    ```
-    
-    - Record the new implementation address (e.g., `0xNewImplementationAddress`).
-    
-2. Upgrade the Proxy:
-
-    - Update `.env` with the proxy address from deployment:
-    
     ```env
     TRANSPARENT_PROXY_ADDRESS=0xYourProxyAddress
-    NEW_IMPL_ADDR=0xNewImplementationAddress
     ```
     
-    - Run the upgrade:
+* Run:     
     
     ```bash
-    make upgradeCryptoartNFTMock
+    make upgradeCryptoartNFTMock [NETWORK=<network>]
     ```
+    - For localhost: `make upgradeCryptoartNFTMock`
+    - For Sepolia: `make upgradeCryptoartNFTMock NETWORK=sepolia`
     
-    - Confirm the upgrade when prompted.
+* The script automatically deploys the new implementation and upgrades the proxy to point to it.
+* If the new implementation requires initialization, ensure `INIT_DATA` is set appropriately in the Makefile (e.g., `cast calldata "initializeV2()"`).
   
 **4. Minting an NFT**
 
@@ -433,14 +422,39 @@ Mint an NFT on a local node:
 - Run:
 
   ```bash
-  make mintNFT TOKENID=1 PRICE=100000000000000000  # 0.1 ETH
+  make mintNFT TOKENID=<some token ID> PRICE=<some token price> [NETWORK=sepolia]
   ```
+  
+  - Examples:
+    - For localhost: `make mintNFT TOKENID=1 PRICE=100000000000000000` (0.1 ETH)
+    - For Sepolia: `make mintNFT TOKENID=1 PRICE=100000000000000000 NETWORK=sepolia`
 
 - Optional parameters (e.g., for specific mint types):
 
   ```bash
   make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE="ipfs://redeemable_uri" URI_NOT_REDEEMABLE="ipfs://not_redeemable_uri"
   ```
+
+**Verifying on Etherscan (for Sepolia Deployments)**
+* After deployment or upgrade on Sepolia, the script will output the proxy and implementation addresses.
+* To verify contracts on Etherscan, use the `--verify` flag with `forge script` (requires `SEPOLIA_API_KEY` in `.env`), or manually verify via the Etherscan website.
+* Check the contracts on Sepolia Etherscan using the logged addresses:
+    - Proxy: `https://sepolia.etherscan.io/address/[Proxy Address]`
+    - Implementation: `https://sepolia.etherscan.io/address/[Implementation Address]`
+
+
+### Deployed Contracts on Sepolia
+The following contracts have been deployed on the Sepolia testnet for verification purposes:
+
+| Contract                | Address                                    | Sepolia Etherscan Link |
+|-------------------------|--------------------------------------------|------------------------|
+| Proxy                   | 0xc5D272B51A75580ded4489D66192E7934efca7AD | [View on Etherscan](https://sepolia.etherscan.io/address/0xc5D272B51A75580ded4489D66192E7934efca7AD) |
+| Original Implementation | 0x192A2b40C808c819864BE912cd9145F14D56aB0d | [View on Etherscan](https://sepolia.etherscan.io/address/0x192A2b40C808c819864BE912cd9145F14D56aB0d) |
+| Upgraded Implementation | 0xf28E09E02E9932c62052922c66072182Ae591041 | [View on Etherscan](https://sepolia.etherscan.io/address/0xf28e09e02e9932c62052922c66072182ae591041) |
+
+* Proxy: The main contract users interact with.
+* Original Implementation: The original logic contract the proxy was delegating to.
+* Upgraded Implementation: The current logic contract the proxy delegates to.
 
 **Additional Makefile Commands**
 
@@ -466,28 +480,22 @@ forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT \
   --broadcast \
   --verify # Optional: attempt verification
 ```
+* Set `<RPC_URL>` to the target network:
+    - Localhost: `http://127.0.0.1:8545`
+    - Sepolia: `<Your Sepolia RPC URL>`
+    
+* Note the deployed proxy address from the output.
 
 **Upgrade Process (UpgradeCryptoartNFT.s.sol)**
 
 This upgrades the proxy to point to a new, already deployed implementation (e.g., `CryptoartNFTMockUpgrade.sol`).
 
-1. Deploy New Implementation Code
-
-Deploy only the new logic contract using forge create. Use a deployer key (can be the same as `PROXY_ADMIN_PRIVATE_KEY` or different).
-
-```bash
-forge create src/mock/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
-  --rpc-url <RPC ENDPOINT HERE> \
-  --private-key <PRIVATE KEY HERE> \
-  --verify # Optional verification
-```
-
-2. Run the Upgrade script
-
-    - Prepare Script Arguments (Command Line):
+1. Using the Upgrade Script:
+    - The script automatically deploys the new implementation and upgrades the proxy.
+    
+    - Prepare Script Arguments:
         - `existingImplementationName`: Artifact name of the current version (e.g., "CryptoartNFT").
         - `newImplementationName`: Artifact name of the new version (e.g., "CryptoartNFTMockUpgrade").
-        - `newImplementationAddress`: The address recorded in Step 1.
         - `initializerCallData`: (Optional) Encoded call data for a V2 initializer (e.g., `initializeV2()`). Use `""` if no initializer call is needed.
         
             ```bash
@@ -502,20 +510,18 @@ forge create src/mock/CryptoartNFTMockUpgrade.sol:CryptoartNFTMockUpgrade \
         # Define argument variables for clarity
         export CURRENT_ARTIFACT_NAME="CryptoartNFT" # Or whatever the current version name is
         export NEW_ARTIFACT_NAME="CryptoartNFTMockUpgrade"   # Or whatever the new version name is
-        export NEW_IMPL_ADDR=0xNewImplementationAddress 
-        # Ensure INIT_DATA is set from step 2
+        # Ensure INIT_DATA is set from the previous step
         
         forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
           --rpc-url $RPC_URL \
           --broadcast \
-          --sig "run(string,string,address,bytes)" \
-          "$CURRENT_ARTIFACT_NAME" \
-          "$NEW_ARTIFACT_NAME" \
-          "$NEW_IMPL_ADDR" \
-          "$INIT_DATA"
+          --sig "run(string,string,bytes)" \
+            "$CURRENT_ARTIFACT_NAME" \
+            "$NEW_ARTIFACT_NAME" \
+            "$INIT_DATA"
           --verify # Optional verification
         ```
-  
+
 ---
 
 ## 9. Known Issues 
