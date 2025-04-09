@@ -10,8 +10,8 @@ import "./MockSigningUtils.sol";
 
 contract UpgradesTest is CryptoartNFTBase {
     function test_TransparentProxyUpgrade() public {
-        // To enable code coverage reports with forge coverage, use the following deployment 
-        // pattern in your tests: instantiate your implementation contracts directly and use 
+        // To enable code coverage reports with forge coverage, use the following deployment
+        // pattern in your tests: instantiate your implementation contracts directly and use
         // the UnsafeUpgrades library.
         address implementation = address(new CryptoartNFT());
         address proxy = UnsafeUpgrades.deployTransparentProxy(

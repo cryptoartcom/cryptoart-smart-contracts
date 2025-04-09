@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {CryptoartNFT} from "../../src/CryptoartNFT.sol"; 
+import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 
 /**
  * @title UpdateNftReceiver Script
@@ -18,7 +18,7 @@ import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 contract UpdateNftReceiver is Script {
     address proxyAddress = vm.envAddress("PROXY_ADDRESS");
     address newNftReceiver = vm.envAddress("NEW_NFT_RECEIVER");
-    uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY"); 
+    uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY");
 
     function run() public returns (bool success) {
         require(newNftReceiver != address(0), "NEW_NFT_RECEIVER cannot be the zero address.");
@@ -26,7 +26,7 @@ contract UpdateNftReceiver is Script {
 
         // Derive owner address from private key for checks and logging
         address designatedOwnerAddress = vm.addr(ownerPrivateKey);
-        
+
         console.log("Executing Script As:", designatedOwnerAddress);
         console.log("Target Proxy Address:", proxyAddress);
         console.log("New NFT Receiver Address:", newNftReceiver);
@@ -35,20 +35,23 @@ contract UpdateNftReceiver is Script {
 
         // Pre-flight check 1: Ensure the provided private key corresponds to the *current* contract owner
         address currentOwner = nft.owner();
-        require(currentOwner == designatedOwnerAddress, "Error: Private key provided does not match the current contract owner.");
+        require(
+            currentOwner == designatedOwnerAddress,
+            "Error: Private key provided does not match the current contract owner."
+        );
         console.log("Owner check passed. Current owner:", currentOwner);
 
-        // Pre-flight check 2: Prevent setting the same address 
+        // Pre-flight check 2: Prevent setting the same address
         address currentReceiver = nft.nftReceiver();
         console.log("Current NFT receiver:", currentReceiver);
         if (currentReceiver == newNftReceiver) {
             console.log("New NFT receiver is the same as the current one. No update needed.");
-            return true; 
+            return true;
         }
 
         // --- Transaction Execution ---
         console.log("Broadcasting transaction to update NFT receiver...");
-        vm.startBroadcast(ownerPrivateKey); 
+        vm.startBroadcast(ownerPrivateKey);
 
         nft.updateNftReceiver(newNftReceiver);
 
@@ -56,7 +59,9 @@ contract UpdateNftReceiver is Script {
 
         // --- Post-flight Verification ---
         address updatedReceiver = nft.nftReceiver();
-        require(updatedReceiver == newNftReceiver, "Verification Failed: NFT receiver address did not update correctly.");
+        require(
+            updatedReceiver == newNftReceiver, "Verification Failed: NFT receiver address did not update correctly."
+        );
         console.log("Successfully updated NFT receiver to:", updatedReceiver);
 
         success = true;

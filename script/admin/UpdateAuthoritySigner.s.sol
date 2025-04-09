@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {CryptoartNFT} from "../../src/CryptoartNFT.sol"; 
+import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 
 /**
  * @title UpdateAuthoritySigner Script
@@ -17,7 +17,7 @@ import {CryptoartNFT} from "../../src/CryptoartNFT.sol";
 contract UpdateAuthoritySigner is Script {
     address transparentProxyAddress = vm.envAddress("TRANSPARENT_PROXY_ADDRESS");
     address newAuthoritySigner = vm.envAddress("AUTHORITY_SIGNER");
-    uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY"); 
+    uint256 ownerPrivateKey = vm.envUint("OWNER_PRIVATE_KEY");
 
     function run() public returns (bool success) {
         require(newAuthoritySigner != address(0), "NEW_AUTHORITY_SIGNER cannot be the zero address.");
@@ -25,19 +25,22 @@ contract UpdateAuthoritySigner is Script {
 
         // Derive owner address from private key for checks and logging
         address designatedOwnerAddress = vm.addr(ownerPrivateKey);
-        
+
         console.log("Executing Script As:", designatedOwnerAddress);
         console.log("Transparent Proxy Address:", transparentProxyAddress);
         console.log("New Authority Signer Address:", newAuthoritySigner);
 
         CryptoartNFT nft = CryptoartNFT(transparentProxyAddress);
-        
+
         // Pre-flight check 1: Ensure the provided private key corresponds to the *current* contract owner
         address currentOwner = nft.owner();
-        require(currentOwner == designatedOwnerAddress, "Error: Private key provided does not match the current contract owner.");
+        require(
+            currentOwner == designatedOwnerAddress,
+            "Error: Private key provided does not match the current contract owner."
+        );
         console.log("Owner check passed. Current owner:", currentOwner);
 
-        // Pre-flight check 2: Prevent setting the same address 
+        // Pre-flight check 2: Prevent setting the same address
         address currentSigner = nft.authoritySigner();
         console.log("Current authority signer:", currentSigner);
         if (currentSigner == newAuthoritySigner) {
@@ -47,7 +50,7 @@ contract UpdateAuthoritySigner is Script {
 
         // --- Transaction Execution ---
         console.log("Broadcasting transaction to update authority signer...");
-        vm.startBroadcast(ownerPrivateKey); 
+        vm.startBroadcast(ownerPrivateKey);
 
         nft.updateAuthoritySigner(newAuthoritySigner);
 
@@ -55,7 +58,10 @@ contract UpdateAuthoritySigner is Script {
 
         // --- Post-flight Verification ---
         address updatedSigner = nft.authoritySigner();
-        require(updatedSigner == newAuthoritySigner, "Verification Failed: Authority signer address did not update correctly.");
+        require(
+            updatedSigner == newAuthoritySigner,
+            "Verification Failed: Authority signer address did not update correctly."
+        );
         console.log("Successfully updated authority signer to:", updatedSigner);
 
         success = true;

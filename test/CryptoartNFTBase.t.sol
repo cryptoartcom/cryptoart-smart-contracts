@@ -51,7 +51,9 @@ contract CryptoartNFTBase is Test {
         // Set authority signer address to match private key for testing
         authoritySigner = vm.addr(authoritySignerPrivateKey);
 
-        nft = testFixtures.deployTransparentProxyWithNFTInitialized(proxyAdmin, owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI);
+        nft = testFixtures.deployTransparentProxyWithNFTInitialized(
+            proxyAdmin, owner, authoritySigner, nftReceiver, MAX_SUPPLY, BASE_URI
+        );
     }
 
     function createMintData(

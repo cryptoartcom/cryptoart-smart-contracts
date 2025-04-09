@@ -39,8 +39,7 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
  * @notice Provides helper functions to set up contracts for testing,
  *         specifically deploying CryptoartNFT behind a Transparent Upgradeable Proxy.
  */
-contract TestFixtures is Test { 
-
+contract TestFixtures is Test {
     /**
      * @notice Deploys CryptoartNFT behind a correctly configured Transparent Upgradeable Proxy.
      * @param _proxyAdminOwner The address that will own the ProxyAdmin contract (controls upgrades).
@@ -52,24 +51,17 @@ contract TestFixtures is Test {
      * @return nftProxy The CryptoartNFT contract instance interacted with via the proxy address.
      */
     function deployTransparentProxyWithNFTInitialized(
-        address _proxyAdminOwner, 
-        address _owner,          
+        address _proxyAdminOwner,
+        address _owner,
         address _authoritySigner,
         address _nftReceiver,
         uint256 _maxSupply,
         string memory _baseURI
     ) public returns (CryptoartNFT nftProxy) {
+        bytes memory initData =
+            abi.encodeCall(CryptoartNFT.initialize, (_owner, _authoritySigner, _nftReceiver, _maxSupply, _baseURI));
 
-        bytes memory initData = abi.encodeCall(
-            CryptoartNFT.initialize,
-            (_owner, _authoritySigner, _nftReceiver, _maxSupply, _baseURI)
-        );
-
-        address proxyAddress = Upgrades.deployTransparentProxy(
-            "CryptoartNFT.sol", 
-            _proxyAdminOwner,      
-            initData               
-        );
+        address proxyAddress = Upgrades.deployTransparentProxy("CryptoartNFT.sol", _proxyAdminOwner, initData);
 
         nftProxy = CryptoartNFT(proxyAddress);
     }

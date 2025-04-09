@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {CryptoartNFT} from "../src/CryptoartNFT.sol"; 
+import {CryptoartNFT} from "../src/CryptoartNFT.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -16,13 +16,13 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  *      - AUTHORITY_SIGNER_PRIVATE_KEY: Private key of the designated authority signer.
  *      - MINTER_PRIVATE_KEY: Private key of the user performing the mint and paying.
  */
- contract MintCryptoartNFT is Script {
+contract MintCryptoartNFT is Script {
     using Strings for uint256;
-    
+
     address proxyAddress = vm.envAddress("TRANSPARENT_PROXY_ADDRESS");
     uint256 authoritySignerPrivateKey = vm.envUint("AUTHORITY_SIGNER_PRIVATE_KEY");
     uint256 minterPrivateKey = vm.envUint("MINTER_PRIVATE_KEY");
-    
+
     /**
      * @notice Executes the minting process.
      * @param recipient The address that will receive the NFT.
@@ -46,7 +46,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
         require(authoritySignerPrivateKey != 0, "AUTHORITY_SIGNER_PRIVATE_KEY not set");
         require(minterPrivateKey != 0, "MINTER_PRIVATE_KEY not set");
         require(recipient != address(0), "Recipient cannot be zero address");
-        
+
         address minterAddress = vm.addr(minterPrivateKey);
         console.log("Executing Mint Script As (Minter):", minterAddress);
         console.log("Recipient:", recipient);
@@ -54,16 +54,16 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
         console.log("Token Price (wei):", tokenPrice);
         console.log("Target Proxy:", proxyAddress);
         console.log("Mint Type (Value):", mintTypeValue);
-        
+
         // Get contract instance
         CryptoartNFT nft = CryptoartNFT(proxyAddress);
-        
+
         // Get current nonce for the recipient
         uint256 nonce = nft.nonces(recipient);
         console.log("Nonce for recipient:", nonce);
-        
+
         // --- Prepare Data Structs ---
-        
+
         // TokenURI Set
         CryptoartNFT.TokenURISet memory tokenUriSet;
         tokenUriSet.uriWhenRedeemable = bytes(uriWhenRedeemable).length > 0
@@ -73,17 +73,17 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
             ? uriWhenNotRedeemable
             : string(abi.encodePacked("token-", tokenId.toString(), "-not-redeemable.json"));
         tokenUriSet.redeemableDefaultIndex = redeemableDefaultIndex;
-        
+
         // Mint Validation Data without the signature
         CryptoartNFT.MintValidationData memory data;
         data.recipient = recipient;
         data.tokenId = tokenId;
         data.tokenPrice = tokenPrice;
         data.mintType = CryptoartNFT.MintType(mintTypeValue); // cast uint8 to enum
-        
+
         // --- Generate Signature ---
         console.log("Generate Signature using Authority Signer...");
-        
+
         bytes32 contentHash = keccak256(
             abi.encode(
                 data.recipient,
@@ -97,26 +97,26 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
                 proxyAddress
             )
         );
-        
+
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(contentHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(authoritySignerPrivateKey, ethSignedMessageHash);
         data.signature = abi.encodePacked(r, s, v);
         console.log("Signature generated");
-        
+
         // --- Mint Tx ---
         console.log("Broadcasting Mint Tx from Minter: ", minterAddress);
         vm.startBroadcast(minterPrivateKey);
-        
+
         nft.mint{value: data.tokenPrice}(data, tokenUriSet);
-        
+
         vm.stopBroadcast();
-        
+
         // --- Verification ---
         address ownerOfToken = nft.ownerOf(tokenId);
         require(ownerOfToken == recipient, "Verification Failed: Recipient does not own the token after mint.");
         console.log("Mint successful! Token", tokenId, "minted to:", ownerOfToken);
-        
+
         success = true;
         return success;
     }
- }
+}
