@@ -63,9 +63,9 @@ contract CryptoartNFT is
     string public baseURI;
 
     // IERC7160
-    mapping(uint256 => string[2]) private _tokenURIs;
-    mapping(uint256 => uint256) private _pinnedURIIndices;
-    mapping(uint256 => bool) private _hasPinnedTokenURI;
+    mapping(uint256 tokenId => string[2] tokenURIs) private _tokenURIs;
+    mapping(uint256 tokenId => uint256 pinnedURIIndices) private _pinnedURIIndices;
+    mapping(uint256 tokenId => bool hasPinnedTokenURI) private _hasPinnedTokenURI;
 
     // ==========================================================================
     // Structs & Enums
