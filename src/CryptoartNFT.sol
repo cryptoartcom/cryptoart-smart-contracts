@@ -193,12 +193,11 @@ contract CryptoartNFT is
     }
 
     modifier validBatchSize(uint256[] calldata tokenIds) {
-        uint256 length = tokenIds.length;
-        if (length == 0) {
+        if (tokenIds.length == 0) {
             revert Error.Batch_EmptyArray();
         }
-        if (length > MAX_BATCH_SIZE) {
-            revert Error.Batch_MaxSizeExceeded(length, MAX_BATCH_SIZE);
+        if (tokenIds.length > MAX_BATCH_SIZE) {
+            revert Error.Batch_MaxSizeExceeded(tokenIds.length, MAX_BATCH_SIZE);
         }
         _;
     }
@@ -264,17 +263,17 @@ contract CryptoartNFT is
     }
 
     function _batchTransferToNftReceiver(uint256[] calldata tradedTokenIds) private {
-        uint256 tradedTokensArrayLength = tradedTokenIds.length;
-        for (uint256 i = 0; i < tradedTokensArrayLength;) {
-            _transferToNftReceiver(tradedTokenIds[i]);
+        address _nftReceiver = nftReceiver;
+        for (uint256 i; i < tradedTokenIds.length;) {
+            _transferToNftReceiver(tradedTokenIds[i], _nftReceiver);
             unchecked {
                 ++i;
             }
         }
     }
 
-    function _transferToNftReceiver(uint256 tokenId) private onlyTokenOwner(tokenId) {
-        ERC721Upgradeable.safeTransferFrom(msg.sender, nftReceiver, tokenId);
+    function _transferToNftReceiver(uint256 tokenId, address _nftReceiver) private onlyTokenOwner(tokenId) {
+        ERC721Upgradeable.safeTransferFrom(msg.sender, _nftReceiver, tokenId);
     }
 
     /**
@@ -315,13 +314,12 @@ contract CryptoartNFT is
     }
 
     function _batchBurn(uint256[] calldata tokenIds) private validBatchSize(tokenIds) {
-        uint256 tokenIdArrayLength = tokenIds.length;
-        for (uint256 i = 0; i < tokenIdArrayLength - 1; ++i) {
-            for (uint256 j = i + 1; j < tokenIdArrayLength; ++j) {
+        for (uint256 i; i < tokenIds.length - 1; ++i) {
+            for (uint256 j = i + 1; j < tokenIds.length; ++j) {
                 if (tokenIds[i] == tokenIds[j]) revert Error.Batch_DuplicateTokenIds(tokenIds[i]);
             }
         }
-        for (uint256 i = 0; i < tokenIdArrayLength;) {
+        for (uint256 i; i < tokenIds.length;) {
             burn(tokenIds[i]);
             unchecked {
                 ++i;
@@ -351,9 +349,13 @@ contract CryptoartNFT is
         view
         override
         onlyIfTokenExists(tokenId)
-        returns (uint256 index, string[2] memory uris, bool pinned)
+        returns (uint256, string[2] memory, bool)
     {
-        return (_getTokenURIIndex(tokenId), _tokenURIs[tokenId], _hasPinnedTokenURI[tokenId]);
+        uint256 index = _getTokenURIIndex(tokenId); 
+        string[2] memory uris = _tokenURIs[tokenId]; 
+        bool pinned = _hasPinnedTokenURI[tokenId];
+        
+        return (index, uris, pinned);
     }
 
     /**
@@ -405,7 +407,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
-    function hasPinnedTokenURI(uint256 tokenId) external view returns (bool pinned) {
+    function hasPinnedTokenURI(uint256 tokenId) external view returns (bool) {
         return _hasPinnedTokenURI[tokenId];
     }
 
@@ -612,10 +614,10 @@ contract CryptoartNFT is
     function _isValidSignature(bytes32 contentHash, bytes calldata signature)
         private
         view
-        returns (bool isValidSignature)
+        returns (bool)
     {
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
-        isValidSignature = signer == authoritySigner;
+        return signer == authoritySigner;
     }
 
     /// @notice Sets base metadata for the token
@@ -652,8 +654,8 @@ contract CryptoartNFT is
         }
     }
 
-    function _tokenExists(uint256 _tokenId) private view returns (bool tokenExists) {
-        tokenExists = _ownerOf(_tokenId) != address(0);
+    function _tokenExists(uint256 _tokenId) private view returns (bool) {
+        return _ownerOf(_tokenId) != address(0);
     }
 
     // ==========================================================================
@@ -668,8 +670,8 @@ contract CryptoartNFT is
     }
 
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
-    function _getTokenURIIndex(uint256 tokenId) private view returns (uint256 tokenURIIndex) {
-        tokenURIIndex = _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
+    function _getTokenURIIndex(uint256 tokenId) private view returns (uint256) {
+        return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
     }
 
     // ==========================================================================
@@ -694,13 +696,13 @@ contract CryptoartNFT is
         onlyIfTokenExists(tokenId)
         returns (string memory)
     {
-        uint256 index = _getTokenURIIndex(tokenId);
         string[2] memory uris = _tokenURIs[tokenId];
-        string memory uri = uris[index];
+        string memory uri = uris[_getTokenURIIndex(tokenId)];
 
         if (bytes(uri).length == 0) {
             revert Error.Token_NoURIFound(tokenId);
         }
+        
         return string.concat(_baseURI(), uri);
     }
 
