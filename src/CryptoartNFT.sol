@@ -540,9 +540,9 @@ contract CryptoartNFT is
         if (balance == 0) {
             revert Error.Admin_NoWithdrawableFunds();
         }
-        (bool success,) = payable(owner()).call{value: balance}(""); // Send to owner
+        (bool success,) = payable(msg.sender).call{value: balance}(""); // Send to owner
         if (!success) {
-            revert Error.Admin_WithdrawalFailed(owner(), balance);
+            revert Error.Admin_WithdrawalFailed(msg.sender, balance);
         }
     }
 
