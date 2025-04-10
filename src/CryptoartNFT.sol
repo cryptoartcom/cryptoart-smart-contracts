@@ -12,7 +12,7 @@ import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/t
 import {ERC721RoyaltyUpgradeable, ERC2981Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardTransientUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {IERC7160} from "./interfaces/IERC7160.sol";
 import {IStory} from "./interfaces/IStory.sol";
 import {Error} from "./libraries/Error.sol";
@@ -34,7 +34,7 @@ contract CryptoartNFT is
     PausableUpgradeable,
     NoncesUpgradeable,
     IStory,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardTransientUpgradeable
 {
     using Strings for uint256;
     using Strings for address;
@@ -163,7 +163,7 @@ contract CryptoartNFT is
         __Ownable_init(contractOwner);
         __Pausable_init();
         __Nonces_init();
-        __ReentrancyGuard_init();
+        __ReentrancyGuardTransient_init();
 
         baseURI = baseURI_;
         ERC2981Upgradeable._setDefaultRoyalty(payable(contractOwner), DEFAULT_ROYALTY_PERCENTAGE);
