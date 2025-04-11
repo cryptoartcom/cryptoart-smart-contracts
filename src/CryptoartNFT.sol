@@ -384,7 +384,6 @@ contract CryptoartNFT is
         }
 
         _pinnedURIIndex[tokenId] = index;
-        _hasPinnedTokenURI[tokenId] = true;
 
         emit TokenUriPinned(tokenId, index);
         emit MetadataUpdate(tokenId);
@@ -402,7 +401,6 @@ contract CryptoartNFT is
         }
         
         _pinnedURIIndex[tokenId] = 0;
-        _hasPinnedTokenURI[tokenId] = true;
 
         _validateUnpairAuthorization(msg.sender, tokenId, signature);
 
