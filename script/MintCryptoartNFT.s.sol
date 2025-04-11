@@ -31,7 +31,7 @@ contract MintCryptoartNFT is Script {
      * @param mintTypeValue The numerical value of the MintType enum (e.g., 0 for OpenMint).
      * @param uriWhenRedeemable Optional: URI for the redeemable state. If empty, uses default.
      * @param uriWhenNotRedeemable Optional: URI for the non-redeemable state. If empty, uses default.
-     * @param redeemableDefaultIndex Optional: Initial URI index (0 or 1). Defaults to 0.
+     * @param initialURIIndex Optional: Initial URI index (0 or 1). Defaults to 0.
      */
     function run(
         address recipient,
@@ -40,7 +40,7 @@ contract MintCryptoartNFT is Script {
         uint8 mintTypeValue,
         string memory uriWhenRedeemable,
         string memory uriWhenNotRedeemable,
-        uint8 redeemableDefaultIndex
+        uint8 initialURIIndex
     ) public returns (bool success) {
         require(proxyAddress != address(0), "TRANSPARENT_PROXY_ADDRESS not set");
         require(authoritySignerPrivateKey != 0, "AUTHORITY_SIGNER_PRIVATE_KEY not set");
@@ -72,7 +72,7 @@ contract MintCryptoartNFT is Script {
         tokenUriSet.uriWhenNotRedeemable = bytes(uriWhenNotRedeemable).length > 0
             ? uriWhenNotRedeemable
             : string(abi.encodePacked("token-", tokenId.toString(), "-not-redeemable.json"));
-        tokenUriSet.redeemableDefaultIndex = redeemableDefaultIndex;
+        tokenUriSet.initialURIIndex = initialURIIndex;
 
         // Mint Validation Data without the signature
         CryptoartNFT.MintValidationData memory data;
@@ -92,7 +92,7 @@ contract MintCryptoartNFT is Script {
                 data.tokenPrice,
                 tokenUriSet.uriWhenRedeemable,
                 tokenUriSet.uriWhenNotRedeemable,
-                tokenUriSet.redeemableDefaultIndex,
+                tokenUriSet.initialURIIndex,
                 nonce,
                 proxyAddress
             )
