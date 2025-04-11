@@ -41,6 +41,11 @@ contract FullWorkFlow is CryptoartNFTBase {
         bytes memory unpairSignature = signingUtils.createRedeemableSignature(
             user1, tokenId, nft.nonces(user1), address(nft), authoritySignerPrivateKey
         );
+       
+        vm.prank(owner);
+        uint256 nonRedeemableURI = 1;
+        nft.pinTokenURI(tokenId, nonRedeemableURI);
+        
         vm.prank(user1);
         nft.markAsRedeemable(tokenId, unpairSignature);
 
