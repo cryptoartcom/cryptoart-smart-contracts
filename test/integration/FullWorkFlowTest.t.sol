@@ -50,7 +50,7 @@ contract FullWorkFlow is CryptoartNFTBase {
 
         // --- IStory Workflow ---
         string memory storyId = "story1";
-        string memory storyContent = "Once upon a time, in a galaxy far far away...";
+        string memory storyContent = "Once upon a time, in a galaxy really, really close by...";
         vm.prank(user1);
         vm.expectEmit();
         emit IStory.Story(tokenId, user1, user1.toHexString(), storyContent);
