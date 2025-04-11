@@ -1,8 +1,8 @@
 # CryptoartNFT
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/5185e0715ba413464b5f195cb3aa0731d790bc5d/src/CryptoartNFT.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/23bd56c7bfc1d47e63ea4a8e62ed270462a1f7c2/src/CryptoartNFT.sol)
 
 **Inherits:**
-[IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardUpgradeable
+[IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardTransientUpgradeable
 
 **Author:**
 Cryptoart Team
@@ -82,21 +82,21 @@ string public baseURI;
 ### _tokenURIs
 
 ```solidity
-mapping(uint256 => string[2]) private _tokenURIs;
+mapping(uint256 tokenId => string[2] tokenURIs) private _tokenURIs;
 ```
 
 
-### _pinnedURIIndices
+### _pinnedURIIndex
 
 ```solidity
-mapping(uint256 => uint256) private _pinnedURIIndices;
+mapping(uint256 tokenId => uint256 pinnedURIIndex) private _pinnedURIIndex;
 ```
 
 
 ### _hasPinnedTokenURI
 
 ```solidity
-mapping(uint256 => bool) private _hasPinnedTokenURI;
+mapping(uint256 tokenId => bool hasPinnedTokenURI) private _hasPinnedTokenURI;
 ```
 
 
@@ -248,7 +248,7 @@ function _batchTransferToNftReceiver(uint256[] calldata tradedTokenIds) private;
 
 
 ```solidity
-function _transferToNftReceiver(uint256 tokenId) private onlyTokenOwner(tokenId);
+function _transferToNftReceiver(uint256 tokenId, address _nftReceiver) private onlyTokenOwner(tokenId);
 ```
 
 ### burnAndMint
@@ -326,7 +326,7 @@ function tokenURIs(uint256 tokenId)
     view
     override
     onlyIfTokenExists(tokenId)
-    returns (uint256 index, string[2] memory uris, bool pinned);
+    returns (uint256, string[2] memory, bool);
 ```
 
 ### updateMetadata
@@ -362,7 +362,7 @@ function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner;
 
 Marks a token as redeemable (pins URI index 0) by the token owner. Requires signature.
 
-*Requires a valid signature from the authority signer, likely obtained after proving physical destruction.*
+*Requires a valid signature from the authority signer*
 
 
 ```solidity
@@ -380,7 +380,7 @@ function markAsRedeemable(uint256 tokenId, bytes calldata signature) external on
 
 
 ```solidity
-function hasPinnedTokenURI(uint256 tokenId) external view returns (bool pinned);
+function hasPinnedTokenURI(uint256 tokenId) external view returns (bool);
 ```
 
 ### unpinTokenURI
@@ -641,23 +641,20 @@ function _validateSignature(MintValidationData calldata data, TokenURISet callda
 
 
 ```solidity
-function _isValidSignature(bytes32 contentHash, bytes calldata signature)
-    private
-    view
-    returns (bool isValidSignature);
+function _isValidSignature(bytes32 contentHash, bytes calldata signature) private view returns (bool);
 ```
 
-### _setTokenMetadata
+### _setTokenURIs
 
-Sets base metadata for the token
+Sets base URIs for the token
 
 
 ```solidity
-function _setTokenMetadata(
+function _setTokenURIs(
     uint256 tokenId,
     string calldata uriWhenRedeemable,
     string calldata uriWhenNotRedeemable,
-    uint256 redeemableDefaultIndex
+    uint256 initialURIIndex
 ) private;
 ```
 
@@ -672,7 +669,7 @@ function _refundExcessPayment(uint256 tokenPrice) private;
 
 
 ```solidity
-function _tokenExists(uint256 _tokenId) private view returns (bool tokenExists);
+function _tokenExists(uint256 _tokenId) private view returns (bool);
 ```
 
 ### _validateUnpairAuthorization
@@ -686,7 +683,7 @@ function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes cal
 
 
 ```solidity
-function _getTokenURIIndex(uint256 tokenId) private view returns (uint256 tokenURIIndex);
+function _getTokenURIIndex(uint256 tokenId) private view returns (uint256);
 ```
 
 ### supportsInterface
@@ -698,7 +695,7 @@ function _getTokenURIIndex(uint256 tokenId) private view returns (uint256 tokenU
 function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(IERC165, ERC721Upgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable)
+    override(IERC165, ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721RoyaltyUpgradeable)
     returns (bool);
 ```
 
@@ -860,7 +857,7 @@ URI set provided during minting, containing redeemable/non-redeemable URIs.
 struct TokenURISet {
     string uriWhenRedeemable;
     string uriWhenNotRedeemable;
-    uint8 redeemableDefaultIndex;
+    uint8 initialURIIndex;
 }
 ```
 

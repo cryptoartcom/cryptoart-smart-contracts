@@ -1,5 +1,5 @@
 # Error
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/5185e0715ba413464b5f195cb3aa0731d790bc5d/src/libraries/Error.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/23bd56c7bfc1d47e63ea4a8e62ed270462a1f7c2/src/libraries/Error.sol)
 
 
 ## Errors
@@ -43,6 +43,12 @@ error Token_IndexOutOfBounds(uint256 tokenId, uint256 index, uint256 maxIndex);
 
 ```solidity
 error Token_InvalidDefaultIndex(uint256 redeemableDefaultIndex);
+```
+
+### Token_AlreadyRedeemable
+
+```solidity
+error Token_AlreadyRedeemable(uint256 tokenID);
 ```
 
 ### Batch_EmptyArray
@@ -121,5 +127,11 @@ error Admin_WithdrawalFailed(address recipient, uint256 amount);
 
 ```solidity
 error Admin_ZeroAddress();
+```
+
+### Admin_MaxSupplyTooLow
+
+```solidity
+error Admin_MaxSupplyTooLow(uint256 newMaxSupply, uint256 totalSupply);
 ```
 

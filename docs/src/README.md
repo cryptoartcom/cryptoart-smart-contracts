@@ -228,7 +228,7 @@ This system has significant centralization aspects that auditors should be aware
     *   `token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol`
     *   `utils/NoncesUpgradeable.sol`
     *   `utils/PausableUpgradeable.sol`
-    *   `utils/ReentrancyGuardUpgradeable.sol`
+    *   `utils/ReentrancyGuardTransientUpgradeable.sol`
 *   **@openzeppelin/contracts v5.0.2:** 
     *   `interfaces/IERC4906.sol`
     *   `utils/cryptography/ECDSA.sol`
@@ -350,7 +350,7 @@ test/
 │   ├── SigningUtils.sol
 │   ├── TestAssertions.sol
 │   └── TestFixtures.sol
-├── integation
+├── integration
 │   ├── FullWorkFlow.t.sol
 │   ├── LifecycleTest.t.sol
 │   └── RoyaltyMetadataTest.t.sol
