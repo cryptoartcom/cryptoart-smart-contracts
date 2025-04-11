@@ -64,7 +64,7 @@ contract CryptoartNFT is
 
     // IERC7160
     mapping(uint256 tokenId => string[2] tokenURIs) private _tokenURIs;
-    mapping(uint256 tokenId => uint256 pinnedURIIndices) private _pinnedURIIndices;
+    mapping(uint256 tokenId => uint256 pinnedURIIndex) private _pinnedURIIndex;
     mapping(uint256 tokenId => bool hasPinnedTokenURI) private _hasPinnedTokenURI;
 
     // ==========================================================================
@@ -353,9 +353,9 @@ contract CryptoartNFT is
     {
         uint256 index = _getTokenURIIndex(tokenId); 
         string[2] memory uris = _tokenURIs[tokenId]; 
-        bool pinned = _hasPinnedTokenURI[tokenId];
+        bool isPinned = _hasPinnedTokenURI[tokenId];
         
-        return (index, uris, pinned);
+        return (index, uris, isPinned);
     }
 
     /**
@@ -383,7 +383,7 @@ contract CryptoartNFT is
             revert Error.Token_IndexOutOfBounds(tokenId, index, _tokenURIs[tokenId].length - 1);
         }
 
-        _pinnedURIIndices[tokenId] = index;
+        _pinnedURIIndex[tokenId] = index;
         _hasPinnedTokenURI[tokenId] = true;
 
         emit TokenUriPinned(tokenId, index);
@@ -397,11 +397,11 @@ contract CryptoartNFT is
      * @param signature A signature from the authority signer authorizing the unpairing.
      */
     function markAsRedeemable(uint256 tokenId, bytes calldata signature) external onlyTokenOwner(tokenId) {
-        if (_hasPinnedTokenURI[tokenId] && _pinnedURIIndices[tokenId] == 0) {
+        if (_pinnedURIIndex[tokenId] == 0) {
             revert Error.Token_AlreadyRedeemable(tokenId);
         }
         
-        _pinnedURIIndices[tokenId] = 0;
+        _pinnedURIIndex[tokenId] = 0;
         _hasPinnedTokenURI[tokenId] = true;
 
         _validateUnpairAuthorization(msg.sender, tokenId, signature);
@@ -563,7 +563,7 @@ contract CryptoartNFT is
 
     function _coreMint(MintValidationData calldata data, TokenURISet calldata tokenUriSet) private {
         _validateMintAuthorization(data, tokenUriSet);
-        _setTokenMetadata(
+        _setTokenURIs(
             data.tokenId,
             tokenUriSet.uriWhenRedeemable,
             tokenUriSet.uriWhenNotRedeemable,
@@ -622,9 +622,9 @@ contract CryptoartNFT is
         return signer == authoritySigner;
     }
 
-    /// @notice Sets base metadata for the token
+    /// @notice Sets base URIs for the token
     // contract can only set first and second URIs for metadata redeemable on true and false
-    function _setTokenMetadata(
+    function _setTokenURIs(
         uint256 tokenId,
         string calldata uriWhenRedeemable,
         string calldata uriWhenNotRedeemable,
@@ -639,7 +639,7 @@ contract CryptoartNFT is
 
         _tokenURIs[tokenId][0] = uriWhenRedeemable;
         _tokenURIs[tokenId][1] = uriWhenNotRedeemable;
-        _pinnedURIIndices[tokenId] = redeemableDefaultIndex;
+        _pinnedURIIndex[tokenId] = redeemableDefaultIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
         emit TokenUriPinned(tokenId, redeemableDefaultIndex);
@@ -670,10 +670,10 @@ contract CryptoartNFT is
             revert Error.Auth_UnauthorizedSigner();
         }
     }
-
-    // @notice Returns the pinned URI index or the last token URI index (length - 1).
+    
+    // @notice Returns the pinned URI index 
     function _getTokenURIIndex(uint256 tokenId) private view returns (uint256) {
-        return _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
+        return _pinnedURIIndex[tokenId]; 
     }
 
     // ==========================================================================
