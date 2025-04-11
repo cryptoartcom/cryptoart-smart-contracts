@@ -392,11 +392,15 @@ contract CryptoartNFT is
 
     /**
      * @notice Marks a token as redeemable (pins URI index 0) by the token owner. Requires signature.
-     * @dev Requires a valid signature from the authority signer, likely obtained after proving physical destruction.
+     * @dev Requires a valid signature from the authority signer 
      * @param tokenId The token ID to mark as redeemable.
      * @param signature A signature from the authority signer authorizing the unpairing.
      */
     function markAsRedeemable(uint256 tokenId, bytes calldata signature) external onlyTokenOwner(tokenId) {
+        if (_hasPinnedTokenURI[tokenId] && _pinnedURIIndices[tokenId] == 0) {
+            revert Error.Token_AlreadyRedeemable(tokenId);
+        }
+        
         _pinnedURIIndices[tokenId] = 0;
         _hasPinnedTokenURI[tokenId] = true;
 
@@ -546,6 +550,9 @@ contract CryptoartNFT is
      * @param newMaxSupply The new maximum supply value.
      */
     function setMaxSupply(uint128 newMaxSupply) external onlyOwner {
+        if (newMaxSupply < ERC721EnumerableUpgradeable.totalSupply()) {
+            revert Error.Admin_MaxSupplyTooLow(newMaxSupply, ERC721EnumerableUpgradeable.totalSupply());
+        }
         maxSupply = newMaxSupply;
         emit MaxSupplySet(newMaxSupply);
     }
