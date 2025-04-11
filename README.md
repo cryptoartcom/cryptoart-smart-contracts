@@ -350,7 +350,7 @@ test/
 │   ├── SigningUtils.sol
 │   ├── TestAssertions.sol
 │   └── TestFixtures.sol
-├── integation
+├── integration
 │   ├── FullWorkFlow.t.sol
 │   ├── LifecycleTest.t.sol
 │   └── RoyaltyMetadataTest.t.sol
