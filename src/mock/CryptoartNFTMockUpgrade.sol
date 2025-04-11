@@ -101,7 +101,7 @@ contract CryptoartNFTMockUpgrade is
     struct TokenURISet {
         string uriWhenRedeemable;
         string uriWhenNotRedeemable;
-        uint8 redeemableDefaultIndex;
+        uint8 initialURIIndex;
     }
 
     // ==========================================================================
@@ -596,7 +596,7 @@ contract CryptoartNFTMockUpgrade is
             data.tokenId,
             tokenUriSet.uriWhenRedeemable,
             tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.redeemableDefaultIndex
+            tokenUriSet.initialURIIndex
         );
         ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _refundExcessPayment(data.tokenPrice);
@@ -632,7 +632,7 @@ contract CryptoartNFTMockUpgrade is
                 data.tokenPrice,
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
-                uriParams.redeemableDefaultIndex,
+                uriParams.initialURIIndex,
                 NoncesUpgradeable._useNonce(data.recipient),
                 address(this)
             )

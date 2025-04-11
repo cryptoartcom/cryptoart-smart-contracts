@@ -25,7 +25,7 @@ contract TestAssertions is Test {
         (uint256 index, string[2] memory uris, bool pinned) = nft.tokenURIs(tokenId);
         assertEq(uris[0], expected.uriWhenRedeemable);
         assertEq(uris[1], expected.uriWhenNotRedeemable);
-        assertEq(index, expected.redeemableDefaultIndex);
+        assertEq(index, expected.initialURIIndex);
         assertTrue(pinned);
 
         // Verify token URI

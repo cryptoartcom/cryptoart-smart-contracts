@@ -33,7 +33,7 @@ contract SigningUtils is Test {
                 tokenPrice,
                 tokenURISet.uriWhenRedeemable,
                 tokenURISet.uriWhenNotRedeemable,
-                tokenURISet.redeemableDefaultIndex,
+                tokenURISet.initialURIIndex,
                 nonce,
                 contractAddress
             )
@@ -62,7 +62,7 @@ contract SigningUtils is Test {
         return CryptoartNFT.TokenURISet({
             uriWhenRedeemable: string(abi.encodePacked("token-", tokenId.toString(), "-redeemable.json")),
             uriWhenNotRedeemable: string(abi.encodePacked("token-", tokenId.toString(), "-not-redeemable.json")),
-            redeemableDefaultIndex: 0
+            initialURIIndex: 0
         });
     }
 }

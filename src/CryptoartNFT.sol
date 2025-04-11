@@ -92,7 +92,7 @@ contract CryptoartNFT is
     struct TokenURISet {
         string uriWhenRedeemable;
         string uriWhenNotRedeemable;
-        uint8 redeemableDefaultIndex;
+        uint8 initialURIIndex;
     }
 
     // ==========================================================================
@@ -567,7 +567,7 @@ contract CryptoartNFT is
             data.tokenId,
             tokenUriSet.uriWhenRedeemable,
             tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.redeemableDefaultIndex
+            tokenUriSet.initialURIIndex
         );
         ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _refundExcessPayment(data.tokenPrice);
@@ -603,7 +603,7 @@ contract CryptoartNFT is
                 data.tokenPrice,
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
-                uriParams.redeemableDefaultIndex,
+                uriParams.initialURIIndex,
                 NoncesUpgradeable._useNonce(data.recipient),
                 address(this)
             )
@@ -628,21 +628,21 @@ contract CryptoartNFT is
         uint256 tokenId,
         string calldata uriWhenRedeemable,
         string calldata uriWhenNotRedeemable,
-        uint256 redeemableDefaultIndex
+        uint256 initialURIIndex
     ) private {
         if (bytes(_tokenURIs[tokenId][0]).length != 0) {
             revert Error.Token_URIAlreadySet(tokenId);
         }
-        if (redeemableDefaultIndex >= URIS_PER_TOKEN) {
-            revert Error.Token_InvalidDefaultIndex(redeemableDefaultIndex);
+        if (initialURIIndex >= URIS_PER_TOKEN) {
+            revert Error.Token_InvalidDefaultIndex(initialURIIndex);
         }
 
         _tokenURIs[tokenId][0] = uriWhenRedeemable;
         _tokenURIs[tokenId][1] = uriWhenNotRedeemable;
-        _pinnedURIIndex[tokenId] = redeemableDefaultIndex;
+        _pinnedURIIndex[tokenId] = initialURIIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
-        emit TokenUriPinned(tokenId, redeemableDefaultIndex);
+        emit TokenUriPinned(tokenId, initialURIIndex);
         emit MetadataUpdate(tokenId);
     }
 

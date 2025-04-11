@@ -28,7 +28,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         (uint256 index, string[2] memory uris, bool pinned) = nft.tokenURIs(TOKEN_ID);
         assertEq(uris[0], testTokenURISet.uriWhenRedeemable);
         assertEq(uris[1], testTokenURISet.uriWhenNotRedeemable);
-        assertEq(index, testTokenURISet.redeemableDefaultIndex);
+        assertEq(index, testTokenURISet.initialURIIndex);
         assertTrue(pinned);
 
         // Verify token URI
