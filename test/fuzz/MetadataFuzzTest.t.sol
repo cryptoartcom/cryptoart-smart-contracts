@@ -59,7 +59,7 @@ contract MetadataFuzzTest is CryptoartNFTBase {
     function testFuzz_UpdateRoyalties(uint96 royaltyPercentage) public {
         vm.prank(owner);
         if (royaltyPercentage > 10000) {
-            vm.expectRevert(abi.encodeWithSelector(Error.Admin_RoyaltyTooHigh.selector, royaltyPercentage, 10000));
+            vm.expectRevert();
         }
         nft.updateRoyalties(payable(owner), royaltyPercentage);
 

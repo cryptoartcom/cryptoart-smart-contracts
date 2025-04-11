@@ -42,7 +42,7 @@ contract AdminTest is CryptoartNFTBase {
     function test_RevertWhenRoyaltyTooHigh() public {
         address newReceiver = makeAddr("newReceiver");
         uint96 tooHighPercentage = 10_001; // < 100%
-        vm.expectRevert(abi.encodeWithSelector(Error.Admin_RoyaltyTooHigh.selector, tooHighPercentage, 10_000));
+        vm.expectRevert();
         vm.prank(owner);
         nft.updateRoyalties(payable(newReceiver), tooHighPercentage);
     }

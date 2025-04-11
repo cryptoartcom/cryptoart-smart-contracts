@@ -334,8 +334,8 @@ contract CryptoartNFT is
      */
     function burn(uint256 tokenId) public override whenNotPaused {
         // require sender is owner or approved has been removed as the internal burn function already checks this
-        ERC721BurnableUpgradeable.burn(tokenId);
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
+        ERC721BurnableUpgradeable.burn(tokenId);
         emit Burned(tokenId);
     }
 
@@ -482,12 +482,7 @@ contract CryptoartNFT is
      * @param newPercentage The new default royalty percentage in basis points.
      */
     function updateRoyalties(address payable newReceiver, uint96 newPercentage) external onlyOwner {
-        if (newPercentage > ROYALTY_BASE) {
-            revert Error.Admin_RoyaltyTooHigh(newPercentage, ROYALTY_BASE);
-        }
-
         ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
-
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
 
