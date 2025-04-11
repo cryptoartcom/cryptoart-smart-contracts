@@ -593,10 +593,7 @@ contract CryptoartNFTMockUpgrade is
         }
         _validateMintAuthorization(data, tokenUriSet);
         _setTokenMetadata(
-            data.tokenId,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.initialURIIndex
+            data.tokenId, tokenUriSet.uriWhenRedeemable, tokenUriSet.uriWhenNotRedeemable, tokenUriSet.initialURIIndex
         );
         ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _refundExcessPayment(data.tokenPrice);

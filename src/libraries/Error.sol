@@ -10,7 +10,7 @@ library Error {
     error Token_NoURIFound(uint256 tokenId);
     error Token_IndexOutOfBounds(uint256 tokenId, uint256 index, uint256 maxIndex);
     error Token_InvalidDefaultIndex(uint256 redeemableDefaultIndex);
-    error Token_AlreadyRedeemable(uint256 tokenID); 
+    error Token_AlreadyRedeemable(uint256 tokenID);
 
     // Batch operation errors
     error Batch_EmptyArray();

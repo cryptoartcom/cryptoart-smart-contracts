@@ -7,12 +7,18 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC721Upgradeable, IERC165} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
-import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {ERC721RoyaltyUpgradeable, ERC2981Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
+import {ERC721BurnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
+import {ERC721EnumerableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {
+    ERC721RoyaltyUpgradeable,
+    ERC2981Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransientUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
+import {ReentrancyGuardTransientUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {IERC7160} from "./interfaces/IERC7160.sol";
 import {IStory} from "./interfaces/IStory.sol";
 import {Error} from "./libraries/Error.sol";
@@ -351,10 +357,10 @@ contract CryptoartNFT is
         onlyIfTokenExists(tokenId)
         returns (uint256, string[2] memory, bool)
     {
-        uint256 index = _getTokenURIIndex(tokenId); 
-        string[2] memory uris = _tokenURIs[tokenId]; 
+        uint256 index = _getTokenURIIndex(tokenId);
+        string[2] memory uris = _tokenURIs[tokenId];
         bool isPinned = _hasPinnedTokenURI[tokenId];
-        
+
         return (index, uris, isPinned);
     }
 
@@ -391,7 +397,7 @@ contract CryptoartNFT is
 
     /**
      * @notice Marks a token as redeemable (pins URI index 0) by the token owner. Requires signature.
-     * @dev Requires a valid signature from the authority signer 
+     * @dev Requires a valid signature from the authority signer
      * @param tokenId The token ID to mark as redeemable.
      * @param signature A signature from the authority signer authorizing the unpairing.
      */
@@ -399,7 +405,7 @@ contract CryptoartNFT is
         if (_pinnedURIIndex[tokenId] == 0) {
             revert Error.Token_AlreadyRedeemable(tokenId);
         }
-        
+
         _pinnedURIIndex[tokenId] = 0;
 
         _validateUnpairAuthorization(msg.sender, tokenId, signature);
@@ -562,10 +568,7 @@ contract CryptoartNFT is
     function _coreMint(MintValidationData calldata data, TokenURISet calldata tokenUriSet) private {
         _validateMintAuthorization(data, tokenUriSet);
         _setTokenURIs(
-            data.tokenId,
-            tokenUriSet.uriWhenRedeemable,
-            tokenUriSet.uriWhenNotRedeemable,
-            tokenUriSet.initialURIIndex
+            data.tokenId, tokenUriSet.uriWhenRedeemable, tokenUriSet.uriWhenNotRedeemable, tokenUriSet.initialURIIndex
         );
         ERC721Upgradeable._safeMint(data.recipient, data.tokenId);
         _refundExcessPayment(data.tokenPrice);
@@ -611,11 +614,7 @@ contract CryptoartNFT is
         }
     }
 
-    function _isValidSignature(bytes32 contentHash, bytes calldata signature)
-        private
-        view
-        returns (bool)
-    {
+    function _isValidSignature(bytes32 contentHash, bytes calldata signature) private view returns (bool) {
         address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(contentHash), signature);
         return signer == authoritySigner;
     }
@@ -668,10 +667,10 @@ contract CryptoartNFT is
             revert Error.Auth_UnauthorizedSigner();
         }
     }
-    
-    // @notice Returns the pinned URI index 
+
+    // @notice Returns the pinned URI index
     function _getTokenURIIndex(uint256 tokenId) private view returns (uint256) {
-        return _pinnedURIIndex[tokenId]; 
+        return _pinnedURIIndex[tokenId];
     }
 
     // ==========================================================================
@@ -702,7 +701,7 @@ contract CryptoartNFT is
         if (bytes(uri).length == 0) {
             revert Error.Token_NoURIFound(tokenId);
         }
-        
+
         return string.concat(_baseURI(), uri);
     }
 
@@ -718,7 +717,10 @@ contract CryptoartNFT is
         return ERC721EnumerableUpgradeable._update(to, tokenId, auth);
     }
 
-    function _increaseBalance(address account, uint128 amount) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+    function _increaseBalance(address account, uint128 amount)
+        internal
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+    {
         ERC721EnumerableUpgradeable._increaseBalance(account, amount);
     }
 }
