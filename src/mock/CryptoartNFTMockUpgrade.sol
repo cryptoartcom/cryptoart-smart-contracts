@@ -68,7 +68,7 @@ contract CryptoartNFTMockUpgrade is
 
     // IERC7160
     mapping(uint256 => string[2]) private _tokenURIs;
-    mapping(uint256 => uint256) private _pinnedURIIndices;
+    mapping(uint256 => uint256) private _pinnedURIIndex;
     mapping(uint256 => bool) private _hasPinnedTokenURI;
 
     // ---- NEW VARIABLES FOR MOCK UPGRADE ----
@@ -404,7 +404,7 @@ contract CryptoartNFTMockUpgrade is
             revert Error.Token_IndexOutOfBounds(tokenId, index, _tokenURIs[tokenId].length - 1);
         }
 
-        _pinnedURIIndices[tokenId] = index;
+        _pinnedURIIndex[tokenId] = index;
         _hasPinnedTokenURI[tokenId] = true;
 
         emit TokenUriPinned(tokenId, index);
@@ -418,7 +418,7 @@ contract CryptoartNFTMockUpgrade is
      * @param signature A signature from the authority signer authorizing the unpairing.
      */
     function markAsRedeemable(uint256 tokenId, bytes calldata signature) external onlyTokenOwner(tokenId) {
-        _pinnedURIIndices[tokenId] = 0;
+        _pinnedURIIndex[tokenId] = 0;
         _hasPinnedTokenURI[tokenId] = true;
 
         _validateUnpairAuthorization(msg.sender, tokenId, signature);
@@ -665,7 +665,7 @@ contract CryptoartNFTMockUpgrade is
 
         _tokenURIs[tokenId][0] = uriWhenRedeemable;
         _tokenURIs[tokenId][1] = uriWhenNotRedeemable;
-        _pinnedURIIndices[tokenId] = redeemableDefaultIndex;
+        _pinnedURIIndex[tokenId] = redeemableDefaultIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
         emit TokenUriPinned(tokenId, redeemableDefaultIndex);
@@ -699,7 +699,7 @@ contract CryptoartNFTMockUpgrade is
 
     // @notice Returns the pinned URI index or the last token URI index (length - 1).
     function _getTokenURIIndex(uint256 tokenId) private view returns (uint256 tokenURIIndex) {
-        tokenURIIndex = _hasPinnedTokenURI[tokenId] ? _pinnedURIIndices[tokenId] : _tokenURIs[tokenId].length - 1;
+        tokenURIIndex = _hasPinnedTokenURI[tokenId] ? _pinnedURIIndex[tokenId] : _tokenURIs[tokenId].length - 1;
     }
 
     // ==========================================================================
