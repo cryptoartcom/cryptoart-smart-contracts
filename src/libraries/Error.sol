@@ -26,7 +26,8 @@ library Error {
     // Auth errors
     error Auth_UnauthorizedSigner();
     error Auth_Unauthorized(address msgSender);
-
+    error Auth_UnpinningNotSupported();
+    
     // Admin errors
     error Admin_RoyaltyTooHigh(uint256 percentage, uint256 maxPercentage);
     error Admin_NoWithdrawableFunds();

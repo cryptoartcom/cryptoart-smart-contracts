@@ -421,7 +421,7 @@ contract CryptoartNFT is
 
     // @inheritdoc IERC721MultiMetadata.unpinTokenURI
     function unpinTokenURI(uint256) external pure {
-        return;
+        revert Error.Auth_UnpinningNotSupported();
     }
 
     // ==========================================================================
