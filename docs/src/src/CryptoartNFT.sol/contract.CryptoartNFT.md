@@ -1,5 +1,5 @@
 # CryptoartNFT
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/23bd56c7bfc1d47e63ea4a8e62ed270462a1f7c2/src/CryptoartNFT.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/d424b74db29eb911c19f28659b6dfae154779ed8/src/CryptoartNFT.sol)
 
 **Inherits:**
 [IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardTransientUpgradeable

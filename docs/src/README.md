@@ -317,6 +317,11 @@ forge build
 # Run all tests
 forge test
 
+# Or to run only the tests in each folder:
+forge test --match-path "test/fuzz/*"
+forge test --match-path "test/integration/*"
+forge test --match-path "test/unit/*"
+
 # Run tests with gas reporting
 forge test --gas-report
 
@@ -324,11 +329,12 @@ forge test --gas-report
 forge test -vvv
 
 # Check test coverage
-forge coverage
+forge coverage --ir-minimum
 
 # To run the upgrade test, clean the cache first and run with the `--ffi` flag
 forge cache clean
 forge clean
+forge build
 forge test --match-contract UpgradesTest --ffi
 ```
 
