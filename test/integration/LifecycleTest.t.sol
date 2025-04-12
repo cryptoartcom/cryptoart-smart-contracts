@@ -40,6 +40,11 @@ contract LifecycleTest is CryptoartNFTBase {
         bytes memory redeemSignature = signingUtils.createRedeemableSignature(
             user2, TOKEN_ID, nft.nonces(user2), address(nft), authoritySignerPrivateKey
         );
+
+        vm.prank(owner);
+        uint256 nonRedeemableURI = 1;
+        nft.pinTokenURI(TOKEN_ID, nonRedeemableURI);
+
         vm.prank(user2);
         nft.markAsRedeemable(TOKEN_ID, redeemSignature);
 

@@ -109,6 +109,10 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         bytes memory signature =
             createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), address(nft), authoritySignerPrivateKey);
 
+        vm.prank(owner);
+        uint256 nonRedeemableURI = 1;
+        nft.pinTokenURI(TOKEN_ID, nonRedeemableURI);
+
         // Emit events and check asserts
         vm.expectEmit(true, false, false, true);
         emit IERC7160.TokenUriPinned(TOKEN_ID, 0);
@@ -135,6 +139,10 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
         bytes memory signature =
             createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), address(nft), badPrivateKey);
+
+        vm.prank(owner);
+        uint256 nonRedeemableURI = 1;
+        nft.pinTokenURI(TOKEN_ID, nonRedeemableURI);
 
         vm.prank(user1);
         vm.expectRevert(Error.Auth_UnauthorizedSigner.selector);
