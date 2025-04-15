@@ -118,7 +118,7 @@ The system revolves around the `CryptoartNFT.sol` contract, which inherits these
 *   **OwnableUpgradeable:** Access control for administrative functions. (Openzeppelin)
 *   **PausableUpgradeable:** Emergency stop mechanism. (Openzeppelin)
 *   **NoncesUpgradeable:** Replay protection for signatures. (Openzeppelin)
-*   **ReentrancyGuardUpgradeable:** Protection against reentrancy attacks on specific functions. (Openzeppelin)
+*   **ReentrancyGuardTransientUpgradeable:** Protection against reentrancy attacks on specific functions. (Openzeppelin)
 
 ### Signature-Based Voucher Minting
 
