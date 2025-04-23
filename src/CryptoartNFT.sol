@@ -11,12 +11,13 @@ import {ERC721BurnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {ERC721PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
 import {
     ERC721RoyaltyUpgradeable,
     ERC2981Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardTransientUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {IERC7160} from "./interfaces/IERC7160.sol";
@@ -36,8 +37,8 @@ contract CryptoartNFT is
     ERC721BurnableUpgradeable,
     ERC721RoyaltyUpgradeable,
     ERC721EnumerableUpgradeable,
+    ERC721PausableUpgradeable,
     OwnableUpgradeable,
-    PausableUpgradeable,
     NoncesUpgradeable,
     IStory,
     ReentrancyGuardTransientUpgradeable
@@ -168,8 +169,8 @@ contract CryptoartNFT is
         __ERC721Burnable_init();
         __ERC721Royalty_init();
         __ERC721Enumerable_init();
+        __ERC721Pausable_init();
         __Ownable_init(contractOwner);
-        __Pausable_init();
         __Nonces_init();
         __ReentrancyGuardTransient_init();
 
@@ -375,6 +376,7 @@ contract CryptoartNFT is
      */
     function updateMetadata(uint256 tokenId, string calldata newRedeemableURI, string calldata newNotRedeemableURI)
         external
+        whenNotPaused
         onlyOwner
         onlyIfTokenExists(tokenId)
     {
@@ -386,7 +388,7 @@ contract CryptoartNFT is
     // @inheritdoc IERC721MultiMetadata.pinTokenURI
     // pin the index-0 URI of the token, which has redeemable attribute on true
     // pin the index-1 URI of the token, which has redeemable attribute on false
-    function pinTokenURI(uint256 tokenId, uint256 index) external onlyIfTokenExists(tokenId) onlyOwner {
+    function pinTokenURI(uint256 tokenId, uint256 index) external whenNotPaused onlyIfTokenExists(tokenId) onlyOwner {
         if (index >= _tokenURIs[tokenId].length) {
             revert Error.Token_IndexOutOfBounds(tokenId, index, _tokenURIs[tokenId].length - 1);
         }
@@ -431,13 +433,14 @@ contract CryptoartNFT is
     // ==========================================================================
 
     /// @inheritdoc IStory
-    function addCollectionStory(string calldata creatorName, string calldata story) external onlyOwner {
+    function addCollectionStory(string calldata creatorName, string calldata story) external whenNotPaused onlyOwner {
         emit CollectionStory(msg.sender, creatorName, story);
     }
 
     /// @inheritdoc IStory
     function addCreatorStory(uint256 tokenId, string calldata creatorName, string calldata story)
         external
+        whenNotPaused
         onlyOwner()
     {
         emit CreatorStory(tokenId, msg.sender, creatorName, story);
@@ -446,6 +449,7 @@ contract CryptoartNFT is
     /// @inheritdoc IStory
     function addStory(uint256 tokenId, string calldata collectorName, string calldata story)
         external
+        whenNotPaused
         onlyTokenOwner(tokenId)
     {
         emit Story(tokenId, msg.sender, collectorName, story);
@@ -458,7 +462,7 @@ contract CryptoartNFT is
      * @param storyId An identifier for the specific story (derived off-chain from event logs).
      * @param visible The desired visibility state.
      */
-    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external {
+    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external whenNotPaused {
         if (ownerOf(tokenId) != msg.sender && msg.sender != owner()) {
             revert Error.Auth_Unauthorized(msg.sender);
         }
@@ -725,10 +729,10 @@ contract CryptoartNFT is
 
     function _update(address to, uint256 tokenId, address auth)
         internal
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721PausableUpgradeable)
         returns (address)
     {
-        return ERC721EnumerableUpgradeable._update(to, tokenId, auth);
+        return super._update(to, tokenId, auth);
     }
 
     function _increaseBalance(address account, uint128 amount)
