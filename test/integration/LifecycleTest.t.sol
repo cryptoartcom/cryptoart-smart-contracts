@@ -17,11 +17,11 @@ contract LifecycleTest is CryptoartNFTBase {
         CryptoartNFT.TokenURISet memory initialTokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         testAssertions.assertTokenURIData(nft, TOKEN_ID, initialTokenURISet, BASE_URI);
 
-        // Step 2: user adds a creator story
+        // Step 2: owner adds a creator story
         string memory creatorStory = "Some NFT creator story about the the art";
-        vm.prank(user1);
+        vm.prank(owner);
         vm.expectEmit();
-        emit IStory.CreatorStory(TOKEN_ID, user1, user1.toHexString(), creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, owner, owner.toHexString(), creatorStory);
         nft.addCreatorStory(TOKEN_ID, "", creatorStory);
 
         // user adds a story

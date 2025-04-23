@@ -29,17 +29,17 @@ contract StoryFeaturesTest is CryptoartNFTBase {
     function test_addCreatorStory() public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         string memory creatorStory = "Some cool creator story";
-        vm.prank(user1);
+        vm.prank(owner);
         vm.expectEmit(true, true, false, true);
-        emit IStory.CreatorStory(TOKEN_ID, user1, user1.toHexString(), creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, owner, owner.toHexString(), creatorStory);
         nft.addCreatorStory(TOKEN_ID, "", creatorStory);
     }
 
-    function test_RevertaddCreatoryStoryIfNotTokenOwner() public {
+    function test_RevertaddCreatoryStoryIfNotOwner() public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         string memory creatorStory = "Some cool creator story";
-        vm.prank(user2);
-        vm.expectRevert(abi.encodeWithSelector(Error.Token_NotOwned.selector, TOKEN_ID, user2));
+        vm.prank(user1);
+        vm.expectRevert();
         nft.addCreatorStory(TOKEN_ID, "", creatorStory);
     }
 

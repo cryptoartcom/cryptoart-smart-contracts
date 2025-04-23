@@ -436,7 +436,7 @@ contract CryptoartNFT is
     /// @inheritdoc IStory
     function addCreatorStory(uint256 tokenId, string calldata, /*creatorName*/ string calldata story)
         external
-        onlyTokenOwner(tokenId)
+        onlyOwner()
     {
         emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
     }
