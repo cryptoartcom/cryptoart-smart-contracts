@@ -131,7 +131,9 @@ contract CryptoartNFT is
     event Burned(uint256 indexed tokenId);
     /// @notice Emitted when a token is minted by trading in other tokens.
     event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
-
+    /// @notice Emitted when a user increments their nonce for the purpose of invalidating a signature
+    event NonceIncremented(address user, uint256 nextAvailableNonce);
+    
     // ==========================================================================
     // Initialization
     // ==========================================================================
@@ -463,6 +465,18 @@ contract CryptoartNFT is
         emit ToggleStoryVisibility(tokenId, storyId, visible);
     }
 
+    // ==========================================================================
+    // Other External Functions
+    // ==========================================================================
+  
+    /**
+     * @notice Allows a user to increment their nonce, invalidating any previous off-chain signatures
+     */
+    function incrementNonce() external {
+        NonceUpgradeable._useNonce(msg.sender);
+        emit NonceIncremented(msg.sender, nonces(msg.sender));
+    }
+    
     // ==========================================================================
     // Admin Controls
     // ==========================================================================
