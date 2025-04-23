@@ -417,7 +417,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
-    function hasPinnedTokenURI(uint256 tokenId) external view returns (bool) {
+    function hasPinnedTokenURI(uint256 tokenId) external view onlyIfTokenExists(tokenId) returns (bool) {
         return _hasPinnedTokenURI[tokenId];
     }
 
