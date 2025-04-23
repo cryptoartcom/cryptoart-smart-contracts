@@ -386,7 +386,7 @@ contract CryptoartNFT is
     // @inheritdoc IERC721MultiMetadata.pinTokenURI
     // pin the index-0 URI of the token, which has redeemable attribute on true
     // pin the index-1 URI of the token, which has redeemable attribute on false
-    function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner {
+    function pinTokenURI(uint256 tokenId, uint256 index) external onlyIfTokenExists(tokenId) onlyOwner {
         if (index >= _tokenURIs[tokenId].length) {
             revert Error.Token_IndexOutOfBounds(tokenId, index, _tokenURIs[tokenId].length - 1);
         }
