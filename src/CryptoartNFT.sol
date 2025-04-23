@@ -473,7 +473,7 @@ contract CryptoartNFT is
      * @notice Allows a user to increment their nonce, invalidating any previous off-chain signatures
      */
     function incrementNonce() external {
-        NonceUpgradeable._useNonce(msg.sender);
+        NoncesUpgradeable._useNonce(msg.sender);
         emit NonceIncremented(msg.sender, nonces(msg.sender));
     }
     
