@@ -79,8 +79,8 @@ contract UpgradesTest is CryptoartNFTBase {
             authoritySignerPrivateKey,
             tokenURISet,
             TOKEN_PRICE,
-            deadline,
             upgradeInstance.nonces(user1),
+            deadline,
             address(upgradeInstance)
         );
         CryptoartNFTMockUpgrade.MintValidationData memory data = CryptoartNFTMockUpgrade.MintValidationData({
@@ -88,6 +88,7 @@ contract UpgradesTest is CryptoartNFTBase {
             tokenId: TOKEN_ID,
             tokenPrice: TOKEN_PRICE,
             mintType: CryptoartNFTMockUpgrade.MintType.OpenMint,
+            deadline: deadline,
             signature: signature
         });
 

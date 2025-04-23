@@ -35,8 +35,8 @@ contract MockSigningUtils is Test {
                 tokenURISet.uriWhenNotRedeemable,
                 tokenURISet.initialURIIndex,
                 nonce,
-                deadline,
                 block.chainid,
+                deadline,
                 contractAddress
             )
         );
