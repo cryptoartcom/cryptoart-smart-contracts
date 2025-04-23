@@ -15,8 +15,8 @@ contract StoryFeaturesTest is CryptoartNFTBase {
         string memory collectionStory = "Some cool story for the NFT collection";
         vm.prank(owner);
         vm.expectEmit(true, true, false, true);
-        emit IStory.CollectionStory(owner, owner.toHexString(), collectionStory);
-        nft.addCollectionStory("", collectionStory);
+        emit IStory.CollectionStory(owner, "someCreatorName", collectionStory);
+        nft.addCollectionStory("someCreatorName", collectionStory);
     }
 
     function test_RevertaddCollectionStoryIfNonOwner() public {
@@ -31,8 +31,8 @@ contract StoryFeaturesTest is CryptoartNFTBase {
         string memory creatorStory = "Some cool creator story";
         vm.prank(owner);
         vm.expectEmit(true, true, false, true);
-        emit IStory.CreatorStory(TOKEN_ID, owner, owner.toHexString(), creatorStory);
-        nft.addCreatorStory(TOKEN_ID, "", creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, owner, "someCreatorName", creatorStory);
+        nft.addCreatorStory(TOKEN_ID, "someCreatorName", creatorStory);
     }
 
     function test_RevertaddCreatoryStoryIfNotOwner() public {
@@ -47,8 +47,8 @@ contract StoryFeaturesTest is CryptoartNFTBase {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         vm.prank(user1);
         vm.expectEmit(true, true, false, true);
-        emit IStory.Story(TOKEN_ID, user1, user1.toHexString(), "Story");
-        nft.addStory(TOKEN_ID, "", "Story");
+        emit IStory.Story(TOKEN_ID, user1, "someCreatorName", "Story");
+        nft.addStory(TOKEN_ID, "someCreatorName", "Story");
     }
 
     function test_RevertaddStoryIfNotTokenOwner() public {

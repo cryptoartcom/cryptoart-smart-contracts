@@ -429,24 +429,24 @@ contract CryptoartNFT is
     // ==========================================================================
 
     /// @inheritdoc IStory
-    function addCollectionStory(string calldata, /*creatorName*/ string calldata story) external onlyOwner {
-        emit CollectionStory(msg.sender, msg.sender.toHexString(), story);
+    function addCollectionStory(string calldata creatorName, string calldata story) external onlyOwner {
+        emit CollectionStory(msg.sender, creatorName, story);
     }
 
     /// @inheritdoc IStory
-    function addCreatorStory(uint256 tokenId, string calldata, /*creatorName*/ string calldata story)
+    function addCreatorStory(uint256 tokenId, string calldata creatorName, string calldata story)
         external
         onlyOwner()
     {
-        emit CreatorStory(tokenId, msg.sender, msg.sender.toHexString(), story);
+        emit CreatorStory(tokenId, msg.sender, creatorName, story);
     }
 
     /// @inheritdoc IStory
-    function addStory(uint256 tokenId, string calldata, /*collectorName*/ string calldata story)
+    function addStory(uint256 tokenId, string calldata collectorName, string calldata story)
         external
         onlyTokenOwner(tokenId)
     {
-        emit Story(tokenId, msg.sender, msg.sender.toHexString(), story);
+        emit Story(tokenId, msg.sender, collectorName, story);
     }
 
     /**

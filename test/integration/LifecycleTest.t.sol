@@ -21,15 +21,15 @@ contract LifecycleTest is CryptoartNFTBase {
         string memory creatorStory = "Some NFT creator story about the the art";
         vm.prank(owner);
         vm.expectEmit();
-        emit IStory.CreatorStory(TOKEN_ID, owner, owner.toHexString(), creatorStory);
-        nft.addCreatorStory(TOKEN_ID, "", creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, owner, "ownerCreatorStoryName", creatorStory);
+        nft.addCreatorStory(TOKEN_ID, "ownerCreatorStoryName", creatorStory);
 
         // user adds a story
         string memory story = "Some cool art story";
         vm.prank(user1);
         vm.expectEmit();
-        emit IStory.Story(TOKEN_ID, user1, user1.toHexString(), story);
-        nft.addStory(TOKEN_ID, "", story);
+        emit IStory.Story(TOKEN_ID, user1, "someCoolCollectorName", story);
+        nft.addStory(TOKEN_ID, "someCoolCollectorName", story);
 
         // Step 3: Transfer NFT to another user
         vm.prank(user1);
