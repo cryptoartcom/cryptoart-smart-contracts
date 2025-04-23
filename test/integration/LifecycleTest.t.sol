@@ -37,8 +37,9 @@ contract LifecycleTest is CryptoartNFTBase {
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user2);
 
         // Step 4: User2 marks as redeemable
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
         bytes memory redeemSignature = signingUtils.createRedeemableSignature(
-            user2, TOKEN_ID, nft.nonces(user2), address(nft), authoritySignerPrivateKey
+            user2, TOKEN_ID, nft.nonces(user2), deadline, address(nft), authoritySignerPrivateKey
         );
 
         vm.prank(owner);
@@ -46,7 +47,7 @@ contract LifecycleTest is CryptoartNFTBase {
         nft.pinTokenURI(TOKEN_ID, nonRedeemableURI);
 
         vm.prank(user2);
-        nft.markAsRedeemable(TOKEN_ID, redeemSignature);
+        nft.markAsRedeemable(TOKEN_ID, redeemSignature, deadline);
 
         // Verify token URI is the redeemable version
         string memory expectedRedeemableURI = string.concat(BASE_URI, initialTokenURISet.uriWhenRedeemable);

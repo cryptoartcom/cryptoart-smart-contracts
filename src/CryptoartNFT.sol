@@ -92,6 +92,7 @@ contract CryptoartNFT is
         uint256 tokenId;
         uint256 tokenPrice;
         MintType mintType;
+        uint256 deadline;
         bytes signature;
     }
 
@@ -405,14 +406,14 @@ contract CryptoartNFT is
      * @param tokenId The token ID to mark as redeemable.
      * @param signature A signature from the authority signer authorizing the unpairing.
      */
-    function markAsRedeemable(uint256 tokenId, bytes calldata signature) external onlyTokenOwner(tokenId) {
+    function markAsRedeemable(uint256 tokenId, bytes calldata signature, uint256 deadline) external onlyTokenOwner(tokenId) {
         if (_pinnedURIIndex[tokenId] == 0) {
             revert Error.Token_AlreadyRedeemable(tokenId);
         }
 
         _pinnedURIIndex[tokenId] = 0;
 
-        _validateUnpairAuthorization(msg.sender, tokenId, signature);
+        _validateUnpairAuthorization(msg.sender, tokenId, signature, deadline);
 
         emit TokenUriPinned(tokenId, 0);
         emit MetadataUpdate(tokenId);
@@ -614,6 +615,10 @@ contract CryptoartNFT is
     }
 
     function _validateSignature(MintValidationData calldata data, TokenURISet calldata uriParams) private {
+        if (block.timestamp > data.deadline) {
+            revert Error.Auth_SignatureExpired(data.deadline, block.timestamp);
+        }
+        
         bytes32 contentHash = keccak256(
             abi.encode(
                 data.recipient,
@@ -625,6 +630,7 @@ contract CryptoartNFT is
                 uriParams.initialURIIndex,
                 NoncesUpgradeable._useNonce(data.recipient),
                 block.chainid,
+                data.deadline,
                 address(this)
             )
         );
@@ -680,8 +686,12 @@ contract CryptoartNFT is
     // Internal Metadata Functions
     // ==========================================================================
 
-    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) private {
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, NoncesUpgradeable._useNonce(minter), block.chainid, address(this)));
+    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature, uint256 deadline) private {
+        if (block.timestamp > deadline) {
+            revert Error.Auth_SignatureExpired(deadline, block.timestamp);
+        }
+        
+        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, NoncesUpgradeable._useNonce(minter), block.chainid, deadline, address(this)));
         if (!_isValidSignature(contentHash, signature)) {
             revert Error.Auth_UnauthorizedSigner();
         }

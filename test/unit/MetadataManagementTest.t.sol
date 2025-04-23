@@ -102,12 +102,15 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
 
     function test_MarkAsRedeemable() public {
         // Create data
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
+        
         bytes memory signature =
-            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), address(nft), authoritySignerPrivateKey);
+            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey);
 
         vm.prank(owner);
         uint256 nonRedeemableURI = 1;
@@ -119,7 +122,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         vm.expectEmit();
         emit IERC4906.MetadataUpdate(TOKEN_ID);
         vm.prank(user1);
-        nft.markAsRedeemable(TOKEN_ID, signature);
+        nft.markAsRedeemable(TOKEN_ID, signature, deadline);
         (uint256 index,, bool pinned) = nft.tokenURIs(TOKEN_ID);
         assertEq(index, 0);
         assertTrue(pinned);
@@ -127,18 +130,21 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         // Revert if not token owner
         vm.prank(user2);
         vm.expectRevert();
-        nft.markAsRedeemable(TOKEN_ID, signature);
+        nft.markAsRedeemable(TOKEN_ID, signature, deadline);
     }
 
     function test_RevertMarkAsRedeemableWithInvalidSignature() public {
         // Create data
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
         uint256 badPrivateKey = 0xB22222;
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
+        
         bytes memory signature =
-            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), address(nft), badPrivateKey);
+            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), badPrivateKey);
 
         vm.prank(owner);
         uint256 nonRedeemableURI = 1;
@@ -146,7 +152,7 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
 
         vm.prank(user1);
         vm.expectRevert(Error.Auth_UnauthorizedSigner.selector);
-        nft.markAsRedeemable(TOKEN_ID, signature);
+        nft.markAsRedeemable(TOKEN_ID, signature, deadline);
     }
 
     function test_TokenMetadataAfterTransfer() public {
@@ -192,10 +198,12 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         nft.updateMetadata(TOKEN_ID, "new-redeemable.json", "new-not-redeemable.json");
 
         // Test markAsRedeemable reverts for burned token (even with valid signature)
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
         bytes memory signature =
-            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), address(nft), authoritySignerPrivateKey);
+            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey);
+            
         vm.prank(user1);
         vm.expectRevert(); // Since the token doesn't exist, the onlyTokenOwner modifier will revert first
-        nft.markAsRedeemable(TOKEN_ID, signature);
+        nft.markAsRedeemable(TOKEN_ID, signature, deadline);
     }
 }

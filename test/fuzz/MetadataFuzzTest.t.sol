@@ -38,14 +38,15 @@ contract MetadataFuzzTest is CryptoartNFTBase {
 
     function testFuzz_MarkAsRedeemable(bytes calldata signatureFuzz) public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
 
         // Use a valid signature but allow fuzzing to test invalid ones
         bytes memory validSignature = signingUtils.createRedeemableSignature(
-            user1, TOKEN_ID, nft.nonces(user1), address(nft), authoritySignerPrivateKey
+            user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey
         );
 
         vm.prank(user1);
-        try nft.markAsRedeemable(TOKEN_ID, signatureFuzz) {
+        try nft.markAsRedeemable(TOKEN_ID, signatureFuzz, deadline) {
             // If it succeeds with a fuzzed signature, it should only be the valid one
             assertEq(keccak256(signatureFuzz), keccak256(validSignature), "Only valid signature should succeed");
             (uint256 pinnedIndex,, bool pinned) = nft.tokenURIs(TOKEN_ID);

@@ -23,6 +23,7 @@ contract SigningUtils is Test {
         CryptoartNFT.TokenURISet memory tokenURISet,
         uint256 tokenPrice,
         uint256 nonce,
+        uint256 deadline,
         address contractAddress
     ) public view returns (bytes memory) {
         bytes32 contentHash = keccak256(
@@ -36,6 +37,7 @@ contract SigningUtils is Test {
                 tokenURISet.initialURIIndex,
                 nonce,
                 block.chainid,
+                deadline,
                 contractAddress
             )
         );
@@ -46,10 +48,11 @@ contract SigningUtils is Test {
         address user,
         uint256 tokenId,
         uint256 nonce,
+        uint256 deadline,
         address contractAddress,
         uint256 signerPrivateKey
     ) public view returns (bytes memory) {
-        bytes32 contentHash = keccak256(abi.encode(user, tokenId, nonce, block.chainid, contractAddress));
+        bytes32 contentHash = keccak256(abi.encode(user, tokenId, nonce, block.chainid, deadline, contractAddress));
         return _generateSignatureFrom(contentHash, signerPrivateKey);
     }
 

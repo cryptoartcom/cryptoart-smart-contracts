@@ -97,6 +97,8 @@ contract MintFuzzTest is CryptoartNFTBase {
     }
 
     function testFuzz_MintWithReentrancy() public {
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
+        
         // Create the attacker contract
         ReentrancyAttacker attacker = new ReentrancyAttacker(address(nft));
         vm.deal(address(attacker), 3 ether);
@@ -123,6 +125,7 @@ contract MintFuzzTest is CryptoartNFTBase {
             tokenURISet,
             TOKEN_PRICE,
             nft.nonces(address(attacker)),
+            deadline,
             address(nft)
         );
 
@@ -131,6 +134,7 @@ contract MintFuzzTest is CryptoartNFTBase {
             tokenId: newTokenId,
             tokenPrice: TOKEN_PRICE,
             mintType: CryptoartNFT.MintType.Burn,
+            deadline: deadline,
             signature: signature
         });
 

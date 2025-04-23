@@ -22,6 +22,7 @@ contract MockSigningUtils is Test {
         CryptoartNFTMockUpgrade.TokenURISet memory tokenURISet,
         uint256 tokenPrice,
         uint256 nonce,
+        uint256 deadline,
         address contractAddress
     ) public view returns (bytes memory) {
         bytes32 contentHash = keccak256(
@@ -34,6 +35,7 @@ contract MockSigningUtils is Test {
                 tokenURISet.uriWhenNotRedeemable,
                 tokenURISet.initialURIIndex,
                 nonce,
+                deadline,
                 block.chainid,
                 contractAddress
             )

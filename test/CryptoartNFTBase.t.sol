@@ -31,7 +31,8 @@ contract CryptoartNFTBase is Test {
     uint256 public constant MAX_SUPPLY = 10001;
     uint256 public constant TOKEN_PRICE = 0.1 ether;
     uint256 public constant TOKEN_ID = 1;
-
+    uint256 public constant DEFAULT_EXPIRATION = 1 days;
+    
     // Helper contracts
     SigningUtils public signingUtils;
     TestAssertions public testAssertions;
@@ -67,15 +68,19 @@ contract CryptoartNFTBase is Test {
         view
         returns (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet)
     {
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
+        
         tokenURISet = signingUtils.createTokenURISet(tokenId);
         bytes memory signature = signingUtils.createMintSignature(
-            user, tokenId, mintType, signerPrivateKey, tokenURISet, tokenPrice, nft.nonces(user), address(nft)
+            user, tokenId, mintType, signerPrivateKey, tokenURISet, tokenPrice, nft.nonces(user), deadline, address(nft)
         );
+        
         data = CryptoartNFT.MintValidationData({
             recipient: user,
             tokenId: tokenId,
             tokenPrice: tokenPrice,
             mintType: mintType,
+            deadline: deadline,
             signature: signature
         });
     }

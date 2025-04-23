@@ -71,6 +71,7 @@ contract UpgradesTest is CryptoartNFTBase {
         // Test new Minting Pause logic in mint function
         MockSigningUtils mockSigningUtils = new MockSigningUtils();
         CryptoartNFTMockUpgrade.TokenURISet memory tokenURISet = mockSigningUtils.createTokenURISet(TOKEN_ID);
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
 
         bytes memory signature = mockSigningUtils.createMintSignature(
             user1,
@@ -78,6 +79,7 @@ contract UpgradesTest is CryptoartNFTBase {
             authoritySignerPrivateKey,
             tokenURISet,
             TOKEN_PRICE,
+            deadline,
             upgradeInstance.nonces(user1),
             address(upgradeInstance)
         );

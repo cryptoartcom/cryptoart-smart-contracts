@@ -38,8 +38,9 @@ contract FullWorkFlow is CryptoartNFTBase {
         assertTrue(pinned);
 
         // --- Unpair Workflow ---
+        uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
         bytes memory unpairSignature = signingUtils.createRedeemableSignature(
-            user1, tokenId, nft.nonces(user1), address(nft), authoritySignerPrivateKey
+            user1, tokenId, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey
         );
 
         vm.prank(owner);
@@ -47,7 +48,7 @@ contract FullWorkFlow is CryptoartNFTBase {
         nft.pinTokenURI(tokenId, nonRedeemableURI);
 
         vm.prank(user1);
-        nft.markAsRedeemable(tokenId, unpairSignature);
+        nft.markAsRedeemable(tokenId, unpairSignature, deadline);
 
         // Verify token URI reflects redeemable state
         string memory expectedRedeemableURI = string.concat(BASE_URI, newRedeemableURI);
