@@ -23,7 +23,7 @@ contract MockSigningUtils is Test {
         uint256 tokenPrice,
         uint256 nonce,
         address contractAddress
-    ) public pure returns (bytes memory) {
+    ) public view returns (bytes memory) {
         bytes32 contentHash = keccak256(
             abi.encode(
                 user,
@@ -34,6 +34,7 @@ contract MockSigningUtils is Test {
                 tokenURISet.uriWhenNotRedeemable,
                 tokenURISet.initialURIIndex,
                 nonce,
+                block.chainid,
                 contractAddress
             )
         );
