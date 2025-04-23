@@ -27,6 +27,7 @@ library Error {
     error Auth_UnauthorizedSigner();
     error Auth_Unauthorized(address msgSender);
     error Auth_UnpinningNotSupported();
+    error Auth_SignatureExpired(uint256 deadline, uint256 blockTimestamp);
     
     // Admin errors
     error Admin_RoyaltyTooHigh(uint256 percentage, uint256 maxPercentage);
