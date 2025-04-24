@@ -360,7 +360,13 @@ contract CryptoartNFT is
         // require sender is owner or approved has been removed as the internal burn function already checks this
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         ERC721BurnableUpgradeable.burn(tokenId);
+        
+        delete _tokenURIs[tokenId];
+        delete _pinnedURIIndex[tokenId];
+        delete _hasPinnedTokenURI[tokenId];
+        
         emit Burned(tokenId);
+        emit TokenUriUnpinned(tokenId);
     }
 
     // ==========================================================================
