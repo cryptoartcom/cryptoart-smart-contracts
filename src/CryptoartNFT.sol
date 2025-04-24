@@ -51,7 +51,6 @@ contract CryptoartNFT is
     // ==========================================================================
 
     uint256 private constant MAX_BATCH_SIZE = 50;
-    uint256 private constant ROYALTY_BASE = 10_000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     /// @notice Default royalty percentage basis points (2.5%).
     uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250;
     uint256 private constant MAX_ROYALTY_PERCENTAGE = 1000; // 10% (1000 basis points)
