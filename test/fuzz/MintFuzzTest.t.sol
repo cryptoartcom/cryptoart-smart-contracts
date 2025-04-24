@@ -53,43 +53,46 @@ contract MintFuzzTest is CryptoartNFTBase {
         mintMethod = uint8(bound(mintMethod, 0, 3)); // only four mint methods
         uint256 tokenId = 999;
 
-        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey);
-
         vm.startPrank(user1);
 
         // switch b/w different mint methods
         if (mintMethod == 0) {
+            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey);
             nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
         } else if (mintMethod == 1) {
+            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey);
             nft.claim{value: TOKEN_PRICE}(data, tokenURISet);
         } else if (mintMethod == 2) {
             // mint tokens for trading first
             uint256[] memory tradedTokens = new uint256[](1);
             uint256 tradeTokenId = 888;
 
-            (data, tokenURISet) = createMintData(
+            (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory mintTokenURISet) = createMintData(
                 user1, tradeTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey
             );
-            nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
+            nft.mint{value: TOKEN_PRICE}(mintData, mintTokenURISet);
+            
+            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey);
 
             tradedTokens[0] = tradeTokenId;
-            (data, tokenURISet) =
-                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
             nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokens, data, tokenURISet);
         } else {
             // test burn and mint
             uint256[] memory burnTokens = new uint256[](1);
             uint256 burnTokenId = 777;
 
-            (data, tokenURISet) = createMintData(
+            (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory mintTokenURISet) = createMintData(
                 user1, burnTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey
             );
-            nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
+            nft.mint{value: TOKEN_PRICE}(mintData, mintTokenURISet);
 
+            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey);
+                
             burnTokens[0] = burnTokenId;
-            (data, tokenURISet) =
-                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType.Burn, authoritySignerPrivateKey);
             nft.burnAndMint{value: TOKEN_PRICE}(burnTokens, 1, data, tokenURISet);
         }
 

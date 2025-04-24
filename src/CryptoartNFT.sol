@@ -82,8 +82,8 @@ contract CryptoartNFT is
     /// @notice Type of mint operation being performed.
     enum MintType {
         OpenMint,
-        Whitelist,
         Claim,
+        Trade,
         Burn
     }
 
@@ -236,6 +236,9 @@ contract CryptoartNFT is
         nonReentrant
         whenNotPaused
     {
+        if (data.mintType != MintType.OpenMint) {
+            revert Error.Auth_InvalidMintType();
+        }
         _coreMint(data, tokenUriSet);
         emit Minted(data.recipient, data.tokenId);
     }
@@ -252,6 +255,9 @@ contract CryptoartNFT is
         nonReentrant
         whenNotPaused
     {
+        if (data.mintType != MintType.Claim) {
+            revert Error.Auth_InvalidMintType();
+        }
         _coreMint(data, tokenUriSet);
         emit Claimed(data.tokenId);
     }
@@ -268,6 +274,9 @@ contract CryptoartNFT is
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
     ) external payable nonReentrant whenNotPaused validBatchSize(tradedTokenIds) {
+        if (data.mintType != MintType.Trade) {
+            revert Error.Auth_InvalidMintType();
+        }
         _batchTransferToNftReceiver(tradedTokenIds);
         _coreMint(data, tokenUriSet);
         emit MintedByTrading(data.tokenId, tradedTokenIds);
@@ -301,6 +310,9 @@ contract CryptoartNFT is
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
     ) external payable nonReentrant whenNotPaused {
+        if (data.mintType != MintType.Burn) {
+            revert Error.Auth_InvalidMintType();
+        }
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
