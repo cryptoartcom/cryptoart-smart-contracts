@@ -371,13 +371,11 @@ contract CryptoartNFT is
         view
         override
         onlyIfTokenExists(tokenId)
-        returns (uint256, string[2] memory, bool)
+        returns (uint256 index, string[2] memory uris, bool isPinned)
     {
-        uint256 index = _getTokenURIIndex(tokenId);
-        string[2] memory uris = _tokenURIs[tokenId];
-        bool isPinned = _hasPinnedTokenURI[tokenId];
-
-        return (index, uris, isPinned);
+        index = _getTokenURIIndex(tokenId);
+        uris = _tokenURIs[tokenId];
+        isPinned = _hasPinnedTokenURI[tokenId];
     }
 
     /**
@@ -747,7 +745,7 @@ contract CryptoartNFT is
         view
         override(ERC721Upgradeable)
         onlyIfTokenExists(tokenId)
-        returns (string memory)
+        returns (string memory fullURI)
     {
         string[2] memory uris = _tokenURIs[tokenId];
         string memory uri = uris[_getTokenURIIndex(tokenId)];
@@ -756,7 +754,7 @@ contract CryptoartNFT is
             revert Error.Token_NoURIFound(tokenId);
         }
 
-        return string.concat(_baseURI(), uri);
+        fullURI = string.concat(_baseURI(), uri);
     }
 
     function _baseURI() internal view override returns (string memory) {
