@@ -58,31 +58,32 @@ contract MetadataFuzzTest is CryptoartNFTBase {
     }
 
     function testFuzz_UpdateRoyalties(uint96 royaltyPercentage) public {
+        uint256 customTokenPriceToTestRoyaltyCalc = 10_000;
         vm.prank(owner);
-        if (royaltyPercentage > 10000) {
+        if (royaltyPercentage > 1000) {
             vm.expectRevert();
         }
         nft.updateRoyalties(payable(owner), royaltyPercentage);
 
-        if (royaltyPercentage <= 10000) {
-            (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(1, 10000);
+        if (royaltyPercentage <= 1000) {
+            (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(TOKEN_ID, customTokenPriceToTestRoyaltyCalc);
             assertEq(receiver, owner, "Royalty receiver mismatch");
             assertEq(royaltyAmount, royaltyPercentage, "Royalty amount mismatch");
         }
     }
 
     function testFuzz_SetTokenRoyalty(uint96 feeNumerator) public {
-        uint256 tokenId = 1;
-        mintNFT(user1, tokenId, TOKEN_PRICE, TOKEN_PRICE);
+        uint256 customTokenPriceToTestRoyaltyCalc = 10_000;
+        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
 
         vm.prank(owner);
-        if (feeNumerator > 10000) {
+        if (feeNumerator > 1000) {
             vm.expectRevert();
         }
-        nft.setTokenRoyalty(tokenId, owner, feeNumerator);
+        nft.setTokenRoyalty(TOKEN_ID, owner, feeNumerator);
 
-        if (feeNumerator <= 10000) {
-            (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(tokenId, 10000);
+        if (feeNumerator <= 1000) {
+            (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(TOKEN_ID, customTokenPriceToTestRoyaltyCalc);
             assertEq(receiver, owner, "Token royalty receiver mismatch");
             assertEq(royaltyAmount, feeNumerator, "Token royalty amount mismatch");
         }

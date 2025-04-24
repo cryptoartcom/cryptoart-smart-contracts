@@ -54,6 +54,7 @@ contract CryptoartNFT is
     uint256 private constant ROYALTY_BASE = 10_000; // as per EIP-2981 (10000 = 100%, so 250 = 2.5%)
     /// @notice Default royalty percentage basis points (2.5%).
     uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250;
+    uint256 private constant MAX_ROYALTY_PERCENTAGE = 1000; // 10% (1000 basis points)
     uint8 private constant URIS_PER_TOKEN = 2;
 
     // ==========================================================================
@@ -507,11 +508,14 @@ contract CryptoartNFT is
 
     /**
      * @notice Updates the default royalty receiver and percentage. Owner only.
-     * @dev Royalty percentage must not exceed ROYALTY_BASE (100%).
+     * @dev Royalty percentage must not exceed MAX_ROYALTY_PERCENTAGE (10%).
      * @param newReceiver The new address to receive default royalties.
      * @param newPercentage The new default royalty percentage in basis points.
      */
     function updateRoyalties(address payable newReceiver, uint96 newPercentage) external onlyOwner {
+        if (newPercentage > MAX_ROYALTY_PERCENTAGE) {
+            revert Error.Admin_RoyaltyTooHigh(newPercentage, MAX_ROYALTY_PERCENTAGE);
+        }
         ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
         emit RoyaltiesUpdated(newReceiver, newPercentage);
     }
@@ -524,6 +528,9 @@ contract CryptoartNFT is
      * @param feeNumerator The royalty amount in basis points for this token.
      */
     function setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) external onlyOwner {
+        if (feeNumerator > MAX_ROYALTY_PERCENTAGE) {
+            revert Error.Admin_RoyaltyTooHigh(feeNumerator, MAX_ROYALTY_PERCENTAGE);
+        }
         ERC2981Upgradeable._setTokenRoyalty(tokenId, receiver, feeNumerator);
     }
 
