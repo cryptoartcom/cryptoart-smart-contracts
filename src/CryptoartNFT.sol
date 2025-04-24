@@ -135,7 +135,7 @@ contract CryptoartNFT is
     event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
     /// @notice Emitted when a user increments their nonce for the purpose of invalidating a signature
     event NonceIncremented(address user, uint256 nextAvailableNonce);
-    
+
     // ==========================================================================
     // Initialization
     // ==========================================================================
@@ -406,7 +406,10 @@ contract CryptoartNFT is
      * @param tokenId The token ID to mark as redeemable.
      * @param signature A signature from the authority signer authorizing the unpairing.
      */
-    function markAsRedeemable(uint256 tokenId, bytes calldata signature, uint256 deadline) external onlyTokenOwner(tokenId) {
+    function markAsRedeemable(uint256 tokenId, bytes calldata signature, uint256 deadline)
+        external
+        onlyTokenOwner(tokenId)
+    {
         if (_pinnedURIIndex[tokenId] == 0) {
             revert Error.Token_AlreadyRedeemable(tokenId);
         }
@@ -442,7 +445,7 @@ contract CryptoartNFT is
     function addCreatorStory(uint256 tokenId, string calldata creatorName, string calldata story)
         external
         whenNotPaused
-        onlyOwner()
+        onlyOwner
     {
         emit CreatorStory(tokenId, msg.sender, creatorName, story);
     }
@@ -473,7 +476,7 @@ contract CryptoartNFT is
     // ==========================================================================
     // Other External Functions
     // ==========================================================================
-  
+
     /**
      * @notice Allows a user to increment their nonce, invalidating any previous off-chain signatures
      */
@@ -481,7 +484,7 @@ contract CryptoartNFT is
         NoncesUpgradeable._useNonce(msg.sender);
         emit NonceIncremented(msg.sender, nonces(msg.sender));
     }
-    
+
     // ==========================================================================
     // Admin Controls
     // ==========================================================================
@@ -618,7 +621,7 @@ contract CryptoartNFT is
         if (block.timestamp > data.deadline) {
             revert Error.Auth_SignatureExpired(data.deadline, block.timestamp);
         }
-        
+
         bytes32 contentHash = keccak256(
             abi.encode(
                 data.recipient,
@@ -686,12 +689,16 @@ contract CryptoartNFT is
     // Internal Metadata Functions
     // ==========================================================================
 
-    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature, uint256 deadline) private {
+    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature, uint256 deadline)
+        private
+    {
         if (block.timestamp > deadline) {
             revert Error.Auth_SignatureExpired(deadline, block.timestamp);
         }
-        
-        bytes32 contentHash = keccak256(abi.encode(minter, tokenId, NoncesUpgradeable._useNonce(minter), block.chainid, deadline, address(this)));
+
+        bytes32 contentHash = keccak256(
+            abi.encode(minter, tokenId, NoncesUpgradeable._useNonce(minter), block.chainid, deadline, address(this))
+        );
         if (!_isValidSignature(contentHash, signature)) {
             revert Error.Auth_UnauthorizedSigner();
         }

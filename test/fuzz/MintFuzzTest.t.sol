@@ -98,7 +98,7 @@ contract MintFuzzTest is CryptoartNFTBase {
 
     function testFuzz_MintWithReentrancy() public {
         uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
-        
+
         // Create the attacker contract
         ReentrancyAttacker attacker = new ReentrancyAttacker(address(nft));
         vm.deal(address(attacker), 3 ether);

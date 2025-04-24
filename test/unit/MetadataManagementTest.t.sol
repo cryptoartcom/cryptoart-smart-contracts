@@ -105,12 +105,13 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
-            
+
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
-        
-        bytes memory signature =
-            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey);
+
+        bytes memory signature = createRedeemableSignature(
+            user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey
+        );
 
         vm.prank(owner);
         uint256 nonRedeemableURI = 1;
@@ -139,10 +140,10 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
         uint256 badPrivateKey = 0xB22222;
         (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
-            
+
         vm.prank(user1);
         nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
-        
+
         bytes memory signature =
             createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), badPrivateKey);
 
@@ -199,9 +200,10 @@ contract MetadataManagementTest is CryptoartNFTBase, SigningUtils {
 
         // Test markAsRedeemable reverts for burned token (even with valid signature)
         uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
-        bytes memory signature =
-            createRedeemableSignature(user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey);
-            
+        bytes memory signature = createRedeemableSignature(
+            user1, TOKEN_ID, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey
+        );
+
         vm.prank(user1);
         vm.expectRevert(); // Since the token doesn't exist, the onlyTokenOwner modifier will revert first
         nft.markAsRedeemable(TOKEN_ID, signature, deadline);

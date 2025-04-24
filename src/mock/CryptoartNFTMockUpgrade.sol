@@ -17,14 +17,16 @@ import {ERC721BurnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {ERC721PausableUpgradeable} from // <<< Updated
-    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
+import {
+    ERC721PausableUpgradeable
+} // <<< Updated
+from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
 import {
     ERC721RoyaltyUpgradeable,
     ERC2981Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
-import {ReentrancyGuardTransientUpgradeable} from 
+import {ReentrancyGuardTransientUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -45,7 +47,7 @@ contract CryptoartNFTMockUpgrade is
     OwnableUpgradeable,
     NoncesUpgradeable,
     IStory,
-    ReentrancyGuardTransientUpgradeable 
+    ReentrancyGuardTransientUpgradeable
 {
     using Strings for uint256;
     using Strings for address;
@@ -107,7 +109,7 @@ contract CryptoartNFTMockUpgrade is
         uint256 tokenId;
         uint256 tokenPrice;
         MintType mintType;
-        uint256 deadline; 
+        uint256 deadline;
         bytes signature;
     }
 
@@ -357,7 +359,11 @@ contract CryptoartNFTMockUpgrade is
         view
         override
         onlyIfTokenExists(tokenId)
-        returns (uint256 index, string[URIS_PER_TOKEN] memory uris, bool pinned) // Use constant
+        returns (
+            uint256 index,
+            string[URIS_PER_TOKEN] memory uris,
+            bool pinned // Use constant
+        )
     {
         index = _getTokenURIIndex(tokenId);
         uris = _tokenURIs[tokenId];
@@ -384,7 +390,8 @@ contract CryptoartNFTMockUpgrade is
         onlyOwner
         onlyIfTokenExists(tokenId) // <<< Added per audit L-5
     {
-        if (index >= URIS_PER_TOKEN) { // <<< Use constant
+        if (index >= URIS_PER_TOKEN) {
+            // <<< Use constant
             revert Error.Token_IndexOutOfBounds(tokenId, index, URIS_PER_TOKEN - 1);
         }
         _pinnedURIIndex[tokenId] = index;
@@ -403,7 +410,8 @@ contract CryptoartNFTMockUpgrade is
         whenNotPaused // <<< Added whenNotPaused
         onlyTokenOwner(tokenId)
     {
-        if (_pinnedURIIndex[tokenId] == URI_REDEEMABLE_INDEX) { // Use constant
+        if (_pinnedURIIndex[tokenId] == URI_REDEEMABLE_INDEX) {
+            // Use constant
             revert Error.Token_AlreadyRedeemable(tokenId);
         }
 
@@ -446,11 +454,11 @@ contract CryptoartNFTMockUpgrade is
     function addCreatorStory(uint256 tokenId, string calldata creatorName, string calldata story)
         external
         whenNotPaused
-        onlyOwner()
+        onlyOwner
     {
         emit CreatorStory(tokenId, msg.sender, creatorName, story);
     }
-    
+
     // Use collectorName parameter per audit L-1
     function addStory(uint256 tokenId, string calldata collectorName, string calldata story)
         external
@@ -497,7 +505,8 @@ contract CryptoartNFTMockUpgrade is
 
     // Added royalty limit check per audit I-3
     function updateRoyalties(address payable newReceiver, uint96 newPercentage) external onlyOwner {
-        if (newPercentage > MAX_ROYALTY_PERCENTAGE) { // Use constant
+        if (newPercentage > MAX_ROYALTY_PERCENTAGE) {
+            // Use constant
             revert Error.Admin_RoyaltyTooHigh(newPercentage, MAX_ROYALTY_PERCENTAGE);
         }
         ERC2981Upgradeable._setDefaultRoyalty(newReceiver, newPercentage);
@@ -506,7 +515,8 @@ contract CryptoartNFTMockUpgrade is
 
     // Added royalty limit check per audit I-3
     function setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) external onlyOwner {
-        if (feeNumerator > MAX_ROYALTY_PERCENTAGE) { // Use constant
+        if (feeNumerator > MAX_ROYALTY_PERCENTAGE) {
+            // Use constant
             revert Error.Admin_RoyaltyTooHigh(feeNumerator, MAX_ROYALTY_PERCENTAGE);
         }
         ERC2981Upgradeable._setTokenRoyalty(tokenId, receiver, feeNumerator);
@@ -559,7 +569,8 @@ contract CryptoartNFTMockUpgrade is
 
     // Keep mock's mintingPaused check
     function _coreMint(MintValidationData calldata data, TokenURISet calldata tokenUriSet) private {
-        if (mintingPaused) { // Mock upgrade check
+        if (mintingPaused) {
+            // Mock upgrade check
             revert Admin_MintingPaused();
         }
         _validateMintAuthorization(data, tokenUriSet);
@@ -667,7 +678,9 @@ contract CryptoartNFTMockUpgrade is
     // ==========================================================================
 
     // Updated validation per I-1, I-2
-    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature, uint256 deadline) private {
+    function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature, uint256 deadline)
+        private
+    {
         if (block.timestamp > deadline) {
             revert Error.Auth_SignatureExpired(deadline, block.timestamp); // Match error params if changed
         }
