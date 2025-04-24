@@ -55,6 +55,8 @@ contract CryptoartNFT is
     uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250;
     uint256 private constant MAX_ROYALTY_PERCENTAGE = 1000; // 10% (1000 basis points)
     uint8 private constant URIS_PER_TOKEN = 2;
+    uint8 private constant URI_REDEEMABLE_INDEX = 0;
+    uint8 private constant URI_NOT_REDEEMABLE_INDEX = 1;
 
     // ==========================================================================
     // State Variables
@@ -70,7 +72,7 @@ contract CryptoartNFT is
     string public baseURI;
 
     // IERC7160
-    mapping(uint256 tokenId => string[2] tokenURIs) private _tokenURIs;
+    mapping(uint256 tokenId => string[URIS_PER_TOKEN] tokenURIs) private _tokenURIs;
     mapping(uint256 tokenId => uint256 pinnedURIIndex) private _pinnedURIIndex;
     mapping(uint256 tokenId => bool hasPinnedTokenURI) private _hasPinnedTokenURI;
 
@@ -371,7 +373,7 @@ contract CryptoartNFT is
         view
         override
         onlyIfTokenExists(tokenId)
-        returns (uint256 index, string[2] memory uris, bool isPinned)
+        returns (uint256 index, string[URIS_PER_TOKEN] memory uris, bool isPinned)
     {
         index = _getTokenURIIndex(tokenId);
         uris = _tokenURIs[tokenId];
@@ -391,8 +393,8 @@ contract CryptoartNFT is
         onlyOwner
         onlyIfTokenExists(tokenId)
     {
-        _tokenURIs[tokenId][0] = newRedeemableURI;
-        _tokenURIs[tokenId][1] = newNotRedeemableURI;
+        _tokenURIs[tokenId][URI_REDEEMABLE_INDEX] = newRedeemableURI;
+        _tokenURIs[tokenId][URI_NOT_REDEEMABLE_INDEX] = newNotRedeemableURI;
         emit MetadataUpdate(tokenId); // ERC4906
     }
 
@@ -401,7 +403,7 @@ contract CryptoartNFT is
     // pin the index-1 URI of the token, which has redeemable attribute on false
     function pinTokenURI(uint256 tokenId, uint256 index) external whenNotPaused onlyIfTokenExists(tokenId) onlyOwner {
         if (index >= _tokenURIs[tokenId].length) {
-            revert Error.Token_IndexOutOfBounds(tokenId, index, _tokenURIs[tokenId].length - 1);
+            revert Error.Token_IndexOutOfBounds(tokenId, index, URIS_PER_TOKEN - 1);
         }
 
         _pinnedURIIndex[tokenId] = index;
@@ -420,15 +422,15 @@ contract CryptoartNFT is
         external
         onlyTokenOwner(tokenId)
     {
-        if (_pinnedURIIndex[tokenId] == 0) {
+        if (_pinnedURIIndex[tokenId] == URI_REDEEMABLE_INDEX) {
             revert Error.Token_AlreadyRedeemable(tokenId);
         }
 
-        _pinnedURIIndex[tokenId] = 0;
+        _pinnedURIIndex[tokenId] = URI_REDEEMABLE_INDEX;
 
         _validateUnpairAuthorization(msg.sender, tokenId, signature, deadline);
 
-        emit TokenUriPinned(tokenId, 0);
+        emit TokenUriPinned(tokenId, URI_REDEEMABLE_INDEX);
         emit MetadataUpdate(tokenId);
     }
 
@@ -678,8 +680,8 @@ contract CryptoartNFT is
             revert Error.Token_InvalidDefaultIndex(initialURIIndex);
         }
 
-        _tokenURIs[tokenId][0] = uriWhenRedeemable;
-        _tokenURIs[tokenId][1] = uriWhenNotRedeemable;
+        _tokenURIs[tokenId][URI_REDEEMABLE_INDEX] = uriWhenRedeemable;
+        _tokenURIs[tokenId][URI_NOT_REDEEMABLE_INDEX] = uriWhenNotRedeemable;
         _pinnedURIIndex[tokenId] = initialURIIndex;
         _hasPinnedTokenURI[tokenId] = true;
 
@@ -747,7 +749,7 @@ contract CryptoartNFT is
         onlyIfTokenExists(tokenId)
         returns (string memory fullURI)
     {
-        string[2] memory uris = _tokenURIs[tokenId];
+        string[URIS_PER_TOKEN] memory uris = _tokenURIs[tokenId];
         string memory uri = uris[_getTokenURIIndex(tokenId)];
 
         if (bytes(uri).length == 0) {
