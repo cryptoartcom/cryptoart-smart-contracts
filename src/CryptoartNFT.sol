@@ -293,7 +293,7 @@ contract CryptoartNFT is
         }
     }
 
-    function _transferToNftReceiver(uint256 tokenId, address _nftReceiver) private onlyTokenOwner(tokenId) {
+    function _transferToNftReceiver(uint256 tokenId, address _nftReceiver) private {
         ERC721Upgradeable.safeTransferFrom(msg.sender, _nftReceiver, tokenId);
     }
 

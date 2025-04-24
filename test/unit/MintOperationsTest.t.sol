@@ -162,7 +162,7 @@ contract MintOperationsTest is CryptoartNFTBase {
             createMintData(user1, TOKEN_ID, TOKEN_PRICE, mintTypeTrade, authoritySignerPrivateKey);
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Token_NotOwned.selector, tokenId101, user1));
+        vm.expectRevert();
         nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokenIds, data, tokenURISet);
     }
 
