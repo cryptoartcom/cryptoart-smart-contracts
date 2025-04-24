@@ -749,9 +749,8 @@ contract CryptoartNFT is
         onlyIfTokenExists(tokenId)
         returns (string memory fullURI)
     {
-        string[URIS_PER_TOKEN] memory uris = _tokenURIs[tokenId];
-        string memory uri = uris[_getTokenURIIndex(tokenId)];
-
+        string storage uri = _tokenURIs[tokenId][_getTokenURIIndex(tokenId)];
+        
         if (bytes(uri).length == 0) {
             revert Error.Token_NoURIFound(tokenId);
         }
