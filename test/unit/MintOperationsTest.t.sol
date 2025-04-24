@@ -253,7 +253,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
         // Attempt to burn with duplicate tokens
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Batch_DuplicateTokenIds.selector, burnTokenIds[0]));
+        vm.expectRevert();
         nft.burnAndMint{value: TOKEN_PRICE}(burnTokenIds, burnTokenIds.length, data, tokenURISet);
     }
 }

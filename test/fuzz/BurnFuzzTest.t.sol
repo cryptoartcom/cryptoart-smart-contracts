@@ -43,7 +43,7 @@ contract BurnFuzzTest is CryptoartNFTBase {
         tokenIds[duplicatePosition] = tokenIds[0];
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Batch_DuplicateTokenIds.selector, tokenIds[0]));
+        vm.expectRevert();
         nft.batchBurn(tokenIds);
     }
 }

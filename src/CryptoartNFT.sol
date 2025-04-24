@@ -338,11 +338,6 @@ contract CryptoartNFT is
     }
 
     function _batchBurn(uint256[] calldata tokenIds) private validBatchSize(tokenIds) {
-        for (uint256 i; i < tokenIds.length - 1; ++i) {
-            for (uint256 j = i + 1; j < tokenIds.length; ++j) {
-                if (tokenIds[i] == tokenIds[j]) revert Error.Batch_DuplicateTokenIds(tokenIds[i]);
-            }
-        }
         for (uint256 i; i < tokenIds.length;) {
             burn(tokenIds[i]);
             unchecked {

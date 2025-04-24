@@ -120,7 +120,7 @@ contract BurnOperationsTest is CryptoartNFTBase {
         duplicateIdsArray[1] = TOKEN_ID;
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Batch_DuplicateTokenIds.selector, TOKEN_ID));
+        vm.expectRevert();
         nft.batchBurn(duplicateIdsArray);
     }
 
