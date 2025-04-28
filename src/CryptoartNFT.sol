@@ -355,11 +355,11 @@ contract CryptoartNFT is
         // require sender is owner or approved has been removed as the internal burn function already checks this
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         ERC721BurnableUpgradeable.burn(tokenId);
-        
+
         delete _tokenURIs[tokenId];
         delete _pinnedURIIndex[tokenId];
         delete _hasPinnedTokenURI[tokenId];
-        
+
         emit Burned(tokenId);
         emit TokenUriUnpinned(tokenId);
     }
@@ -751,7 +751,7 @@ contract CryptoartNFT is
         returns (string memory fullURI)
     {
         string storage uri = _tokenURIs[tokenId][_getTokenURIIndex(tokenId)];
-        
+
         if (bytes(uri).length == 0) {
             revert Error.Token_NoURIFound(tokenId);
         }
