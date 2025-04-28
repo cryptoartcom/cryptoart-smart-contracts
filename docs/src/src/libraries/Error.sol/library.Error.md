@@ -1,5 +1,5 @@
 # Error
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/d424b74db29eb911c19f28659b6dfae154779ed8/src/libraries/Error.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/1b717ca8471d1b93cf032ada44414eb539a88db5/src/libraries/Error.sol)
 
 
 ## Errors
@@ -63,12 +63,6 @@ error Batch_EmptyArray();
 error Batch_MaxSizeExceeded(uint256 size, uint256 maxSize);
 ```
 
-### Batch_DuplicateTokenIds
-
-```solidity
-error Batch_DuplicateTokenIds(uint256 tokenId);
-```
-
 ### Batch_InsufficientTokenAmount
 
 ```solidity
@@ -103,6 +97,24 @@ error Auth_UnauthorizedSigner();
 
 ```solidity
 error Auth_Unauthorized(address msgSender);
+```
+
+### Auth_UnpinningNotSupported
+
+```solidity
+error Auth_UnpinningNotSupported();
+```
+
+### Auth_SignatureExpired
+
+```solidity
+error Auth_SignatureExpired(uint256 deadline, uint256 blockTimestamp);
+```
+
+### Auth_InvalidMintType
+
+```solidity
+error Auth_InvalidMintType();
 ```
 
 ### Admin_RoyaltyTooHigh

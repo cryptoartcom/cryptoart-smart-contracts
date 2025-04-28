@@ -98,8 +98,8 @@ contract CryptoartNFTMockUpgrade is
     /// @notice Type of mint operation being performed.
     enum MintType {
         OpenMint,
-        Whitelist,
         Claim,
+        Trade,
         Burn
     }
 
@@ -109,6 +109,7 @@ contract CryptoartNFTMockUpgrade is
         uint256 tokenId;
         uint256 tokenPrice;
         MintType mintType;
+        uint256 requiredBurnOrTradeCount;
         uint256 deadline;
         bytes signature;
     }
@@ -254,8 +255,12 @@ contract CryptoartNFTMockUpgrade is
         external
         payable
         nonReentrant
-        whenNotPaused // <<< Added whenNotPaused here and below
+        whenNotPaused
     {
+        if (data.mintType != MintType.OpenMint) {
+            revert Error.Auth_InvalidMintType();
+        }
+        
         _coreMint(data, tokenUriSet);
         emit Minted(data.recipient, data.tokenId);
     }
@@ -266,6 +271,10 @@ contract CryptoartNFTMockUpgrade is
         nonReentrant
         whenNotPaused
     {
+        if (data.mintType != MintType.Claim) {
+            revert Error.Auth_InvalidMintType();
+        }
+        
         _coreMint(data, tokenUriSet);
         emit Claimed(data.tokenId);
     }
@@ -275,6 +284,14 @@ contract CryptoartNFTMockUpgrade is
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
     ) external payable nonReentrant whenNotPaused validBatchSize(tradedTokenIds) {
+        if (data.mintType != MintType.Trade) {
+            revert Error.Auth_InvalidMintType();
+        }
+
+        if (tradedTokenIds.length != data.requiredBurnOrTradeCount) {
+            revert Error.Batch_InsufficientTokenAmount(data.requiredBurnOrTradeCount, tradedTokenIds.length);
+        }   
+        
         _batchTransferToNftReceiver(tradedTokenIds);
         _coreMint(data, tokenUriSet);
         emit MintedByTrading(data.tokenId, tradedTokenIds);
@@ -304,9 +321,14 @@ contract CryptoartNFTMockUpgrade is
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
     ) external payable nonReentrant whenNotPaused {
+        if (data.mintType != MintType.Burn) {
+            revert Error.Auth_InvalidMintType();
+        }
+        
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
+        
         _batchBurn(tokenIds);
         _coreMint(data, tokenUriSet);
 
@@ -613,12 +635,13 @@ contract CryptoartNFTMockUpgrade is
                 data.tokenId,
                 data.mintType,
                 data.tokenPrice,
+                data.requiredBurnOrTradeCount,
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
                 uriParams.initialURIIndex,
                 NoncesUpgradeable._useNonce(data.recipient),
-                block.chainid, // <<< Added chainId
-                data.deadline, // <<< Added deadline
+                block.chainid, 
+                data.deadline,
                 address(this)
             )
         );

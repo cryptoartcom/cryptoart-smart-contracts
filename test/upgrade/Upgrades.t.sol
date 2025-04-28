@@ -88,6 +88,7 @@ contract UpgradesTest is CryptoartNFTBase {
             tokenId: TOKEN_ID,
             tokenPrice: TOKEN_PRICE,
             mintType: CryptoartNFTMockUpgrade.MintType.OpenMint,
+            requiredBurnOrTradeCount: REQUIRED_MINT_CLAIM_COUNT,
             deadline: deadline,
             signature: signature
         });

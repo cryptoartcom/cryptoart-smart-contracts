@@ -94,6 +94,7 @@ contract CryptoartNFT is
         uint256 tokenId;
         uint256 tokenPrice;
         MintType mintType;
+        uint256 requiredBurnOrTradeCount;
         uint256 deadline;
         bytes signature;
     }
@@ -123,8 +124,6 @@ contract CryptoartNFT is
     event NftReceiverUpdated(address indexed newNftReceiver);
     /// @notice Emitted when a story's visibility is toggled.
     event ToggleStoryVisibility(uint256 indexed tokenId, string indexed storyId, bool visible);
-
-    // NFT lifecycle events
     /// @notice Emitted on a standard mint.
     event Minted(address indexed recipient, uint256 indexed tokenId);
     /// @notice Emitted when a token is minted by burning other tokens.
@@ -278,6 +277,9 @@ contract CryptoartNFT is
         if (data.mintType != MintType.Trade) {
             revert Error.Auth_InvalidMintType();
         }
+        if (tradedTokenIds.length != data.requiredBurnOrTradeCount) {
+            revert Error.Batch_InsufficientTokenAmount(data.requiredBurnOrTradeCount, tradedTokenIds.length);
+        }
         _batchTransferToNftReceiver(tradedTokenIds);
         _coreMint(data, tokenUriSet);
         emit MintedByTrading(data.tokenId, tradedTokenIds);
@@ -301,26 +303,22 @@ contract CryptoartNFT is
      * @notice Mints a new token by burning existing tokens, using a signed voucher and payment.
      * @dev Burns the specified `tokenIds` owned by the sender.
      * @param tokenIds Array of token IDs owned by the sender to be burned.
-     * @param requiredBurnCount The exact number of tokens required to be burned.
      * @param data Mint validation data including recipient, tokenId, price, type, and signature.
      * @param tokenUriSet Initial URIs (redeemable/non-redeemable) for the new token.
      */
     function burnAndMint(
         uint256[] calldata tokenIds,
-        uint256 requiredBurnCount,
         MintValidationData calldata data,
         TokenURISet calldata tokenUriSet
     ) external payable nonReentrant whenNotPaused {
         if (data.mintType != MintType.Burn) {
             revert Error.Auth_InvalidMintType();
         }
-        if (tokenIds.length != requiredBurnCount) {
-            revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
+        if (tokenIds.length != data.requiredBurnOrTradeCount) {
+            revert Error.Batch_InsufficientTokenAmount(data.requiredBurnOrTradeCount, tokenIds.length);
         }
-
         _batchBurn(tokenIds);
         _coreMint(data, tokenUriSet);
-
         emit MintedByBurning(data.tokenId, tokenIds);
     }
 
@@ -428,7 +426,6 @@ contract CryptoartNFT is
         }
 
         _pinnedURIIndex[tokenId] = URI_REDEEMABLE_INDEX;
-
         _validateUnpairAuthorization(msg.sender, tokenId, signature, deadline);
 
         emit TokenUriPinned(tokenId, URI_REDEEMABLE_INDEX);
@@ -647,6 +644,7 @@ contract CryptoartNFT is
                 data.tokenId,
                 data.mintType,
                 data.tokenPrice,
+                data.requiredBurnOrTradeCount,
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
                 uriParams.initialURIIndex,

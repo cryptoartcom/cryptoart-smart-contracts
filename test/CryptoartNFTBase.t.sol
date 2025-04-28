@@ -32,6 +32,8 @@ contract CryptoartNFTBase is Test {
     uint256 public constant TOKEN_PRICE = 0.1 ether;
     uint256 public constant TOKEN_ID = 1;
     uint256 public constant DEFAULT_EXPIRATION = 1 days;
+    uint256 public constant REQUIRED_MINT_CLAIM_COUNT = 0;
+    uint256 public constant REQUIRED_BURN_TRADE_COUNT = 2;
 
     // Helper contracts
     SigningUtils public signingUtils;
@@ -57,6 +59,26 @@ contract CryptoartNFTBase is Test {
         );
     }
 
+    function mintNFT(address user, uint256 tokenId, uint256 tokenPrice, uint256 paymentValue)
+        internal
+    {
+        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
+            user, tokenId, tokenPrice, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey
+        );
+
+        vm.prank(user);
+        nft.mint{value: paymentValue}(data, tokenURISet);
+    }
+
+    function mintMultipleTokens(address to, uint256 count) internal returns (uint256[] memory) {
+        uint256[] memory tokenIds = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            tokenIds[i] = 100 + i;
+            mintNFT(to, tokenIds[i], TOKEN_PRICE, TOKEN_PRICE);
+        }
+        return tokenIds;
+    }
+
     function createMintData(
         address user,
         uint256 tokenId,
@@ -72,7 +94,16 @@ contract CryptoartNFTBase is Test {
 
         tokenURISet = signingUtils.createTokenURISet(tokenId);
         bytes memory signature = signingUtils.createMintSignature(
-            user, tokenId, mintType, signerPrivateKey, tokenURISet, tokenPrice, nft.nonces(user), deadline, address(nft)
+            user,
+            tokenId,
+            mintType,
+            signerPrivateKey,
+            tokenURISet,
+            tokenPrice,
+            REQUIRED_MINT_CLAIM_COUNT,
+            nft.nonces(user),
+            deadline,
+            address(nft)
         );
 
         data = CryptoartNFT.MintValidationData({
@@ -80,25 +111,9 @@ contract CryptoartNFTBase is Test {
             tokenId: tokenId,
             tokenPrice: tokenPrice,
             mintType: mintType,
+            requiredBurnOrTradeCount: REQUIRED_MINT_CLAIM_COUNT,
             deadline: deadline,
             signature: signature
         });
-    }
-
-    function mintNFT(address user, uint256 tokenId, uint256 tokenPrice, uint256 paymentValue) internal {
-        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
-            createMintData(user, tokenId, tokenPrice, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
-
-        vm.prank(user);
-        nft.mint{value: paymentValue}(data, tokenURISet);
-    }
-
-    function mintMultipleTokens(address to, uint256 count) internal returns (uint256[] memory) {
-        uint256[] memory tokenIds = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            tokenIds[i] = 100 + i;
-            mintNFT(to, tokenIds[i], TOKEN_PRICE, TOKEN_PRICE);
-        }
-        return tokenIds;
     }
 }

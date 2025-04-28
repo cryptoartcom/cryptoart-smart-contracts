@@ -52,50 +52,104 @@ contract MintFuzzTest is CryptoartNFTBase {
 
         mintMethod = uint8(bound(mintMethod, 0, 3)); // only four mint methods
         uint256 tokenId = 999;
+        
+        uint8 openMint = 0;
+        uint8 claim = 1;
+        uint8 trade = 2;
+        uint8 burn = 3;
 
         vm.startPrank(user1);
 
         // switch b/w different mint methods
-        if (mintMethod == 0) {
+        if (mintMethod == openMint) {
             (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey
+                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(openMint), authoritySignerPrivateKey
             );
             nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
-        } else if (mintMethod == 1) {
+            
+        } else if (mintMethod == claim) {
             (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey
+                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(claim), authoritySignerPrivateKey
             );
             nft.claim{value: TOKEN_PRICE}(data, tokenURISet);
-        } else if (mintMethod == 2) {
-            // mint tokens for trading first
+            
+        } else if (mintMethod == trade) {
             uint256[] memory tradedTokens = new uint256[](1);
+            uint256 requiredTradeCount = tradedTokens.length;
             uint256 tradeTokenId = 888;
+            uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
 
+            // First, mint the token
             (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory mintTokenURISet) =
-            createMintData(user1, tradeTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+                createMintData(user1, tradeTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
             nft.mint{value: TOKEN_PRICE}(mintData, mintTokenURISet);
 
-            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey
+            // Then, trade it to mint
+            CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
+            bytes memory signature = signingUtils.createMintSignature(
+                user1,
+                tokenId,
+                CryptoartNFT.MintType(trade),
+                authoritySignerPrivateKey,
+                tokenURISet,
+                TOKEN_PRICE,
+                requiredTradeCount,
+                nft.nonces(user1),
+                deadline,
+                address(nft)
             );
-
+    
+           CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
+                recipient: user1,
+                tokenId: tokenId,
+                tokenPrice: TOKEN_PRICE,
+                mintType: CryptoartNFT.MintType(trade),
+                requiredBurnOrTradeCount: requiredTradeCount,
+                deadline: deadline,
+                signature: signature
+            });
+           
             tradedTokens[0] = tradeTokenId;
             nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokens, data, tokenURISet);
-        } else {
-            // test burn and mint
+            
+        } else if (mintMethod == burn) {
             uint256[] memory burnTokens = new uint256[](1);
+            uint256 requiredBurnCount = burnTokens.length;
             uint256 burnTokenId = 777;
+            uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
 
+            // First, mint the token
             (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory mintTokenURISet) =
-            createMintData(user1, burnTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+                createMintData(user1, burnTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
             nft.mint{value: TOKEN_PRICE}(mintData, mintTokenURISet);
 
-            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(mintMethod), authoritySignerPrivateKey
+            // Then, burn and mint a token
+            CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(tokenId);
+            bytes memory signature = signingUtils.createMintSignature(
+                user1,
+                tokenId,
+                CryptoartNFT.MintType(burn),
+                authoritySignerPrivateKey,
+                tokenURISet,
+                TOKEN_PRICE,
+                requiredBurnCount,
+                nft.nonces(user1),
+                deadline,
+                address(nft)
             );
-
+    
+            CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
+                recipient: user1,
+                tokenId: tokenId,
+                tokenPrice: TOKEN_PRICE,
+                mintType: CryptoartNFT.MintType(burn),
+                requiredBurnOrTradeCount: requiredBurnCount,
+                deadline: deadline,
+                signature: signature
+            });
+            
             burnTokens[0] = burnTokenId;
-            nft.burnAndMint{value: TOKEN_PRICE}(burnTokens, 1, data, tokenURISet);
+            nft.burnAndMint{value: TOKEN_PRICE}(burnTokens, data, tokenURISet);
         }
 
         vm.stopPrank();
@@ -103,6 +157,7 @@ contract MintFuzzTest is CryptoartNFTBase {
 
     function testFuzz_MintWithReentrancy() public {
         uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
+        uint256 requiredBurnCount = 1;
 
         // Create the attacker contract
         ReentrancyAttacker attacker = new ReentrancyAttacker(address(nft));
@@ -129,6 +184,7 @@ contract MintFuzzTest is CryptoartNFTBase {
             authoritySignerPrivateKey,
             tokenURISet,
             TOKEN_PRICE,
+            requiredBurnCount,
             nft.nonces(address(attacker)),
             deadline,
             address(nft)
@@ -139,6 +195,7 @@ contract MintFuzzTest is CryptoartNFTBase {
             tokenId: newTokenId,
             tokenPrice: TOKEN_PRICE,
             mintType: CryptoartNFT.MintType.Burn,
+            requiredBurnOrTradeCount: requiredBurnCount,
             deadline: deadline,
             signature: signature
         });
@@ -194,7 +251,6 @@ contract ReentrancyAttacker {
     function executeBurnAndMint() external payable {
         nft.burnAndMint{value: mintData.tokenPrice}(
             burnTokenIds,
-            1, // requireBurnCount = 1
             mintData,
             tokenURISet
         );
@@ -216,7 +272,7 @@ contract ReentrancyAttacker {
             attempted = true;
 
             // Try to reenter
-            try nft.burnAndMint{value: 0.1 ether}(burnTokenIds, 1, mintData, tokenURISet) {
+            try nft.burnAndMint{value: 0.1 ether}(burnTokenIds, mintData, tokenURISet) {
                 // If this succeeds, reentrancy worked
                 succeeded = true;
             } catch {

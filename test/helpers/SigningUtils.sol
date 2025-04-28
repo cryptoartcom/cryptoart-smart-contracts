@@ -22,6 +22,7 @@ contract SigningUtils is Test {
         uint256 signerPrivateKey,
         CryptoartNFT.TokenURISet memory tokenURISet,
         uint256 tokenPrice,
+        uint256 requiredBurnOrTradeCount,
         uint256 nonce,
         uint256 deadline,
         address contractAddress
@@ -32,6 +33,7 @@ contract SigningUtils is Test {
                 tokenId,
                 mintType,
                 tokenPrice,
+                requiredBurnOrTradeCount,
                 tokenURISet.uriWhenRedeemable,
                 tokenURISet.uriWhenNotRedeemable,
                 tokenURISet.initialURIIndex,

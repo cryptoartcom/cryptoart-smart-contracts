@@ -1,8 +1,8 @@
 # CryptoartNFT
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/d424b74db29eb911c19f28659b6dfae154779ed8/src/CryptoartNFT.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/1b717ca8471d1b93cf032ada44414eb539a88db5/src/CryptoartNFT.sol)
 
 **Inherits:**
-[IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable, PausableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardTransientUpgradeable
+[IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, ERC721PausableUpgradeable, OwnableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardTransientUpgradeable
 
 **Author:**
 Cryptoart Team
@@ -20,13 +20,6 @@ uint256 private constant MAX_BATCH_SIZE = 50;
 ```
 
 
-### ROYALTY_BASE
-
-```solidity
-uint256 private constant ROYALTY_BASE = 10_000;
-```
-
-
 ### DEFAULT_ROYALTY_PERCENTAGE
 Default royalty percentage basis points (2.5%).
 
@@ -36,10 +29,31 @@ uint96 public constant DEFAULT_ROYALTY_PERCENTAGE = 250;
 ```
 
 
+### MAX_ROYALTY_PERCENTAGE
+
+```solidity
+uint256 private constant MAX_ROYALTY_PERCENTAGE = 1000;
+```
+
+
 ### URIS_PER_TOKEN
 
 ```solidity
 uint8 private constant URIS_PER_TOKEN = 2;
+```
+
+
+### URI_REDEEMABLE_INDEX
+
+```solidity
+uint8 private constant URI_REDEEMABLE_INDEX = 0;
+```
+
+
+### URI_NOT_REDEEMABLE_INDEX
+
+```solidity
+uint8 private constant URI_NOT_REDEEMABLE_INDEX = 1;
 ```
 
 
@@ -82,7 +96,7 @@ string public baseURI;
 ### _tokenURIs
 
 ```solidity
-mapping(uint256 tokenId => string[2] tokenURIs) private _tokenURIs;
+mapping(uint256 tokenId => string[URIS_PER_TOKEN] tokenURIs) private _tokenURIs;
 ```
 
 
@@ -248,7 +262,7 @@ function _batchTransferToNftReceiver(uint256[] calldata tradedTokenIds) private;
 
 
 ```solidity
-function _transferToNftReceiver(uint256 tokenId, address _nftReceiver) private onlyTokenOwner(tokenId);
+function _transferToNftReceiver(uint256 tokenId, address _nftReceiver) private;
 ```
 
 ### burnAndMint
@@ -259,19 +273,17 @@ Mints a new token by burning existing tokens, using a signed voucher and payment
 
 
 ```solidity
-function burnAndMint(
-    uint256[] calldata tokenIds,
-    uint256 requiredBurnCount,
-    MintValidationData calldata data,
-    TokenURISet calldata tokenUriSet
-) external payable nonReentrant whenNotPaused;
+function burnAndMint(uint256[] calldata tokenIds, MintValidationData calldata data, TokenURISet calldata tokenUriSet)
+    external
+    payable
+    nonReentrant
+    whenNotPaused;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`tokenIds`|`uint256[]`|Array of token IDs owned by the sender to be burned.|
-|`requiredBurnCount`|`uint256`|The exact number of tokens required to be burned.|
 |`data`|`MintValidationData`|Mint validation data including recipient, tokenId, price, type, and signature.|
 |`tokenUriSet`|`TokenURISet`|Initial URIs (redeemable/non-redeemable) for the new token.|
 
@@ -326,7 +338,7 @@ function tokenURIs(uint256 tokenId)
     view
     override
     onlyIfTokenExists(tokenId)
-    returns (uint256, string[2] memory, bool);
+    returns (uint256 index, string[URIS_PER_TOKEN] memory uris, bool isPinned);
 ```
 
 ### updateMetadata
@@ -339,6 +351,7 @@ Updates both URIs for a given token. Owner only.
 ```solidity
 function updateMetadata(uint256 tokenId, string calldata newRedeemableURI, string calldata newNotRedeemableURI)
     external
+    whenNotPaused
     onlyOwner
     onlyIfTokenExists(tokenId);
 ```
@@ -355,7 +368,7 @@ function updateMetadata(uint256 tokenId, string calldata newRedeemableURI, strin
 
 
 ```solidity
-function pinTokenURI(uint256 tokenId, uint256 index) external onlyOwner;
+function pinTokenURI(uint256 tokenId, uint256 index) external whenNotPaused onlyIfTokenExists(tokenId) onlyOwner;
 ```
 
 ### markAsRedeemable
@@ -366,7 +379,9 @@ Marks a token as redeemable (pins URI index 0) by the token owner. Requires sign
 
 
 ```solidity
-function markAsRedeemable(uint256 tokenId, bytes calldata signature) external onlyTokenOwner(tokenId);
+function markAsRedeemable(uint256 tokenId, bytes calldata signature, uint256 deadline)
+    external
+    onlyTokenOwner(tokenId);
 ```
 **Parameters**
 
@@ -374,13 +389,14 @@ function markAsRedeemable(uint256 tokenId, bytes calldata signature) external on
 |----|----|-----------|
 |`tokenId`|`uint256`|The token ID to mark as redeemable.|
 |`signature`|`bytes`|A signature from the authority signer authorizing the unpairing.|
+|`deadline`|`uint256`||
 
 
 ### hasPinnedTokenURI
 
 
 ```solidity
-function hasPinnedTokenURI(uint256 tokenId) external view returns (bool);
+function hasPinnedTokenURI(uint256 tokenId) external view onlyIfTokenExists(tokenId) returns (bool);
 ```
 
 ### unpinTokenURI
@@ -399,13 +415,13 @@ limiting the number of times the creator may write a story.*
 
 
 ```solidity
-function addCollectionStory(string calldata, string calldata story) external onlyOwner;
+function addCollectionStory(string calldata creatorName, string calldata story) external whenNotPaused onlyOwner;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`||
+|`creatorName`|`string`|String representation of the creator's name|
 |`story`|`string`|The story written and attached to the token id|
 
 
@@ -418,14 +434,17 @@ limiting the number of times the creator may write a story.*
 
 
 ```solidity
-function addCreatorStory(uint256 tokenId, string calldata, string calldata story) external onlyTokenOwner(tokenId);
+function addCreatorStory(uint256 tokenId, string calldata creatorName, string calldata story)
+    external
+    whenNotPaused
+    onlyOwner;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`tokenId`|`uint256`|The token id to which the story is attached|
-|`<none>`|`string`||
+|`creatorName`|`string`|String representation of the creator's name|
 |`story`|`string`|The story written and attached to the token id|
 
 
@@ -438,14 +457,17 @@ limiting the number of times a collector may write a story.*
 
 
 ```solidity
-function addStory(uint256 tokenId, string calldata, string calldata story) external onlyTokenOwner(tokenId);
+function addStory(uint256 tokenId, string calldata collectorName, string calldata story)
+    external
+    whenNotPaused
+    onlyTokenOwner(tokenId);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`tokenId`|`uint256`|The token id to which the story is attached|
-|`<none>`|`string`||
+|`collectorName`|`string`|String representation of the collectors's name|
 |`story`|`string`|The story written and attached to the token id|
 
 
@@ -457,7 +479,7 @@ Emits an event signaling a change in visibility for a story. Token owner or admi
 
 
 ```solidity
-function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external;
+function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external whenNotPaused;
 ```
 **Parameters**
 
@@ -467,6 +489,15 @@ function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool vi
 |`storyId`|`string`|An identifier for the specific story (derived off-chain from event logs).|
 |`visible`|`bool`|The desired visibility state.|
 
+
+### incrementNonce
+
+Allows a user to increment their nonce, invalidating any previous off-chain signatures
+
+
+```solidity
+function incrementNonce() external;
+```
 
 ### pause
 
@@ -494,7 +525,7 @@ function unpause() external onlyOwner;
 
 Updates the default royalty receiver and percentage. Owner only.
 
-*Royalty percentage must not exceed ROYALTY_BASE (100%).*
+*Royalty percentage must not exceed MAX_ROYALTY_PERCENTAGE (10%).*
 
 
 ```solidity
@@ -676,7 +707,8 @@ function _tokenExists(uint256 _tokenId) private view returns (bool);
 
 
 ```solidity
-function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature) private;
+function _validateUnpairAuthorization(address minter, uint256 tokenId, bytes calldata signature, uint256 deadline)
+    private;
 ```
 
 ### _getTokenURIIndex
@@ -708,7 +740,7 @@ function tokenURI(uint256 tokenId)
     view
     override(ERC721Upgradeable)
     onlyIfTokenExists(tokenId)
-    returns (string memory);
+    returns (string memory fullURI);
 ```
 
 ### _baseURI
@@ -724,7 +756,7 @@ function _baseURI() internal view override returns (string memory);
 ```solidity
 function _update(address to, uint256 tokenId, address auth)
     internal
-    override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+    override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721PausableUpgradeable)
     returns (address);
 ```
 
@@ -834,6 +866,14 @@ Emitted when a token is minted by trading in other tokens.
 event MintedByTrading(uint256 newTokenId, uint256[] tradedTokenIds);
 ```
 
+### NonceIncremented
+Emitted when a user increments their nonce for the purpose of invalidating a signature
+
+
+```solidity
+event NonceIncremented(address user, uint256 nextAvailableNonce);
+```
+
 ## Structs
 ### MintValidationData
 Data required for validating mint operations via signature.
@@ -845,6 +885,8 @@ struct MintValidationData {
     uint256 tokenId;
     uint256 tokenPrice;
     MintType mintType;
+    uint256 requiredBurnOrTradeCount;
+    uint256 deadline;
     bytes signature;
 }
 ```
@@ -869,8 +911,8 @@ Type of mint operation being performed.
 ```solidity
 enum MintType {
     OpenMint,
-    Whitelist,
     Claim,
+    Trade,
     Burn
 }
 ```
