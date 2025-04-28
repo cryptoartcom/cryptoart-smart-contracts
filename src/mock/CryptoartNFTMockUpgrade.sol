@@ -335,8 +335,6 @@ contract CryptoartNFTMockUpgrade is
 
     function burn(uint256 tokenId) public override whenNotPaused {
         // _isApprovedOrOwner check is done internally by ERC721BurnableUpgradeable.burn
-        address owner = ownerOf(tokenId); // Get owner before burning
-
         ERC2981Upgradeable._resetTokenRoyalty(tokenId);
         ERC721BurnableUpgradeable.burn(tokenId);
 
