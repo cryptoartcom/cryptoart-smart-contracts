@@ -441,6 +441,11 @@ contract CryptoartNFT is
     function unpinTokenURI(uint256) external pure {
         revert Error.Auth_UnpinningNotSupported();
     }
+   
+   // @inheritdoc IERC4906.MetadataUpdate  
+    function triggerMetadataUpdate(uint256 _tokenId) external onlyOwner {
+        emit MetadataUpdate(_tokenId);
+    }
 
     // ==========================================================================
     // Story Features
@@ -642,8 +647,8 @@ contract CryptoartNFT is
             abi.encode(
                 data.recipient,
                 data.tokenId,
-                data.mintType,
                 data.tokenPrice,
+                data.mintType,
                 data.requiredBurnOrTradeCount,
                 uriParams.uriWhenRedeemable,
                 uriParams.uriWhenNotRedeemable,
