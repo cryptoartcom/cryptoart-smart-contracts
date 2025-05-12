@@ -15,10 +15,10 @@
 # Help: Display detailed usage instructions
 help:
 	@echo "======================================================================"
-	@echo "CryptoartNFT Makefile - Simplify Your Foundry Workflow"
+	@echo "CryptoartNFT Makefile"
 	@echo "======================================================================"
 	@echo "This Makefile wraps complex 'forge' commands into simple 'make' targets."
-	@echo "Why use this? It saves you from typing long, error-prone commands and ensures consistency."
+	@echo "Saves from typing long, error-prone commands."
 	@echo "Run 'make <target>' to execute tasks. Below are the key commands and how to use them:"
 	@echo ""
 	@echo "----------------------------------------------------------------------"
@@ -97,11 +97,11 @@ NETWORK ?= localhost
 
 # Network-specific arguments
 ifeq ($(NETWORK),localhost)
-	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast -vvvv 
+	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast 
 else ifeq ($(NETWORK),base-sepolia)
-	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) --etherscan-api-key $(BASE_SEPOLIA_API_KEY) --broadcast -vvvv
+	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) --etherscan-api-key $(BASE_SEPOLIA_API_KEY) --broadcast -vvvv --verify
 else ifeq ($(NETWORK),sepolia)
-	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(SEPOLIA_API_KEY) --broadcast -vvvv
+	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(SEPOLIA_API_KEY) --broadcast -vvvv --verify
 endif
 
 # ==============================================================================
@@ -156,7 +156,7 @@ anvil:
 # Deploy initial V1 contract using ProxyAdmin's key
 deploy:
 	@echo "Deploying to $(NETWORK)..."
-	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --verify --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
+	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
 
 # Update authority signer
 updateAuthoritySigner:
@@ -184,18 +184,20 @@ mintNFT: check_env_mint check_args_mint
 	$(eval URI_REDEEMABLE := $(or $(URI_REDEEMABLE),""))
 	$(eval URI_NOT_REDEEMABLE := $(or $(URI_NOT_REDEEMABLE),""))
 	$(eval REDEEMABLE_DEFAULT_INDEX := $(or $(REDEEMABLE_DEFAULT_INDEX),0))
+	$(eval DEADLINE := $(or $(DEADLINE),2000000000))
 	@forge script script/MintCryptoartNFT.s.sol:MintCryptoartNFT \
 	 	--private-key $(MINTER_PRIVATE_KEY) \
-	  	--sig "run(address,uint256,uint256,uint8,string,string,uint8)" \
+	  	--sig "run(address,uint256,uint8,uint256,string,string,uint8,uint256)" \
 		  	'$(MINTER_ADDRESS)' \
 			'$(TOKENID)' \
-		  	'$(PRICE)' \
 			'$(MINTTYPE_VALUE)' \
+		  	'$(PRICE)' \
 			'$(URI_REDEEMABLE)' \
 			'$(URI_NOT_REDEEMABLE)' \
 			'$(REDEEMABLE_DEFAULT_INDEX)' \
+			'$(DEADLINE)' \
 		$(NETWORK_ARGS)
-
+		
 # Check required environment variables for mintNFT
 check_env_mint:
 ifndef TRANSPARENT_PROXY_ADDRESS
@@ -219,3 +221,12 @@ endif
 ifndef PRICE
 	$(error PRICE (in wei) is not set. Use: make mintNFT PRICE=10000 ...)
 endif
+
+
+# cast send \
+#     0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \
+#     "mint(((address,uint256,uint256,uint8,uint256,uint256,bytes),(string,string,uint8)))" \
+#     "((0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65,1,10000000000000000,0,0,1746280695,0xbef0c830642ec387553f13f738a990e6a48edc0cf0e859e61aa68a28116c5c813a68e11b0443bea0ec3e7bebbc796fb44772f65428d1cbc20f6355a54180c6941c),(\"mockHash-1/true.json\",\"mockHash-1/false.json\",0))" \
+#     --value 10000000000000000 \
+#     --private-key 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a \
+#     --rpc-url http://127.0.0.1:8545
