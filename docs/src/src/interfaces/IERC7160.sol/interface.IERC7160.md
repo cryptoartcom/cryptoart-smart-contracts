@@ -1,5 +1,5 @@
 # IERC7160
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/1b717ca8471d1b93cf032ada44414eb539a88db5/src/interfaces/IERC7160.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/f2a750c4b24c985c039cfd827f6eb92a8a383dad/src/interfaces/IERC7160.sol)
 
 *The ERC-165 identifier for this interface is 0x06e1bc5b.*
 

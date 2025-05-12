@@ -1,5 +1,5 @@
 # Error
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/1b717ca8471d1b93cf032ada44414eb539a88db5/src/libraries/Error.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/f2a750c4b24c985c039cfd827f6eb92a8a383dad/src/libraries/Error.sol)
 
 
 ## Errors

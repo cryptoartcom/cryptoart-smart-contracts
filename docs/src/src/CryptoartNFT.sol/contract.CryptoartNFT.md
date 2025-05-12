@@ -1,5 +1,5 @@
 # CryptoartNFT
-[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/1b717ca8471d1b93cf032ada44414eb539a88db5/src/CryptoartNFT.sol)
+[Git Source](https://github.com/cryptoartcom/cryptoart-smart-contracts/blob/f2a750c4b24c985c039cfd827f6eb92a8a383dad/src/CryptoartNFT.sol)
 
 **Inherits:**
 [IERC7160](/src/interfaces/IERC7160.sol/interface.IERC7160.md), IERC4906, ERC721BurnableUpgradeable, ERC721RoyaltyUpgradeable, ERC721EnumerableUpgradeable, ERC721PausableUpgradeable, OwnableUpgradeable, NoncesUpgradeable, [IStory](/src/interfaces/IStory.sol/interface.IStory.md), ReentrancyGuardTransientUpgradeable
@@ -404,6 +404,13 @@ function hasPinnedTokenURI(uint256 tokenId) external view onlyIfTokenExists(toke
 
 ```solidity
 function unpinTokenURI(uint256) external pure;
+```
+
+### triggerMetadataUpdate
+
+
+```solidity
+function triggerMetadataUpdate(uint256 _tokenId) external onlyOwner;
 ```
 
 ### addCollectionStory

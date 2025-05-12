@@ -221,12 +221,3 @@ endif
 ifndef PRICE
 	$(error PRICE (in wei) is not set. Use: make mintNFT PRICE=10000 ...)
 endif
-
-
-# cast send \
-#     0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \
-#     "mint(((address,uint256,uint256,uint8,uint256,uint256,bytes),(string,string,uint8)))" \
-#     "((0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65,1,10000000000000000,0,0,1746280695,0xbef0c830642ec387553f13f738a990e6a48edc0cf0e859e61aa68a28116c5c813a68e11b0443bea0ec3e7bebbc796fb44772f65428d1cbc20f6355a54180c6941c),(\"mockHash-1/true.json\",\"mockHash-1/false.json\",0))" \
-#     --value 10000000000000000 \
-#     --private-key 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a \
-#     --rpc-url http://127.0.0.1:8545

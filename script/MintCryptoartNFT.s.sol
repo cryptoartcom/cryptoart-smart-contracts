@@ -36,17 +36,18 @@ contract MintCryptoartNFT is Script {
     function run(
         address recipient,
         uint256 tokenId,
-        uint256 tokenPrice,
         uint8 mintTypeValue,
+        uint256 tokenPrice,
         string memory uriWhenRedeemable,
         string memory uriWhenNotRedeemable,
-        uint8 initialURIIndex
+        uint8 initialURIIndex,
+        uint256 deadline
     ) public returns (bool success) {
         require(proxyAddress != address(0), "TRANSPARENT_PROXY_ADDRESS not set");
         require(authoritySignerPrivateKey != 0, "AUTHORITY_SIGNER_PRIVATE_KEY not set");
         require(minterPrivateKey != 0, "MINTER_PRIVATE_KEY not set");
         require(recipient != address(0), "Recipient cannot be zero address");
-
+        
         address minterAddress = vm.addr(minterPrivateKey);
         console.log("Executing Mint Script As (Minter):", minterAddress);
         console.log("Recipient:", recipient);
@@ -54,10 +55,11 @@ contract MintCryptoartNFT is Script {
         console.log("Token Price (wei):", tokenPrice);
         console.log("Target Proxy:", proxyAddress);
         console.log("Mint Type (Value):", mintTypeValue);
+        console.log("Deadline:", deadline);
 
         // Get contract instance
         CryptoartNFT nft = CryptoartNFT(proxyAddress);
-
+        
         // Get current nonce for the recipient
         uint256 nonce = nft.nonces(recipient);
         console.log("Nonce for recipient:", nonce);
@@ -80,7 +82,9 @@ contract MintCryptoartNFT is Script {
         data.tokenId = tokenId;
         data.tokenPrice = tokenPrice;
         data.mintType = CryptoartNFT.MintType(mintTypeValue); // cast uint8 to enum
-
+        data.requiredBurnOrTradeCount = 0;
+        data.deadline = deadline;
+        
         // --- Generate Signature ---
         console.log("Generate Signature using Authority Signer...");
 
@@ -88,12 +92,15 @@ contract MintCryptoartNFT is Script {
             abi.encode(
                 data.recipient,
                 data.tokenId,
-                data.mintType,
                 data.tokenPrice,
+                data.mintType,
+                data.requiredBurnOrTradeCount,
                 tokenUriSet.uriWhenRedeemable,
                 tokenUriSet.uriWhenNotRedeemable,
                 tokenUriSet.initialURIIndex,
                 nonce,
+                block.chainid,
+                data.deadline,
                 proxyAddress
             )
         );

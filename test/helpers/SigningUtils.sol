@@ -31,8 +31,8 @@ contract SigningUtils is Test {
             abi.encode(
                 user,
                 tokenId,
-                mintType,
                 tokenPrice,
+                mintType,
                 requiredBurnOrTradeCount,
                 tokenURISet.uriWhenRedeemable,
                 tokenURISet.uriWhenNotRedeemable,
