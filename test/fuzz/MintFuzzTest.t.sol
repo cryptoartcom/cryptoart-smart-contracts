@@ -52,7 +52,7 @@ contract MintFuzzTest is CryptoartNFTBase {
 
         mintMethod = uint8(bound(mintMethod, 0, 3)); // only four mint methods
         uint256 tokenId = 999;
-        
+
         uint8 openMint = 0;
         uint8 claim = 1;
         uint8 trade = 2;
@@ -62,17 +62,13 @@ contract MintFuzzTest is CryptoartNFTBase {
 
         // switch b/w different mint methods
         if (mintMethod == openMint) {
-            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(openMint), authoritySignerPrivateKey
-            );
+            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(openMint), authoritySignerPrivateKey);
             nft.mint{value: TOKEN_PRICE}(data, tokenURISet);
-            
         } else if (mintMethod == claim) {
-            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-                user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(claim), authoritySignerPrivateKey
-            );
+            (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+                createMintData(user1, tokenId, TOKEN_PRICE, CryptoartNFT.MintType(claim), authoritySignerPrivateKey);
             nft.claim{value: TOKEN_PRICE}(data, tokenURISet);
-            
         } else if (mintMethod == trade) {
             uint256[] memory tradedTokens = new uint256[](1);
             uint256 requiredTradeCount = tradedTokens.length;
@@ -81,7 +77,7 @@ contract MintFuzzTest is CryptoartNFTBase {
 
             // First, mint the token
             (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory mintTokenURISet) =
-                createMintData(user1, tradeTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            createMintData(user1, tradeTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
             nft.mint{value: TOKEN_PRICE}(mintData, mintTokenURISet);
 
             // Then, trade it to mint
@@ -98,8 +94,8 @@ contract MintFuzzTest is CryptoartNFTBase {
                 deadline,
                 address(nft)
             );
-    
-           CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
+
+            CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
                 recipient: user1,
                 tokenId: tokenId,
                 tokenPrice: TOKEN_PRICE,
@@ -108,10 +104,9 @@ contract MintFuzzTest is CryptoartNFTBase {
                 deadline: deadline,
                 signature: signature
             });
-           
+
             tradedTokens[0] = tradeTokenId;
             nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokens, data, tokenURISet);
-            
         } else if (mintMethod == burn) {
             uint256[] memory burnTokens = new uint256[](1);
             uint256 requiredBurnCount = burnTokens.length;
@@ -120,7 +115,7 @@ contract MintFuzzTest is CryptoartNFTBase {
 
             // First, mint the token
             (CryptoartNFT.MintValidationData memory mintData, CryptoartNFT.TokenURISet memory mintTokenURISet) =
-                createMintData(user1, burnTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
+            createMintData(user1, burnTokenId, TOKEN_PRICE, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
             nft.mint{value: TOKEN_PRICE}(mintData, mintTokenURISet);
 
             // Then, burn and mint a token
@@ -137,7 +132,7 @@ contract MintFuzzTest is CryptoartNFTBase {
                 deadline,
                 address(nft)
             );
-    
+
             CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
                 recipient: user1,
                 tokenId: tokenId,
@@ -147,7 +142,7 @@ contract MintFuzzTest is CryptoartNFTBase {
                 deadline: deadline,
                 signature: signature
             });
-            
+
             burnTokens[0] = burnTokenId;
             nft.burnAndMint{value: TOKEN_PRICE}(burnTokens, data, tokenURISet);
         }
@@ -249,11 +244,7 @@ contract ReentrancyAttacker {
     }
 
     function executeBurnAndMint() external payable {
-        nft.burnAndMint{value: mintData.tokenPrice}(
-            burnTokenIds,
-            mintData,
-            tokenURISet
-        );
+        nft.burnAndMint{value: mintData.tokenPrice}(burnTokenIds, mintData, tokenURISet);
     }
 
     // This checks if reentrancy was attempted

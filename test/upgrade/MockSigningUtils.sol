@@ -14,8 +14,9 @@ import {CryptoartNFTMockUpgrade} from "../../src/mock/CryptoartNFTMockUpgrade.so
  */
 contract MockSigningUtils is Test {
     using Strings for uint256;
+
     uint256 constant REQUIRED_MINT_CLAIM_COUNT = 0;
-    
+
     function createMintSignature(
         address user,
         uint256 tokenId,

@@ -441,8 +441,8 @@ contract CryptoartNFT is
     function unpinTokenURI(uint256) external pure {
         revert Error.Auth_UnpinningNotSupported();
     }
-   
-   // @inheritdoc IERC4906.MetadataUpdate  
+
+    // @inheritdoc IERC4906.MetadataUpdate
     function triggerMetadataUpdate(uint256 _tokenId) external onlyOwner {
         emit MetadataUpdate(_tokenId);
     }
@@ -618,14 +618,16 @@ contract CryptoartNFT is
     }
 
     function _validateMintAuthorization(MintValidationData calldata data, TokenURISet calldata uriParams) private {
-        _validatePayment(data.tokenPrice);
+        _validatePaymentFor(data.mintType, data.tokenPrice);
         _validateTokenRequirements(data.tokenId);
         _validateSignature(data, uriParams);
     }
 
-    function _validatePayment(uint256 tokenPrice) private view {
-        if (msg.value < tokenPrice) {
-            revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
+    function _validatePaymentFor(MintType mintType, uint256 tokenPrice) private view {
+        if (mintType == MintType.OpenMint || mintType == MintType.Claim) {
+            if (msg.value < tokenPrice) {
+                revert Error.Mint_InsufficientPayment(tokenPrice, msg.value);
+            }
         }
     }
 
@@ -694,13 +696,13 @@ contract CryptoartNFT is
     }
 
     function _refundExcessPayment(uint256 tokenPrice) private {
+      if (msg.value > tokenPrice) {
         uint256 excess = msg.value - tokenPrice;
-        if (excess > 0) {
-            (bool success,) = payable(msg.sender).call{value: excess}("");
-            if (!success) {
-                revert Error.Mint_RefundFailed(msg.sender, excess);
-            }
+        (bool success,) = payable(msg.sender).call{value: excess}("");
+        if (!success) {
+          revert Error.Mint_RefundFailed(msg.sender, excess);
         }
+      }
     }
 
     function _tokenExists(uint256 _tokenId) private view returns (bool) {

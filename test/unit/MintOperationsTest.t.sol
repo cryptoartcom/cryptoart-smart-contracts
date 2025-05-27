@@ -133,7 +133,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         emit CryptoartNFT.MintedByTrading(TOKEN_ID, tradedTokenIds);
 
         uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
-        
+
         CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         bytes memory signature = signingUtils.createMintSignature(
             user1,
@@ -148,7 +148,7 @@ contract MintOperationsTest is CryptoartNFTBase {
             address(nft)
         );
 
-       CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
+        CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
             recipient: user1,
             tokenId: TOKEN_ID,
             tokenPrice: TOKEN_PRICE,
@@ -159,7 +159,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         });
 
         vm.prank(user1);
-        nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokenIds, data, tokenURISet);
+        nft.mintWithTrade(tradedTokenIds, data, tokenURISet);
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
 
         for (uint256 i = 0; i < tradedTokenIds.length; i++) {
@@ -187,7 +187,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
         vm.prank(user1);
         vm.expectRevert();
-        nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokenIds, data, tokenURISet);
+        nft.mintWithTrade(tradedTokenIds, data, tokenURISet);
     }
 
     function test_RevertMintWithTradeEmptyArray() public {
@@ -198,7 +198,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Error.Batch_EmptyArray.selector));
-        nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokenIds, data, tokenURISet);
+        nft.mintWithTrade(tradedTokenIds, data, tokenURISet);
     }
 
     function test_RevertMintWithTradeArrayTooLarge() public {
@@ -212,7 +212,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Error.Batch_MaxSizeExceeded.selector, 51, 50));
-        nft.mintWithTrade{value: TOKEN_PRICE}(tradedTokenIds, data, tokenURISet);
+        nft.mintWithTrade(tradedTokenIds, data, tokenURISet);
     }
 
     // ============ Burn And Mint Tests ============
@@ -225,7 +225,7 @@ contract MintOperationsTest is CryptoartNFTBase {
         }
 
         uint256 deadline = block.timestamp + DEFAULT_EXPIRATION;
-        
+
         CryptoartNFT.TokenURISet memory tokenURISet = signingUtils.createTokenURISet(TOKEN_ID);
         bytes memory signature = signingUtils.createMintSignature(
             user1,
@@ -240,7 +240,7 @@ contract MintOperationsTest is CryptoartNFTBase {
             address(nft)
         );
 
-       CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
+        CryptoartNFT.MintValidationData memory data = CryptoartNFT.MintValidationData({
             recipient: user1,
             tokenId: TOKEN_ID,
             tokenPrice: TOKEN_PRICE,
@@ -249,13 +249,13 @@ contract MintOperationsTest is CryptoartNFTBase {
             deadline: deadline,
             signature: signature
         });
-       
+
         vm.expectEmit(true, false, false, true);
         emit CryptoartNFT.MintedByBurning(TOKEN_ID, burnTokenIds);
 
         // Then burn and mint
         vm.prank(user1);
-        nft.burnAndMint{value: TOKEN_PRICE}(burnTokenIds, data, tokenURISet);
+        nft.burnAndMint(burnTokenIds, data, tokenURISet);
 
         testAssertions.assertTokenOwnership(nft, TOKEN_ID, user1);
 
@@ -278,9 +278,11 @@ contract MintOperationsTest is CryptoartNFTBase {
 
         vm.prank(user1);
         vm.expectRevert(
-            abi.encodeWithSelector(Error.Batch_InsufficientTokenAmount.selector, REQUIRED_MINT_CLAIM_COUNT, burnTokenIds.length)
+            abi.encodeWithSelector(
+                Error.Batch_InsufficientTokenAmount.selector, REQUIRED_MINT_CLAIM_COUNT, burnTokenIds.length
+            )
         );
-        nft.burnAndMint{value: TOKEN_PRICE}(burnTokenIds, data, tokenURISet);
+        nft.burnAndMint(burnTokenIds, data, tokenURISet);
     }
 
     function test_RevertBurnAndMintDuplicateTokens() public {
@@ -298,6 +300,6 @@ contract MintOperationsTest is CryptoartNFTBase {
         // Attempt to burn with duplicate tokens
         vm.prank(user1);
         vm.expectRevert();
-        nft.burnAndMint{value: TOKEN_PRICE}(burnTokenIds, data, tokenURISet);
+        nft.burnAndMint(burnTokenIds, data, tokenURISet);
     }
 }
