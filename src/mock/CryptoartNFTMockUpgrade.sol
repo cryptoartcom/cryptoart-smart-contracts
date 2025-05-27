@@ -260,7 +260,7 @@ contract CryptoartNFTMockUpgrade is
         if (data.mintType != MintType.OpenMint) {
             revert Error.Auth_InvalidMintType();
         }
-        
+
         _coreMint(data, tokenUriSet);
         emit Minted(data.recipient, data.tokenId);
     }
@@ -274,7 +274,7 @@ contract CryptoartNFTMockUpgrade is
         if (data.mintType != MintType.Claim) {
             revert Error.Auth_InvalidMintType();
         }
-        
+
         _coreMint(data, tokenUriSet);
         emit Claimed(data.tokenId);
     }
@@ -290,8 +290,8 @@ contract CryptoartNFTMockUpgrade is
 
         if (tradedTokenIds.length != data.requiredBurnOrTradeCount) {
             revert Error.Batch_InsufficientTokenAmount(data.requiredBurnOrTradeCount, tradedTokenIds.length);
-        }   
-        
+        }
+
         _batchTransferToNftReceiver(tradedTokenIds);
         _coreMint(data, tokenUriSet);
         emit MintedByTrading(data.tokenId, tradedTokenIds);
@@ -324,11 +324,11 @@ contract CryptoartNFTMockUpgrade is
         if (data.mintType != MintType.Burn) {
             revert Error.Auth_InvalidMintType();
         }
-        
+
         if (tokenIds.length != requiredBurnCount) {
             revert Error.Batch_InsufficientTokenAmount(requiredBurnCount, tokenIds.length);
         }
-        
+
         _batchBurn(tokenIds);
         _coreMint(data, tokenUriSet);
 
@@ -640,7 +640,7 @@ contract CryptoartNFTMockUpgrade is
                 uriParams.uriWhenNotRedeemable,
                 uriParams.initialURIIndex,
                 NoncesUpgradeable._useNonce(data.recipient),
-                block.chainid, 
+                block.chainid,
                 data.deadline,
                 address(this)
             )

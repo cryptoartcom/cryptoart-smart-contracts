@@ -6,7 +6,7 @@
 -include .env
 
 # Declare phony targets
-.PHONY: all test clean deploy help install snapshot format anvil updateAuthoritySigner upgradeCryptoartNFTMock mintNFT
+.PHONY: all test clean deploy help install snapshot format anvil updateAuthoritySigner upgradeCryptoartNFT mintNFT
 
 # ==============================================================================
 # Variables & Configuration
@@ -45,26 +45,26 @@ help:
 	@echo "    Steps to Deploy Locally:"
 	@echo "      1. Start Anvil: 'make anvil' (in one terminal)."
 	@echo "      2. Open a new terminal in the same directory."
-	@echo "      3. Ensure .env has LOCAL_NODE_URL=http://127.0.0.1:8545 and keys (e.g., PROXY_ADMIN_OWNER_PRIVATE_KEY)."
+	@echo "      3. Ensure .env has LOCAL_NODE_URL=http://127.0.0.1:8545 and keys (e.g., DEPLOYER_PRIVATE_KEY)."
 	@echo "      4. Run: 'make deploy' (deploys to localhost)."
 	@echo "      5. Note the proxy address from the output (e.g., 0xYourProxyAddress)."
 	@echo "         - Save it to .env as TRANSPARENT_PROXY_ADDRESS for later use."
 	@echo ""
 	@echo "    Steps to Deploy to Testnet (e.g., Sepolia):"
-	@echo "      1. Ensure .env has SEPOLIA_URL, SEPOLIA_API_KEY, and PROXY_ADMIN_OWNER_PRIVATE_KEY."
+	@echo "      1. Ensure .env has SEPOLIA_URL, SEPOLIA_API_KEY, and DEPLOYER_PRIVATE_KEY."
 	@echo "      2. Run: 'make deploy NETWORK=sepolia'."
 	@echo "      3. Wait for deployment and verification (check output for success)."
 	@echo ""
 	@echo "----------------------------------------------------------------------"
 	@echo "Upgrading Contracts"
 	@echo "----------------------------------------------------------------------"
-	@echo "  make upgradeCryptoartNFTMock [NETWORK=<network>]"
-	@echo "    Upgrades the deployed proxy to a new implementation (e.g., CryptoartNFTMockUpgrade)."
+	@echo "  make upgradeCryptoartNFT [NETWORK=<network>]"
+	@echo "    Upgrades the deployed proxy to a new implementation (e.g., CryptoartNFTUpgrade)."
 	@echo "        - Requires a prior proxy deployment (TRANSPARENT_PROXY_ADDRESS in .env)."
 	@echo "        - This will deploy the new implementation contract for you, no need to do that separately"
 	@echo ""
 	@echo "    Steps:"
-	@echo "      1. Run: 'make upgradeCryptoartNFTMock NETWORK=<some network>'."
+	@echo "      1. Run: 'make upgradeCryptoartNFT NETWORK=<some network>'."
 	@echo "      2. Wait for deployment and verification (check output for success)."
 	@echo ""
 	@echo "----------------------------------------------------------------------"
@@ -81,14 +81,14 @@ help:
 	@echo "      2. Update .env with TRANSPARENT_PROXY_ADDRESS from deployment."
 	@echo "      3. Run: 'make mintNFT TOKENID=1 PRICE=100000000000000000'."
 	@echo "      4. For a free mint with custom URIs:"
-	@echo "         'make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE=\"ipfs://redeemable\" URI_NOT_REDEEMABLE=\"ipfs://not_redeemable\"'."	
+	@echo "         'make mintNFT TOKENID=2 PRICE=0 MINTTYPE=1 URI_REDEEMABLE=\"ipfs://redeemable\" URI_NOT_REDEEMABLE=\"ipfs://not_redeemable\"'."
 	@echo ""
 	@echo "    Steps to mint to Testnet (e.g., Sepolia):"
-	@echo "      1. Ensure .env has SEPOLIA_URL, and MINTER_ADDRESS."
+	@echo "      1. Ensure .env has SEPOLIA_URL, and DEPLOYER_ADDRESS."
 	@echo "      2. Run: 'make mintNFT TOKENID=<insert some token id> PRICE=<insert some token price> NETWORK=sepolia'."
 	@echo "      3. Wait for verification (check output for success)."
 	@echo ""
-	
+
 # Default anvil private key (override if needed)
 DEFAULT_ANVIL_KEY := 0x0
 
@@ -97,9 +97,9 @@ NETWORK ?= localhost
 
 # Network-specific arguments
 ifeq ($(NETWORK),localhost)
-	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast 
+	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast
 else ifeq ($(NETWORK),base-sepolia)
-	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) --etherscan-api-key $(BASE_SEPOLIA_API_KEY) --broadcast -vvvv --verify
+	NETWORK_ARGS := --rpc-url https://sepolia.base.org --etherscan-api-key $(BASE_SEPOLIA_API_KEY) --broadcast -vvvv --verify
 else ifeq ($(NETWORK),sepolia)
 	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(SEPOLIA_API_KEY) --broadcast -vvvv --verify
 endif
@@ -156,39 +156,39 @@ anvil:
 # Deploy initial V1 contract using ProxyAdmin's key
 deploy:
 	@echo "Deploying to $(NETWORK)..."
-	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
+	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --private-key $(DEPLOYER_PRIVATE_KEY) $(NETWORK_ARGS)
 
 # Update authority signer
 updateAuthoritySigner:
 	@echo "Updating authority signer on $(NETWORK)..."
-	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner --private-key $(OWNER_PRIVATE_KEY) $(NETWORK_ARGS) 
+	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner --private-key $(OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
 
-# Upgrade CryptoartNFTMock 
-upgradeCryptoartNFTMock:
-	@echo "Upgrading CryptoartNFTMock..."
+# Upgrade CryptoartNFT
+upgradeCryptoartNFT:
+	@echo "Upgrading CryptoartNFT..."
 	$(eval CURRENT_ARTIFACT_NAME := CryptoartNFT.sol)
-	$(eval NEW_ARTIFACT_NAME := CryptoartNFTMockUpgrade.sol)
-	$(eval INIT_DATA := $(shell cast calldata "initializeV2()"))
+	$(eval NEW_ARTIFACT_NAME := CryptoartNFT.sol)
+	# $(eval INIT_DATA := $(shell cast calldata "")) # Any additional functions such as another Initalizer to be called needs to be added here in the form of a function signature
+	@forge clean && forge build && \
 	@forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
-		--private-key $(PROXY_ADMIN_OWNER_PRIVATE_KEY) \
 		--sig "run(string,string,bytes)" \
 			"$(CURRENT_ARTIFACT_NAME)" \
 			"$(NEW_ARTIFACT_NAME)" \
-			"$(INIT_DATA)" \
+			"0x" \ # No data if not running any additional initializer functions
 		$(NETWORK_ARGS)
 
 # Mint an NFT
 mintNFT: check_env_mint check_args_mint
-	@echo "Minting Token ID $(TOKENID) for $(MINTER_ADDRESS) at price $(PRICE) wei..."
+	@echo "Minting Token ID $(TOKENID) for $(DEPLOYER_ADDRESS) at price $(PRICE) wei..."
 	$(eval MINTTYPE_VALUE := $(or $(MINTTYPE),0))
 	$(eval URI_REDEEMABLE := $(or $(URI_REDEEMABLE),""))
 	$(eval URI_NOT_REDEEMABLE := $(or $(URI_NOT_REDEEMABLE),""))
 	$(eval REDEEMABLE_DEFAULT_INDEX := $(or $(REDEEMABLE_DEFAULT_INDEX),0))
 	$(eval DEADLINE := $(or $(DEADLINE),2000000000))
 	@forge script script/MintCryptoartNFT.s.sol:MintCryptoartNFT \
-	 	--private-key $(MINTER_PRIVATE_KEY) \
+	 	--private-key $(DEPLOYER_PRIVATE_KEY) \
 	  	--sig "run(address,uint256,uint8,uint256,string,string,uint8,uint256)" \
-		  	'$(MINTER_ADDRESS)' \
+		  	'$(DEPLOYER_ADDRESS)' \
 			'$(TOKENID)' \
 			'$(MINTTYPE_VALUE)' \
 		  	'$(PRICE)' \
@@ -197,7 +197,7 @@ mintNFT: check_env_mint check_args_mint
 			'$(REDEEMABLE_DEFAULT_INDEX)' \
 			'$(DEADLINE)' \
 		$(NETWORK_ARGS)
-		
+
 # Check required environment variables for mintNFT
 check_env_mint:
 ifndef TRANSPARENT_PROXY_ADDRESS
@@ -206,8 +206,8 @@ endif
 ifndef AUTHORITY_SIGNER_PRIVATE_KEY
 	$(error AUTHORITY_SIGNER_PRIVATE_KEY is not set in .env)
 endif
-ifndef MINTER_PRIVATE_KEY
-	$(error MINTER_PRIVATE_KEY is not set in .env)
+ifndef DEPLOYER_PRIVATE_KEY
+	$(error DEPLOYER_PRIVATE_KEY is not set in .env)
 endif
 ifndef LOCAL_NODE_URL
 	$(error LOCAL_NODE_URL is not set in .env)

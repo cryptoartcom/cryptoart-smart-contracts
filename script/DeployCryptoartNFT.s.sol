@@ -8,7 +8,7 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract DeployCryptoartNFT is Script {
     function run() external {
-        uint256 proxyAdminPrivateKey = vm.envUint("PROXY_ADMIN_OWNER_PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address INITIAL_OWNER_ADDRESS_FOR_PROXY_ADMIN = vm.envAddress("PROXY_ADMIN_OWNER");
         address owner = vm.envAddress("OWNER_ADDRESS");
         address authoritySigner = vm.envAddress("AUTHORITY_SIGNER");
@@ -17,7 +17,7 @@ contract DeployCryptoartNFT is Script {
         string memory baseURI = vm.envString("BASE_URI");
 
         console.log("--- Starting Proxy Deployment ---");
-        vm.startBroadcast(proxyAdminPrivateKey);
+        vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
             "CryptoartNFT.sol",

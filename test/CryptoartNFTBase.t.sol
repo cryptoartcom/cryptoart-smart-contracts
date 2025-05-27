@@ -59,12 +59,9 @@ contract CryptoartNFTBase is Test {
         );
     }
 
-    function mintNFT(address user, uint256 tokenId, uint256 tokenPrice, uint256 paymentValue)
-        internal
-    {
-        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) = createMintData(
-            user, tokenId, tokenPrice, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey
-        );
+    function mintNFT(address user, uint256 tokenId, uint256 tokenPrice, uint256 paymentValue) internal {
+        (CryptoartNFT.MintValidationData memory data, CryptoartNFT.TokenURISet memory tokenURISet) =
+            createMintData(user, tokenId, tokenPrice, CryptoartNFT.MintType.OpenMint, authoritySignerPrivateKey);
 
         vm.prank(user);
         nft.mint{value: paymentValue}(data, tokenURISet);

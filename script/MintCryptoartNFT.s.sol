@@ -14,14 +14,14 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  * @dev Reads configuration from environment variables:
  *      - TRANSPARENT_PROXY_ADDRESS: Address of the CryptoartNFT proxy.
  *      - AUTHORITY_SIGNER_PRIVATE_KEY: Private key of the designated authority signer.
- *      - MINTER_PRIVATE_KEY: Private key of the user performing the mint and paying.
+ *      - DEPLOYER_PRIVATE_KEY: Private key of the user performing the mint and paying.
  */
 contract MintCryptoartNFT is Script {
     using Strings for uint256;
 
     address proxyAddress = vm.envAddress("TRANSPARENT_PROXY_ADDRESS");
     uint256 authoritySignerPrivateKey = vm.envUint("AUTHORITY_SIGNER_PRIVATE_KEY");
-    uint256 minterPrivateKey = vm.envUint("MINTER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
 
     /**
      * @notice Executes the minting process.
@@ -45,11 +45,11 @@ contract MintCryptoartNFT is Script {
     ) public returns (bool success) {
         require(proxyAddress != address(0), "TRANSPARENT_PROXY_ADDRESS not set");
         require(authoritySignerPrivateKey != 0, "AUTHORITY_SIGNER_PRIVATE_KEY not set");
-        require(minterPrivateKey != 0, "MINTER_PRIVATE_KEY not set");
+        require(deployerPrivateKey != 0, "DEPLOYER_PRIVATE_KEY not set");
         require(recipient != address(0), "Recipient cannot be zero address");
-        
-        address minterAddress = vm.addr(minterPrivateKey);
-        console.log("Executing Mint Script As (Minter):", minterAddress);
+
+        address deployerAddress = vm.addr(deployerPrivateKey);
+        console.log("Executing Mint Script As (Deployer):", deployerAddress);
         console.log("Recipient:", recipient);
         console.log("Token ID:", tokenId);
         console.log("Token Price (wei):", tokenPrice);
@@ -59,7 +59,7 @@ contract MintCryptoartNFT is Script {
 
         // Get contract instance
         CryptoartNFT nft = CryptoartNFT(proxyAddress);
-        
+
         // Get current nonce for the recipient
         uint256 nonce = nft.nonces(recipient);
         console.log("Nonce for recipient:", nonce);
@@ -84,7 +84,7 @@ contract MintCryptoartNFT is Script {
         data.mintType = CryptoartNFT.MintType(mintTypeValue); // cast uint8 to enum
         data.requiredBurnOrTradeCount = 0;
         data.deadline = deadline;
-        
+
         // --- Generate Signature ---
         console.log("Generate Signature using Authority Signer...");
 
@@ -111,8 +111,8 @@ contract MintCryptoartNFT is Script {
         console.log("Signature generated");
 
         // --- Mint Tx ---
-        console.log("Broadcasting Mint Tx from Minter: ", minterAddress);
-        vm.startBroadcast(minterPrivateKey);
+        console.log("Broadcasting Mint Tx from Minter: ", deployerAddress);
+        vm.startBroadcast(deployerPrivateKey);
 
         nft.mint{value: data.tokenPrice}(data, tokenUriSet);
 
