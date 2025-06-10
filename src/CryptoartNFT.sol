@@ -122,8 +122,6 @@ contract CryptoartNFT is
     event AuthoritySignerUpdated(address indexed newAuthoritySigner);
     /// @notice Emitted when the NFT receiver address is updated.
     event NftReceiverUpdated(address indexed newNftReceiver);
-    /// @notice Emitted when a story's visibility is toggled.
-    event ToggleStoryVisibility(uint256 indexed tokenId, string indexed storyId, bool visible);
     /// @notice Emitted on a standard mint.
     event Minted(address indexed recipient, uint256 indexed tokenId);
     /// @notice Emitted when a token is minted by burning other tokens.
@@ -433,7 +431,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
-    function hasPinnedTokenURI(uint256 tokenId) external view onlyIfTokenExists(tokenId) returns (bool) {
+    function hasPinnedTokenURI(uint256 tokenId) external view  returns (bool) {
         return _hasPinnedTokenURI[tokenId];
     }
 
@@ -472,20 +470,6 @@ contract CryptoartNFT is
         onlyTokenOwner(tokenId)
     {
         emit Story(tokenId, msg.sender, collectorName, story);
-    }
-
-    /**
-     * @notice Emits an event signaling a change in visibility for a story. Token owner or admin only.
-     * @dev Off-chain listeners interpret this event to control story display.
-     * @param tokenId The token ID the story belongs to.
-     * @param storyId An identifier for the specific story (derived off-chain from event logs).
-     * @param visible The desired visibility state.
-     */
-    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible) external whenNotPaused {
-        if (ownerOf(tokenId) != msg.sender && msg.sender != owner()) {
-            revert Error.Auth_Unauthorized(msg.sender);
-        }
-        emit ToggleStoryVisibility(tokenId, storyId, visible);
     }
 
     // ==========================================================================
@@ -632,11 +616,12 @@ contract CryptoartNFT is
     }
 
     function _validateTokenRequirements(uint256 tokenId) private view {
+        uint256 totalSupply = ERC721EnumerableUpgradeable.totalSupply();
         if (_tokenExists(tokenId)) {
             revert Error.Token_AlreadyMinted(tokenId);
         }
-        if (ERC721EnumerableUpgradeable.totalSupply() >= maxSupply) {
-            revert Error.Mint_ExceedsTotalSupply(tokenId, totalSupply());
+        if (totalSupply >= maxSupply) {
+            revert Error.Mint_ExceedsMaxSupply(tokenId, totalSupply);
         }
     }
 

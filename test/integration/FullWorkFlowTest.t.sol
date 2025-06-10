@@ -55,17 +55,10 @@ contract FullWorkFlow is CryptoartNFTBase {
         assertEq(nft.tokenURI(tokenId), expectedRedeemableURI);
 
         // --- IStory Workflow ---
-        string memory storyId = "story1";
         string memory storyContent = "Once upon a time, in a galaxy really, really close by...";
         vm.prank(user1);
         vm.expectEmit();
         emit IStory.Story(tokenId, user1, "user1CollectorName", storyContent);
         nft.addStory(tokenId, "user1CollectorName", storyContent);
-
-        // NFT owner toggles story visibility
-        vm.prank(user1);
-        vm.expectEmit(true, true, false, true);
-        emit CryptoartNFT.ToggleStoryVisibility(tokenId, storyId, true);
-        nft.toggleStoryVisibility(tokenId, storyId, true);
     }
 }

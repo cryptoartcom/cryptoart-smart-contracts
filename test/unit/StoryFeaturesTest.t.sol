@@ -57,27 +57,4 @@ contract StoryFeaturesTest is CryptoartNFTBase {
         vm.expectRevert(abi.encodeWithSelector(Error.Token_NotOwned.selector, TOKEN_ID, user2));
         nft.addStory(TOKEN_ID, "", "Story");
     }
-
-    function test_toggleVisibility_tokenOwner() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
-        vm.prank(user1);
-        vm.expectEmit(true, true, false, true);
-        emit CryptoartNFT.ToggleStoryVisibility(TOKEN_ID, "story1", true);
-        nft.toggleStoryVisibility(TOKEN_ID, "story1", true);
-    }
-
-    function test_toggleVisibility_contractOwner() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
-        vm.prank(owner);
-        vm.expectEmit(true, true, false, true);
-        emit CryptoartNFT.ToggleStoryVisibility(TOKEN_ID, "story1", false);
-        nft.toggleStoryVisibility(TOKEN_ID, "story1", false);
-    }
-
-    function test_ReverttoggleVisibilityIfNotAuthorized() public {
-        mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
-        vm.prank(user2);
-        vm.expectRevert(abi.encodeWithSelector(Error.Auth_Unauthorized.selector, user2));
-        nft.toggleStoryVisibility(TOKEN_ID, "story1", true);
-    }
 }

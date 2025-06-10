@@ -104,7 +104,7 @@ contract MintOperationsTest is CryptoartNFTBase {
 
         vm.startPrank(user1);
         nft.mint{value: TOKEN_PRICE}(data1, tokenURISet1);
-        vm.expectRevert(abi.encodeWithSelector(Error.Mint_ExceedsTotalSupply.selector, 2, 1));
+        vm.expectRevert(abi.encodeWithSelector(Error.Mint_ExceedsMaxSupply.selector, 2, 1));
         nft.mint{value: TOKEN_PRICE}(data2, tokenURISet);
         vm.stopPrank();
     }

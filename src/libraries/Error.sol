@@ -20,7 +20,7 @@ library Error {
     // Mint errors
     error Mint_InsufficientPayment(uint256 required, uint256 provided);
     error Mint_RefundFailed(address recipient, uint256 amount);
-    error Mint_ExceedsTotalSupply(uint256 tokenId, uint256 maxSupply);
+    error Mint_ExceedsMaxSupply(uint256 tokenId, uint256 maxSupply);
 
     // Auth errors
     error Auth_UnauthorizedSigner();
