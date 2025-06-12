@@ -137,8 +137,6 @@ contract CryptoartNFTMockUpgrade is
     event AuthoritySignerUpdated(address indexed newAuthoritySigner);
     /// @notice Emitted when the NFT receiver address is updated.
     event NftReceiverUpdated(address indexed newNftReceiver);
-    /// @notice Emitted when a story's visibility is toggled.
-    event ToggleStoryVisibility(uint256 indexed tokenId, string indexed storyId, bool visible);
 
     // NFT lifecycle events
     /// @notice Emitted on a standard mint.
@@ -488,17 +486,6 @@ contract CryptoartNFTMockUpgrade is
         emit Story(tokenId, msg.sender, collectorName, story);
     }
 
-    function toggleStoryVisibility(uint256 tokenId, string calldata storyId, bool visible)
-        external
-        whenNotPaused // <<< Added whenNotPaused
-    {
-        // Check needs to be inside as modifier cannot access state easily for owner check
-        if (ownerOf(tokenId) != msg.sender && owner() != msg.sender) {
-            revert Error.Auth_Unauthorized(msg.sender);
-        }
-        emit ToggleStoryVisibility(tokenId, storyId, visible);
-    }
-
     // ==========================================================================
     // Other External Functions
     // ==========================================================================
@@ -619,7 +606,7 @@ contract CryptoartNFTMockUpgrade is
             revert Error.Token_AlreadyMinted(tokenId);
         }
         if (ERC721EnumerableUpgradeable.totalSupply() >= maxSupply) {
-            revert Error.Mint_ExceedsTotalSupply(tokenId, totalSupply());
+            revert Error.Mint_ExceedsMaxSupply(tokenId, totalSupply());
         }
     }
 
