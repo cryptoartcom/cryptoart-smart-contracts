@@ -448,7 +448,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC4906.MetadataUpdate
-    function triggerMetadataUpdate(uint256 _tokenId) external onlyOwner {
+    function triggerMetadataUpdate(uint256 _tokenId) external onlyAuthoritySigner {
         emit MetadataUpdate(_tokenId);
     }
 
