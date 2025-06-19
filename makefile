@@ -99,7 +99,7 @@ NETWORK ?= localhost
 ifeq ($(NETWORK),localhost)
 	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast
 else ifeq ($(NETWORK),base-sepolia)
-	NETWORK_ARGS := --rpc-url https://sepolia.base.org --etherscan-api-key $(BASE_SEPOLIA_API_KEY) --broadcast -vvvv --verify
+	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) -vvvv 
 else ifeq ($(NETWORK),sepolia)
 	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(SEPOLIA_API_KEY) --broadcast -vvvv --verify
 endif
@@ -164,13 +164,22 @@ updateAuthoritySigner:
 	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner --private-key $(OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
 
 # Upgrade CryptoartNFT
+
+# TODO: There's something wrong with this command but I'm not sure what.  I couldn't get it to work but when I manually entered the forge script command, it worked.  Just remember to:
+# 1. make sure the env vars are correct
+# 2. make sure the --broadcast flag is set
+# 3. do forge cache clean, forge clean, forge build first
+# 4. add the --verify flag and etherscan-api-key for verification
+# Heres the command I used that worked:
+# forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT --sig "run(string,string,bytes)" "CryptoartNFT.sol" "CryptoartNFT.sol" "0x" --rpc-url https://eth-sepolia.g.alchemy.com/v2/<api-key-here> --private-key <proxy-admin-private-key-here> --broadcast
+
 upgradeCryptoartNFT:
 	@echo "Upgrading CryptoartNFT..."
 	$(eval CURRENT_ARTIFACT_NAME := CryptoartNFT.sol)
 	$(eval NEW_ARTIFACT_NAME := CryptoartNFT.sol)
 	# $(eval INIT_DATA := $(shell cast calldata "")) # Any additional functions such as another Initalizer to be called needs to be added here in the form of a function signature
 	@forge clean && forge build && \
-	@forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
+	forge script script/UpgradeCryptoartNFT.s.sol:UpgradeCryptoartNFT \
 		--sig "run(string,string,bytes)" \
 			"$(CURRENT_ARTIFACT_NAME)" \
 			"$(NEW_ARTIFACT_NAME)" \

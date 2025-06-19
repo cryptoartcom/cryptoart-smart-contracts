@@ -24,7 +24,7 @@ contract MetadataFuzzTest is CryptoartNFTBase {
     function testFuzz_PinTokenURI(uint256 index) public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
 
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         if (index < 2) {
             nft.pinTokenURI(TOKEN_ID, index);
             (uint256 pinnedIndex,, bool pinned) = nft.tokenURIs(TOKEN_ID);

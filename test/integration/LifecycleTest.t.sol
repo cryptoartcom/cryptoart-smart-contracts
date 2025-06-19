@@ -19,9 +19,9 @@ contract LifecycleTest is CryptoartNFTBase {
 
         // Step 2: owner adds a creator story
         string memory creatorStory = "Some NFT creator story about the the art";
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         vm.expectEmit();
-        emit IStory.CreatorStory(TOKEN_ID, owner, "ownerCreatorStoryName", creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, authoritySigner, "ownerCreatorStoryName", creatorStory);
         nft.addCreatorStory(TOKEN_ID, "ownerCreatorStoryName", creatorStory);
 
         // user adds a story
@@ -42,7 +42,7 @@ contract LifecycleTest is CryptoartNFTBase {
             user2, TOKEN_ID, nft.nonces(user2), deadline, address(nft), authoritySignerPrivateKey
         );
 
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         uint256 nonRedeemableURI = 1;
         nft.pinTokenURI(TOKEN_ID, nonRedeemableURI);
 

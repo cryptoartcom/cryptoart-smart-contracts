@@ -25,7 +25,7 @@ contract RoyaltyMetadataTest is CryptoartNFTBase {
         assertEq(royalty, 500);
 
         // Step 3: Pin token URI
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         nft.pinTokenURI(TOKEN_ID, 1); // pin to non-redeemable uri
 
         // Check: tokenURI reflects the pinned metadata

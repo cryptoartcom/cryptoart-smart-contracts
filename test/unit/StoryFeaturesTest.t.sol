@@ -13,9 +13,9 @@ contract StoryFeaturesTest is CryptoartNFTBase {
 
     function test_addCollectionStory() public {
         string memory collectionStory = "Some cool story for the NFT collection";
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         vm.expectEmit(true, true, false, true);
-        emit IStory.CollectionStory(owner, "someCreatorName", collectionStory);
+        emit IStory.CollectionStory(authoritySigner, "someCreatorName", collectionStory);
         nft.addCollectionStory("someCreatorName", collectionStory);
     }
 
@@ -29,9 +29,9 @@ contract StoryFeaturesTest is CryptoartNFTBase {
     function test_addCreatorStory() public {
         mintNFT(user1, TOKEN_ID, TOKEN_PRICE, TOKEN_PRICE);
         string memory creatorStory = "Some cool creator story";
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         vm.expectEmit(true, true, false, true);
-        emit IStory.CreatorStory(TOKEN_ID, owner, "someCreatorName", creatorStory);
+        emit IStory.CreatorStory(TOKEN_ID, authoritySigner, "someCreatorName", creatorStory);
         nft.addCreatorStory(TOKEN_ID, "someCreatorName", creatorStory);
     }
 

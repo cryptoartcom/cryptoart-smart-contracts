@@ -43,7 +43,7 @@ contract FullWorkFlow is CryptoartNFTBase {
             user1, tokenId, nft.nonces(user1), deadline, address(nft), authoritySignerPrivateKey
         );
 
-        vm.prank(owner);
+        vm.prank(authoritySigner);
         uint256 nonRedeemableURI = 1;
         nft.pinTokenURI(tokenId, nonRedeemableURI);
 

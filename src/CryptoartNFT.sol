@@ -218,6 +218,13 @@ contract CryptoartNFT is
         _;
     }
 
+    modifier onlyAuthoritySigner() {
+        if (msg.sender != authoritySigner) {
+            revert Error.Auth_Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     // ==========================================================================
     // Mint Operations
     // ==========================================================================
@@ -398,7 +405,7 @@ contract CryptoartNFT is
     // @inheritdoc IERC721MultiMetadata.pinTokenURI
     // pin the index-0 URI of the token, which has redeemable attribute on true
     // pin the index-1 URI of the token, which has redeemable attribute on false
-    function pinTokenURI(uint256 tokenId, uint256 index) external whenNotPaused onlyIfTokenExists(tokenId) onlyOwner {
+    function pinTokenURI(uint256 tokenId, uint256 index) external whenNotPaused onlyIfTokenExists(tokenId) onlyAuthoritySigner {
         if (index >= _tokenURIs[tokenId].length) {
             revert Error.Token_IndexOutOfBounds(tokenId, index, URIS_PER_TOKEN - 1);
         }
@@ -431,7 +438,7 @@ contract CryptoartNFT is
     }
 
     // @inheritdoc IERC721MultiMetadata.hasPinnedTokenURI
-    function hasPinnedTokenURI(uint256 tokenId) external view  returns (bool) {
+    function hasPinnedTokenURI(uint256 tokenId) external view returns (bool) {
         return _hasPinnedTokenURI[tokenId];
     }
 
@@ -450,7 +457,7 @@ contract CryptoartNFT is
     // ==========================================================================
 
     /// @inheritdoc IStory
-    function addCollectionStory(string calldata creatorName, string calldata story) external whenNotPaused onlyOwner {
+    function addCollectionStory(string calldata creatorName, string calldata story) external whenNotPaused onlyAuthoritySigner {
         emit CollectionStory(msg.sender, creatorName, story);
     }
 
@@ -458,7 +465,7 @@ contract CryptoartNFT is
     function addCreatorStory(uint256 tokenId, string calldata creatorName, string calldata story)
         external
         whenNotPaused
-        onlyOwner
+        onlyAuthoritySigner
     {
         emit CreatorStory(tokenId, msg.sender, creatorName, story);
     }
@@ -681,13 +688,13 @@ contract CryptoartNFT is
     }
 
     function _refundExcessPayment(uint256 tokenPrice) private {
-      if (msg.value > tokenPrice) {
-        uint256 excess = msg.value - tokenPrice;
-        (bool success,) = payable(msg.sender).call{value: excess}("");
-        if (!success) {
-          revert Error.Mint_RefundFailed(msg.sender, excess);
+        if (msg.value > tokenPrice) {
+            uint256 excess = msg.value - tokenPrice;
+            (bool success,) = payable(msg.sender).call{value: excess}("");
+            if (!success) {
+                revert Error.Mint_RefundFailed(msg.sender, excess);
+            }
         }
-      }
     }
 
     function _tokenExists(uint256 _tokenId) private view returns (bool) {

@@ -31,13 +31,16 @@ contract UpgradeCryptoartNFT is Script {
         } else {
             console.log("No Initializer Call Data provided.");
         }
-
+        
+        // TODO: I need to change this in a way that allows for upgrading for small changes versus upgrading for more major things. Or even, when we go to mainnet, we should not use the unsafeSkipStorageCheck.  So I think I want to create two types of functions here: one that uses the safe check and another that skips it. 
+        
         // Setting the options for validating the upgrade
         Options memory opts;
-        // opts.referenceContract = currentImplementationName;
+        opts.referenceContract = currentImplementationName;
 
         // Only use this for very small bugs or changes. Otherwise, THIS IS ** DANGEROUS **
         opts.unsafeSkipStorageCheck = true;
+        // opts.unsafeSkipAllChecks = true; // Skip all validation to save gas
 
         console.log("Validating storage layout...");
         // Upgrades.validateUpgrade(newImplementationName, opts);
@@ -45,10 +48,11 @@ contract UpgradeCryptoartNFT is Script {
 
         console.log("Broadcasting upgrade transaction...");
         vm.startBroadcast(proxyAdminPrivateKey);
+        console.log("Begin upgrade...");
         Upgrades.upgradeProxy(transparentProxyAddress, newImplementationName, initializerCalldata, opts);
 
         address newImplementationAddress = Upgrades.getImplementationAddress(transparentProxyAddress);
-
+        
         vm.stopBroadcast();
 
         console.log("--- Upgrade Complete ---");
