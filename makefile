@@ -101,7 +101,7 @@ ifeq ($(NETWORK),localhost)
 else ifeq ($(NETWORK),base-sepolia)
 	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) -vvvv 
 else ifeq ($(NETWORK),sepolia)
-	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(SEPOLIA_API_KEY) --broadcast -vvvv --verify
+	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast -vvvv --verify --account cryptoart-deployer-testnet --sender $(DEPLOYER_ADDRESS) 
 endif
 
 # ==============================================================================
@@ -154,9 +154,13 @@ anvil:
 # ==============================================================================
 
 # Deploy initial V1 contract using ProxyAdmin's key
-deploy:
+deployTestnet:
 	@echo "Deploying to $(NETWORK)..."
-	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --private-key $(DEPLOYER_PRIVATE_KEY) $(NETWORK_ARGS)
+	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy $(NETWORK_ARGS)
+
+# deployMainnet:
+# 	@echo "Deploying to $(NETWORK)..."
+# 	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --account cryptoart-deployer --sender <WALLET ADDRESS HERE> --rpc-url $(MAINNET_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast --verify -vvvv 
 
 # Update authority signer
 updateAuthoritySigner:
