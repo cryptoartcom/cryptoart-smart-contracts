@@ -103,7 +103,17 @@ help:
 	@echo "      - Example: In deployTestnet, use '--account cryptoart-deployer --sender 0xYourWalletAddress'."
 	@echo "      - When running, you'll be prompted for the password to unlock the keystore."
 	@echo ""
-
+	@echo "----------------------------------------------------------------------"
+	@echo "Repository Management"
+	@echo "----------------------------------------------------------------------"
+	@echo "  make push-github"
+	@echo "    Pushes all local branches to the GitHub remote repository."
+	@echo "    - Assumes the GitHub remote is already added via 'git remote add github <github-repo-url>'."
+	@echo "    - Runs: 'git push github --all'."
+	@echo "    - Use this to sync updates from the primary Bitbucket repo to GitHub."
+	@echo "    - Ensure you have push access to the GitHub repo and are on the correct branch before running."
+	@echo ""
+	
 # Default anvil private key (override if needed)
 DEFAULT_ANVIL_KEY := 0x0
 
@@ -235,6 +245,11 @@ mintNFT: check_env_mint check_args_mint
 			'$(DEADLINE)' \
 		$(NETWORK_ARGS)
 
+# @dev This command will update the Github repository
+push-github:
+	@echo "Pushing all branches to GitHub remote..."
+	@git push github --all	
+	
 # Check required environment variables for mintNFT
 check_args_keystore:
 ifndef KEYSTORE_NAME
