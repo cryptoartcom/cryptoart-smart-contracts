@@ -17,6 +17,7 @@ help:
 	@echo "======================================================================"
 	@echo "CryptoartNFT Makefile"
 	@echo "======================================================================"
+	@echo " *** NEVER HARD CODE THE PRIVATE KEY, USE THE KEYSTORE COMMAND TO ENCRYPT IT!!! ***"
 	@echo "This Makefile wraps complex 'forge' commands into simple 'make' targets."
 	@echo "Saves from typing long, error-prone commands."
 	@echo "Run 'make <target>' to execute tasks. Below are the key commands and how to use them:"
@@ -46,13 +47,13 @@ help:
 	@echo "      1. Start Anvil: 'make anvil' (in one terminal)."
 	@echo "      2. Open a new terminal in the same directory."
 	@echo "      3. Ensure .env has LOCAL_NODE_URL=http://127.0.0.1:8545 and keys (e.g., DEPLOYER_PRIVATE_KEY)."
-	@echo "      4. Run: 'make deploy' (deploys to localhost)."
+	@echo "      4. Run: 'make deployLocalhost' (deploys to localhost)."
 	@echo "      5. Note the proxy address from the output (e.g., 0xYourProxyAddress)."
 	@echo "         - Save it to .env as TRANSPARENT_PROXY_ADDRESS for later use."
 	@echo ""
 	@echo "    Steps to Deploy to Testnet (e.g., Sepolia):"
 	@echo "      1. Ensure .env has SEPOLIA_URL, SEPOLIA_API_KEY, and DEPLOYER_PRIVATE_KEY."
-	@echo "      2. Run: 'make deploy NETWORK=sepolia'."
+	@echo "      2. Run: 'make deployTestnet NETWORK=sepolia'."
 	@echo "      3. Wait for deployment and verification (check output for success)."
 	@echo ""
 	@echo "----------------------------------------------------------------------"
@@ -77,7 +78,7 @@ help:
 	@echo "    - Optional: NETWORK, MINTTYPE, URI_REDEEMABLE, URI_NOT_REDEEMABLE, REDEEMABLE_DEFAULT_INDEX."
 	@echo ""
 	@echo "    Steps to mint locally:"
-	@echo "      1. Deploy the contract: 'make deploy' (if not already done)."
+	@echo "      1. Deploy the contract: 'make deployLocalhost' (if not already done)."
 	@echo "      2. Update .env with TRANSPARENT_PROXY_ADDRESS from deployment."
 	@echo "      3. Run: 'make mintNFT TOKENID=1 PRICE=100000000000000000'."
 	@echo "      4. For a free mint with custom URIs:"
@@ -88,6 +89,20 @@ help:
 	@echo "      2. Run: 'make mintNFT TOKENID=<insert some token id> PRICE=<insert some token price> NETWORK=sepolia'."
 	@echo "      3. Wait for verification (check output for success)."
 	@echo ""
+	@echo "----------------------------------------------------------------------"
+	@echo "Security & Key Management"
+	@echo "----------------------------------------------------------------------"
+	@echo "  make create-keystore KEYSTORE_NAME=<name>"
+	@echo "    Creates an encrypted keystore for a private key using Foundry's cast wallet."
+	@echo "    - Purpose: Avoid hardcoding private keys in .env or commands. Use this before running deployment/mint/upgrade scripts."
+	@echo "    - KEYSTORE_NAME: A unique name for the keystore (e.g., 'cryptoart-deployer')."
+	@echo "    - Runs: 'cast wallet import <KEYSTORE_NAME> --interactive'."
+	@echo "    - You'll be prompted to enter your private key and a password to encrypt it."
+	@echo "    - IMPORTANT: Remember the password! You'll need it to decrypt when using the keystore."
+	@echo "    - Usage in commands: Replace '--private-key <key>' with '--account <KEYSTORE_NAME> --sender <PUBLIC_WALLET_ADDRESS>'."
+	@echo "      - Example: In deployTestnet, use '--account cryptoart-deployer --sender 0xYourWalletAddress'."
+	@echo "      - When running, you'll be prompted for the password to unlock the keystore."
+	@echo ""
 
 # Default anvil private key (override if needed)
 DEFAULT_ANVIL_KEY := 0x0
@@ -97,11 +112,9 @@ NETWORK ?= localhost
 
 # Network-specific arguments
 ifeq ($(NETWORK),localhost)
-	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --broadcast
-else ifeq ($(NETWORK),base-sepolia)
-	NETWORK_ARGS := --rpc-url $(BASE_SEPOLIA_URL) -vvvv 
+	NETWORK_ARGS := --rpc-url $(LOCAL_NODE_URL) --private-key $(DEPLOYER_PRIVATE_KEY) --broadcast
 else ifeq ($(NETWORK),sepolia)
-	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast -vvvv --verify --account cryptoart-deployer-testnet --sender $(DEPLOYER_ADDRESS) 
+	NETWORK_ARGS := --rpc-url $(SEPOLIA_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast -vvvv --verify --account cryptoart-deployer-testnet --sender $(DEPLOYER_ADDRESS)
 endif
 
 # ==============================================================================
@@ -152,15 +165,25 @@ anvil:
 # ==============================================================================
 # Deployment & Upgrade Commands
 # ==============================================================================
+create-keystore: check_args_keystore
+	@echo "Creating encrypted keystore '$(KEYSTORE_NAME)'..."
+	@cast wallet import $(KEYSTORE_NAME) --interactive
+	
+deployLocalhost:
+	@echo "Deploying to $(NETWORK)..."
+	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT $(NETWORK_ARGS)
 
 # Deploy initial V1 contract using ProxyAdmin's key
 deployTestnet:
 	@echo "Deploying to $(NETWORK)..."
 	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy $(NETWORK_ARGS)
 
+### ** SHOULD NO LONGER NEEDED BUT I'LL LEAVE IT HERE FOR REFERENCE **
 # deployMainnet:
 # 	@echo "Deploying to $(NETWORK)..."
-# 	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --account cryptoart-deployer --sender <WALLET ADDRESS HERE> --rpc-url $(MAINNET_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast --verify -vvvv 
+# 	@forge clean && forge build && forge script script/DeployCryptoartNFT.s.sol:DeployCryptoartNFT --legacy --account cryptoart-deployer --sender <WALLET ADDRESS HERE> --rpc-url $(MAINNET_URL) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast --verify -vvvv
+
+### YOU SHOULD ALWAYS BE ENCRYPTING THE PRIVATE KEY WITH THE KEYSTORE COMMAND!!! DON'T USE the `--private-key` flag!!!!!!!!!!! 
 
 # Update authority signer
 updateAuthoritySigner:
@@ -168,7 +191,7 @@ updateAuthoritySigner:
 	@forge script script/admin/UpdateAuthoritySigner.s.sol:UpdateAuthoritySigner --private-key $(OWNER_PRIVATE_KEY) $(NETWORK_ARGS)
 
 # Upgrade CryptoartNFT
-
+# @dev DON'T USE THE `--private-key` FLAG. ENCRYPT THE PK WITH THE KEYSTORE COMMAND!!
 # TODO: There's something wrong with this command but I'm not sure what.  I couldn't get it to work but when I manually entered the forge script command, it worked.  Just remember to:
 # 1. make sure the env vars are correct
 # 2. make sure the --broadcast flag is set
@@ -191,6 +214,7 @@ upgradeCryptoartNFT:
 		$(NETWORK_ARGS)
 
 # Mint an NFT
+# @dev This command was used for quick testing. You almost certainly don't want to use it. 
 mintNFT: check_env_mint check_args_mint
 	@echo "Minting Token ID $(TOKENID) for $(DEPLOYER_ADDRESS) at price $(PRICE) wei..."
 	$(eval MINTTYPE_VALUE := $(or $(MINTTYPE),0))
@@ -212,6 +236,11 @@ mintNFT: check_env_mint check_args_mint
 		$(NETWORK_ARGS)
 
 # Check required environment variables for mintNFT
+check_args_keystore:
+ifndef KEYSTORE_NAME
+	$(error KEYSTORE_NAME is not set. Use: make create-keystore KEYSTORE_NAME=my-keystore)
+endif
+
 check_env_mint:
 ifndef TRANSPARENT_PROXY_ADDRESS
 	$(error TRANSPARENT_PROXY_ADDRESS is not set. Please deploy V1 first and set it in .env)
